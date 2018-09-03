@@ -1,0 +1,70 @@
+<div class="bg-image-dice">
+   <style>
+      .bg-image-dice {
+         background: url('__/plugins/randomise-data/dice.jpg') no-repeat center center fixed;
+         -webkit-background-size: cover;
+         -moz-background-size: cover;
+         -o-background-size: cover;
+         background-size: cover;
+         height: 1000px;
+      }
+
+      .progress {
+         background: none;
+         -webkit-box-shadow: none;
+         box-shadow: none;
+      }
+   </style>
+   <div class="row">
+      <div class="col-md-12 ml-2 t-2 text-white">
+         <h2>
+            <i class="fa fa-user-secret" style="padding-right:5px" aria-hidden="true"></i> Randomisator</h2>
+         <h5> Create new .cub files with random data in the target folder</h5>
+      </div>
+   </div>
+   <div class="row" style="margin-top:10px">
+      <div class="col-md-6">
+         <div class="card ml-2">
+            <div class="card-header" style="padding: 5px 10px;">
+               <i class="fa fa-fw cubes"></i> 1.Pick cubes to randomise </div>
+            <div class="card-body">
+               <div style="cursor:pointer">
+                     <label class="radio-inline"><input type="radio" name="optradio" ng-click="addAllModelCubes()"><i class="fa fa-fw fa-cubes"></i> All model cubes  </label>
+                     <label class="radio-inline"><input type="radio" name="optradio" checked ng-click="selectPerCubes()"> <i class="fa fa-fw cubes"></i> Select cubes</label>
+               </div>
+               <div class="col-md-12" style="margin-top:10px" ng-if="showCubeSelection">
+                  <input class="form-control ng-pristine ng-untouched ng-valid ng-empty" style="border-radius:0;display:inline" type="text"
+                     ng-model="selection.cube" placeholder="Search for cubes" ng-keydown="key($event,selection.cube)" uib-typeahead="cube.Name for cube in lists.cubes | filter:$viewValue | limitTo:20"
+                     typeahead-append-to-body="true">
+               </div>
+               <div class="card-text" style="margin-top:10px">
+                     Cubes selected:
+                  </div>
+               <div class="col-md-12" style="margin-top:10px">
+                  <div ng-repeat="cube in lists.cubesTarget" class="badge ml-1" ng-style="generateHSLColour(cube)" style="font-size: 0.9em;margin-bottom:5px;cursor:default;">
+                     <i class="fa fa-fw fa-close" ng-click="removeFromCubesTarget(cube)" style="cursor:pointer"></i> {{cube}}
+                  </div>
+               </div>
+            </div>
+         </div>
+      </div>
+      <div class="col-md-6">
+         <div class="card mr-2">
+            <div class="card-header" style="padding: 5px 10px;">
+               <i class="fa fa-fw fa-user-secret"></i> 2.Randomise data </div>
+            <div class="card-body">
+               <div class="card-text">
+                  Target folder:
+               </div>
+               <div class="col-md-12" style="margin-top:10px">
+                  <input class="form-control ng-pristine ng-untouched ng-valid ng-empty" style="border-radius:0;display:inline" type="text"
+                     ng-model="selections.targetFolder">
+               </div>
+               <div class="col-md-12 text-center" style="margin-top:19px">
+                  <button type="button" ng-disabled="lists.cubesTarget.length==0" class="btn btn-danger action ng-scope" ng-click="openModalRandomise()">Randomise</button>
+               </div>
+            </div>
+         </div>
+      </div>
+   </div>
+</div>
