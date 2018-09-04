@@ -1,0 +1,41 @@
+<div>
+   <div class="modal-header text-white bg-danger">
+      <span>
+         <i class="fa fa-user-secret"></i>
+         <span>Randomise data for following cubes
+         </span>
+      </span>
+   </div>
+   <div class="modal-body">
+      <div class="row">
+         <div class="col-md-12">
+            <div class="card" ng-if="cubesRandomized.length==0">
+               <div class="card-header" style="padding: 5px 10px;">
+                  <div>
+                     <i class="fa fa-w cubes"></i> Cubes ({{cubesTarget.length}})
+                  </div>
+               </div>
+               <div class="card-body">
+                  <div ng-repeat="item in cubesTarget track by $index">
+                     <div>{{$index + 1}}.
+                        <i class="fa fa-w cubes"></i> {{item}}
+                     </div>
+                  </div>
+               </div>
+            </div>
+            <div ng-if="cubesRandomized.length>0">
+               <div class="text-center text-success">
+                     <i class="fa fa-user-secret" style="font-size:8em"></i>
+               </div>
+               <div class="alert alert-success" role="alert" style="margin-top:10px;padding: 5px 10px">
+                  cubes data randomized check folder '{{selections.targetFolder}}' for .cub files
+               </div>
+            </div>
+         </div>
+      </div>
+   </div>
+   <div class="modal-footer">
+      <button ng-if="cubesRandomized.length==0" type="button" class="btn btn-danger action ng-scope" ng-click="randomiseAll()" >Randomise</button>
+      <button type="button" class="btn btn-default action ng-scope" ng-click="closeThisDialog(0)" >Cancel</button>
+   </div>
+</div>
