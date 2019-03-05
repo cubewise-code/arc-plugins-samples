@@ -1,0 +1,40 @@
+<div>
+   <div class="modal-header text-white bg-danger">
+      <span>
+         <i class="fa fa-trash"></i>
+         <span>Delete the following subsets
+         </span>
+      </span>
+   </div>
+   <div class="modal-body">
+      <div class="row" style="margin-top:10px">
+         <div class="col-md-12">
+            <div class="card">
+               <div class="card-header" style="padding: 5px 10px;">
+                  <div ng-if="!messages">
+                     <i class="fa fa-w subset"></i> Subsets ({{subsets.length}})
+                  </div>
+                  <div ng-if="messages.length>0">
+                     <i class="fa fa-w subset"></i> Subsets Deleted ({{subsetsDeleted.length}})
+                  </div>
+               </div>
+               <div class="card-body">
+                  <div ng-if="!messages" ng-repeat="subset in subsets track by $index">
+                     {{$index + 1}}.
+                     <i class="fa fa-fw subset"></i> {{subset.fqn}}
+                  </div>
+                  <div ng-if="messages.length>0" ng-repeat="item in messages track by $index">
+                     <div class="alert alert-{{item.class}}" role="alert" style="padding: 5px 10px">
+                        <i class="fa fa-w {{item.icon}}"></i> {{item.message}}
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </div>
+      </div>
+   </div>
+   <div class="modal-footer">
+      <button type="button" class="btn btn-danger action ng-scope" ng-click="deleteSubsets()" ng-disabled="messages.length>0" translate="DELETE">Delete</button>
+      <button type="button" class="btn btn-default action ng-scope" ng-click="closeThisDialog(0)" translate="CANCEL">Cancel</button>
+   </div>
+</div>
