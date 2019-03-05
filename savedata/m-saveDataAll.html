@@ -1,0 +1,27 @@
+<div>
+   <div class="modal-header text-white bg-primary">
+      <span>
+         <i class="fa fa-cubes"></i>
+         <span>Execute Save Data All
+         </span>
+      </span>
+   </div>
+   <div class="modal-body">
+      <div class="row text-center" style="margin-top:10px">
+         <div class="col-md-12">
+
+            <button type="button" class="btn btn-primary action ng-scope" ng-click="saveDataAll()">SaveDataAll</button>
+         </div>
+      </div>
+      <div class="row" ng-if="selections.responseTimeMs>0" style="margin-top:10px">
+         <div class="col-md-12">
+            <div class="alert alert-success" role="alert">
+                  <i class="fa fa-check-circle" aria-hidden="true" style="cursor:pointer"></i> Save data for all cubes in {{selections.responseTimeMs}} Ms
+            </div>
+         </div>
+      </div>
+   </div>
+   <div class="modal-footer">
+      <button type="button" class="btn btn-default action ng-scope" ng-click="closeThisDialog(0)">Cancel</button>
+   </div>
+</div>

@@ -1,0 +1,1485 @@
+<div>
+   <style>
+      .open-copy-code {
+         position: absolute;
+         right: 0px;
+         top: 0px;
+         z-index: 9;
+         border-radius: 0px;
+         -webkit-box-shadow: 0px 0px 5px 0px rgba(102, 102, 102, 0.4);
+         -moz-box-shadow: 0px 0px 5px 0px rgba(102, 102, 102, 0.4);
+         box-shadow: 0px 0px 5px 0px rgba(102, 102, 102, 0.4);
+
+      }
+
+      .codesnipet {
+         margin: 0px;
+         width: 100%;
+         height: inherit;
+         height: 200px;
+         position: absolute;
+         z-index: 99999;
+         overflow: auto;
+         top: 0px;
+         left: 0px;
+         background-color: #FFF;
+         border: thin solid #ccc;
+         -webkit-box-shadow: 0 6px 12px rgba(0, 0, 0, .175);
+         box-shadow: 0 6px 12px rgba(0, 0, 0, .175);
+      }
+
+      .closecodebtn {
+         right: 0px;
+         color: #fff;
+         position: absolute;
+         background-color: #3e3e3f;
+         top: -5px;
+         z-index: 999999999;
+      }
+
+      .closecodebtn:hover {
+         right: 0px;
+         color: #666;
+         position: absolute;
+         background-color: #fff;
+         top: -5px;
+         z-index: 999999999;
+      }
+
+      .copycodebtn {
+         right: 30px;
+         position: absolute;
+
+         top: -5px;
+         z-index: 999999999;
+      }
+   </style>
+   <div class="row">
+      <div class="col-md-12">
+         <h2>
+            <i class="fa fa-archive" style="padding-right:5px" aria-hidden="true"></i> Cheatsheet</h2>
+         <h5> Everyting you need to know to start building plugins</h5>
+      </div>
+   </div>
+   <div>
+      <uib-tabset>
+         <uib-tab>
+            <uib-tab-heading>
+               Getting Started
+            </uib-tab-heading>
+            <div class="row">
+               <div class="col-md-4 mt-2">
+                  <div class="card">
+                     <div class="card-header" style="padding: 5px 10px;">
+                        <label><i class="fa fa-book""></i> Most important articles</label>
+                     </div>
+                     <div class="
+                              card-body">
+                              <ul class="list-group list-group-flush">
+                                 <li class="list-group-item"><a href="https://code.cubewise.com/arc-plugins/" target="_blank">Plugin
+                                       Help Section</a></li>
+                                 <li class="list-group-item"><a href="https://code.cubewise.com/arc-docs/how-plugins-work"
+                                       target="_blank">How Plugins work</a></li>
+                                 <li class="list-group-item"><a href="https://code.cubewise.com/arc-docs/how-to-create-your-plugins"
+                                       target="_blank">How to create your plugins</a></li>
+                              </ul>
+                     </div>
+                  </div>
+               </div>
+               <div class="col-md-8 mt-2">
+                  <div class="card">
+                     <div class="card-header" style="padding: 5px 10px;">
+                        <label><i class="fa fa-book""></i> Build your first plugin</label>
+                     </div>
+                     <div class="
+                              card-body">
+                              <ul class="list-group list-group-flush">
+                                 <li class="list-group-item"><strong>1.</strong> Duplicate the folder <strong>C:\Arc\plugins\template-page</strong>
+                                 </li>
+                                 <li class="list-group-item"><strong>2.</strong> Rename the folder my-new-plugin</li>
+                                 <li class="list-group-item"><strong>3.</strong> Open plugins\my-new-plugin\<strong>plugin.js</strong>
+                                    file</li>
+                                 <li class="list-group-item"><strong></strong>4.</strong> To activate the plugin, you
+                                    have to
+                                    uncomment the first part by removing <strong>/*</strong> line 4 and <strong>*/</strong>
+                                    line 19</li>
+                                 <li class="list-group-item"><strong>5.</strong> <a href="https://code.cubewise.com/canvas-docs/disable-cache"
+                                       target="_blank">Disable cache</a>, when working on plugins you need to disable
+                                    the your browser cache to see the changes</li>
+                                 <li class="list-group-item"><strong>6.</strong> Refresh Arc, you should now see your
+                                    new plugin under
+                                    tools in the left-navigation pane with name <strong>Template Title</strong></li>
+                                 <li class="list-group-item"><strong>7.</strong>To update the menu title, replace
+                                    <strong>Template Title</strong>
+                                    line 8 of the plugin.js with your new title</li>
+                                 <li class="list-group-item"><strong>8.</strong>To update the menu icon, replace
+                                    <strong>fa-paw</strong>
+                                    line 9 of the plugin.js with your new icon</li>
+                                 <li class="list-group-item"><strong>9.</strong>Make your plugin unique by replacing
+                                    <strong>arcTemplate</strong> line 8 and 21</li>
+                                 <li class="list-group-item"><strong>10.</strong> Replace the folder name <strong>template-page</strong>
+                                    line 28 with your new folder name</li>
+                              </ul>
+                     </div>
+                  </div>
+               </div>
+            </div>
+            <p></p>
+            <p></p>
+            <p></p>
+            <p></p>
+         </uib-tab>
+         <uib-tab>
+            <uib-tab-heading>
+               Variables
+            </uib-tab-heading>
+            <div class="row">
+               <div class="col-md-4 mt-2">
+                  <div class="card">
+                     <div class="card-header" style="padding: 5px 10px;">
+                        <label>Get instance name</label>
+                     </div>
+                     <div class="card-body text-center">
+                        {{instance}}
+                     </div>
+                     <div class="card-footer">
+                        <pre><code>$scope.instance</code></pre>
+                     </div>
+                  </div>
+               </div>
+               <div class="col-md-4 mt-2">
+                  <div class="card">
+                     <div class="card-header" style="padding: 5px 10px;">
+                        <label>Check if control objects on/off</label>
+                     </div>
+                     <div class="card-body text-center">
+                        {{showHideControlObjects}}
+                     </div>
+                     <div class="card-footer">
+                        <pre><code>$rootScope.uiPrefs.controlObjects</code></pre>
+                     </div>
+                  </div>
+               </div>
+               <div class="col-md-4 mt-2">
+                  <div class="card">
+                     <div class="card-header" style="padding: 5px 10px;">
+                        <label>Get URL</label>
+                     </div>
+                     <div class="card-body text-center">
+                        {{encodeURIComponent(instance)}}
+                     </div>
+                     <div class="card-footer">
+                        <pre><code>encodeURIComponent($scope.instance)</code></pre>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </uib-tab>
+         <uib-tab>
+            <uib-tab-heading>
+               Icons
+            </uib-tab-heading>
+            <p>Arc includes all icons from
+               <a href="https://fontawesome.com/v4.7.0/icons/" target="_blank">Font Awesome v4.7</a>.
+            </p>
+            <div>
+               <h5>Defaults icons</h5>
+            </div>
+            <div class="row">
+               <div class="col-md-3 mt-2">
+                  <div class="card">
+                     <div class="card-header" style="padding: 5px 10px;">
+                        <label>Applications</label>
+                     </div>
+                     <div class="card-body text-center">
+                        <i class="fa applications fa-2x"></i>
+                     </div>
+                     <div class="card-footer">
+                        <pre><code>&lt;i class="fa cubes"&gt;&lt;/i&gt</code></pre>
+                     </div>
+                  </div>
+               </div>
+               <div class="col-md-3 mt-2">
+                  <div class="card">
+                     <div class="card-header" style="padding: 5px 10px;">
+                        <label>Dimensions</label>
+                     </div>
+                     <div class="card-body text-center">
+                        <i class="fa dimensions fa-2x"></i>
+                     </div>
+                     <div class="card-footer">
+                        <pre><code>&lt;i class="fa dimensions"&gt;&lt;/i&gt</code></pre>
+                     </div>
+                  </div>
+               </div>
+               <div class="col-md-3 mt-2">
+                  <div class="card">
+                     <div class="card-header" style="padding: 5px 10px;">
+                        <label>Cubes</label>
+                     </div>
+                     <div class="card-body text-center">
+                        <i class="fa cubes fa-2x"></i>
+                     </div>
+                     <div class="card-footer">
+                        <pre><code>&lt;i class="fa cubes"&gt;&lt;/i&gt</code></pre>
+                     </div>
+                  </div>
+               </div>
+               <div class="col-md-3 mt-2">
+                  <div class="card">
+                     <div class="card-header" style="padding: 5px 10px;">
+                        <label>Processes</label>
+                     </div>
+                     <div class="card-body text-center">
+                        <i class="fa processes fa-2x"></i>
+                     </div>
+                     <div class="card-footer">
+                        <pre><code>&lt;i class="fa processes"&gt;&lt;/i&gt</code></pre>
+                     </div>
+                  </div>
+               </div>
+               <div class="col-md-3 mt-2">
+                  <div class="card">
+                     <div class="card-header" style="padding: 5px 10px;">
+                        <label>Chores</label>
+                     </div>
+                     <div class="card-body text-center">
+                        <i class="fa chores fa-2x"></i>
+                     </div>
+                     <div class="card-footer">
+                        <pre><code>&lt;i class="fa chores"&gt;&lt;/i&gt</code></pre>
+                     </div>
+                  </div>
+               </div>
+               <div class="col-md-3 mt-2">
+                  <div class="card">
+                     <div class="card-header" style="padding: 5px 10px;">
+                        <label>View</label>
+                     </div>
+                     <div class="card-body text-center">
+                        <i class="fa view fa-2x"></i>
+                     </div>
+                     <div class="card-footer">
+                        <pre><code>&lt;i class="fa view"&gt;&lt;/i&gt</code></pre>
+                     </div>
+                  </div>
+               </div>
+               <div class="col-md-3 mt-2">
+                  <div class="card">
+                     <div class="card-header" style="padding: 5px 10px;">
+                        <label>Subset</label>
+                     </div>
+                     <div class="card-body text-center">
+                        <i class="fa subset fa-2x"></i>
+                     </div>
+                     <div class="card-footer">
+                        <pre><code>&lt;i class="fa subset"&gt;&lt;/i&gt</code></pre>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </uib-tab>
+         <uib-tab>
+            <uib-tab-heading>
+               Services
+            </uib-tab-heading>
+            <div class="row">
+               <div class="col-md-6 mt-2">
+                  <div class="card">
+                     <div class="card-header" style="padding: 5px 10px;">
+                        <label>
+                           <i class="fa fa-fw chores"></i> Execute a chore</label>
+                     </div>
+                     <div class="card-body">
+                        <div class="card-text">
+                           Run a chore:
+                        </div>
+                        <div>
+                           <div class="input-group">
+                              <input type="text" ng-model="selections.chore" placeholder="Chore Name" class="form-control ng-pristine ng-untouched ng-valid ng-empty"
+                                 style="display:inline">
+                              <div class="input-group-append">
+                                 <button ng-disabled="!selections.chore" class="btn btn-warning" title="Delete"
+                                    ng-click="executeChore(selections.chore)" disabled="disabled">
+                                    <i class="fa fa-fw fa-bolt"></i>
+                                 </button>
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                  <div ng-init="displayCodeS0 = 0" ng-click="displayCodeS0 = 1" class="btn btn-info open-copy-code">
+                     <i class="fa fa-code" aria-hidden="true"></i>
+                  </div>
+                  <div ng-show="displayCodeS0 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeS0 = 0">x</div>
+                  <pre id="codeS0" class="codesnipet" ng-show="displayCodeS0 == 1" readonly content-editable>
+<code><kbd> plugin.js:</kbd>
+      $scope.executeChore = function (name) {
+         $tm1.choreExecute($scope.instance, name);
+      }; 
+<kbd> template.html:</kbd>
+ng-click="executeChore(selections.chore)"
+</code>
+                   </pre>
+               </div>
+               <div class="col-md-6 mt-2">
+                  <div class="card">
+                     <div class="card-header" style="padding: 5px 10px;">
+                        <label>
+                           <i class="fa fa-fw processes"></i> Execute a process
+                        </label>
+                     </div>
+                     <div class="card-body">
+                        <div class="card-text">
+                           Run a process:
+                        </div>
+                        <div class="input-group">
+                           <input type="text" ng-model="selections.process" placeholder="Process Name" class="form-control ng-pristine ng-untouched ng-valid ng-empty"
+                              style="display:inline">
+                           <div class="input-group-append">
+                              <button ng-disabled="!selections.process" class="btn btn-warning" title="Delete" ng-click="executeProcess(selections.process)"
+                                 disabled="disabled">
+                                 <i class="fa fa-fw fa-bolt"></i>
+                              </button>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                  <div ng-init="displayCodeS1 = 0" ng-click="displayCodeS1 = 1" class="btn btn-info open-copy-code">
+                     <i class="fa fa-code" aria-hidden="true"></i>
+                  </div>
+                  <div ng-show="displayCodeS1 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeS1 = 0">x
+                  </div>
+                  <pre id="codeS1" class="codesnipet" ng-show="displayCodeS1 == 1" readonly content-editable>
+<code><kbd> plugin.js:</kbd>
+   $scope.executeProcess = function (name) {
+      $tm1.processExecute($scope.instance, name);
+   }; 
+<kbd> template.html:</kbd>
+ng-click="executeProcess(selections.process)"
+</code>
+                   </pre>
+               </div>
+               <div class="col-md-6 mt-2">
+                  <div class="card">
+                     <div class="card-header" style="padding: 5px 10px;">
+                        <label><i class="fa fa-fw cubes"></i>$tm1.instances</label></div>
+                     <div class="card-body">
+                        <div class="input-group">
+                           <div class="col-md-10">
+                              <span>Click to get the list of all instances available:</span>
+                           </div>
+                           <div class="col-md-2 text-right" style="padding-right:0px">
+                              <button class="btn btn-warning" title="Get Instances" ng-click="getInstances()">
+                                 <i class="fa fa-fw fa-bolt"></i>
+                              </button>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                  <div ng-init="displayCodeS2 = 0" ng-click="displayCodeS2 = 1" class="btn btn-info open-copy-code">
+                     <i class="fa fa-code" aria-hidden="true"></i>
+                  </div>
+                  <div ng-show="displayCodeS2 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeS2 = 0">x
+                  </div>
+                  <pre id="codeS2" class="codesnipet" ng-show="displayCodeS2 == 1" readonly content-editable>
+<code><kbd> plugin.js:</kbd>
+   $scope.getInstances = function () {
+      $tm1.instances().then(function (data) {
+         $scope.lists.instances = data;
+         //Open Modal
+         $scope.openModalInstances("List of instances", $scope.lists.instances);
+      });
+   };
+<kbd> template.html:</kbd>
+ng-click="getInstances()"
+</code>
+                   </pre>
+               </div>
+               <div class="col-md-6 mt-2">
+                  <div class="card">
+                     <div class="card-header" style="padding: 5px 10px;">
+                        <label><i class="fa fa-fw cubes"></i>$tm1.instance</label></div>
+                     <div class="card-body">
+                        <div class="card-text">
+                           Get information of a specific instance:
+                        </div>
+                        <div class="btn-toolbar input-group pull-right">
+                           <input type="text" ng-model="selections.instance" placeholder="Dimension Name" class="form-control ng-pristine ng-untouched ng-valid ng-empty"
+                              style="display:inline">
+                           <div class="input-group-append">
+                              <button class="btn btn-warning input-group-append" title="Get Instance" ng-click="getInstance(selections.instance)">
+                                 <i class="fa fa-fw fa-bolt"></i>
+                              </button>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                  <div ng-init="displayCodeS3 = 0" ng-click="displayCodeS3 = 1" class="btn btn-info open-copy-code">
+                     <i class="fa fa-code" aria-hidden="true"></i>
+                  </div>
+                  <div ng-show="displayCodeS3 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeS3 = 0">x
+                  </div>
+                  <pre id="codeS3" class="codesnipet" ng-show="displayCodeS3 == 1" readonly content-editable>
+<code><kbd> plugin.js:</kbd>
+   $scope.getInstance = function (name) {
+      $scope.options.showInstanceInfo = !$scope.options.showInstanceInfo;
+      $tm1.instance(name).then(function (data) {
+         $scope.lists.instanceData = data;
+         $scope.openModalInstances($scope.selections.instance, $scope.lists.instanceData);
+      });
+   };
+<kbd> template.html:</kbd>
+ng-click="getInstance(selections.instance)"
+</code>
+                   </pre>
+               </div>
+               <div class="col-md-6 mt-2">
+                  <div class="card">
+                     <div class="card-header" style="padding: 5px 10px;">
+                        <label><i class="fa fa-fw dimensions"></i> $tm1.cubeDimensions</label> </div>
+                     <div class="card-body">
+                        <div class="card-text">
+                           Get dimensions for a specific cube:
+                        </div>
+                        <div class="input-group">
+                           <input type="text" ng-model="selections.cube" placeholder="Cube Name" class="form-control ng-pristine ng-untouched ng-valid ng-empty"
+                              style="display:inline">
+                           <div class="input-group-append">
+                              <button ng-disabled="!selections.cube" class="btn btn-warning" title="Delete" ng-click="getCubeDimensions(selections.cube)"
+                                 disabled="disabled">
+                                 <i class="fa fa-fw fa-bolt"></i>
+                              </button>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                  <div ng-init="displayCodeS4 = 0" ng-click="displayCodeS4 = 1" class="btn btn-info open-copy-code">
+                     <i class="fa fa-code" aria-hidden="true"></i>
+                  </div>
+                  <div ng-show="displayCodeS4 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeS4 = 0">x
+                  </div>
+                  <pre id="codeS4" class="codesnipet" ng-show="displayCodeS4 == 1" readonly content-editable>
+<code><kbd> plugin.js:</kbd>
+   $scope.getCubeDimensions = function (cube) {
+      $tm1.cubeDimensions($scope.instance, cube).then(function (data) {
+         $scope.lists.dimensions = data;
+         $scope.openModalInstances($scope.selections.cube, $scope.lists.dimensions);
+      });
+   };
+<kbd> template.html:</kbd>
+ng-click="getCubeDimensions(selections.cube)"
+</code>
+                   </pre>
+               </div>
+               <div class="col-md-6 mt-2">
+                  <div class="card">
+                     <div class="card-header" style="padding: 5px 10px;">
+                        <label><i class="fa fa-fw fa-pencil-square"></i> $tm1.cellUpdate</label> </div>
+                     <div class="card-body">
+                        <div class="card-text">
+                           Send a value to a cell:
+                        </div>
+                        <div class="btn-toolbar pull-right">
+                           <div class="input-group">
+                              <input type="text" ng-model="selections.valueToBeSent" placeholder="Value" class="col-md-4 form-control ng-pristine ng-untouched ng-valid ng-empty"
+                                 style="display:inline">
+                              <div class="col-md-4 text-center">
+                                 <button ng-disabled="!selections.valueToBeSent" class="btn btn-warning" title="Delete"
+                                    ng-click="sendValueToCell(selections.valueToBeSent)" disabled="disabled">
+                                    <i class="fa fa-fw fa-arrow-right"></i>
+                                 </button>
+                              </div>
+                              <div class="col-md-4">
+                                 Value in TM1: {{values.CurrentDate}}
+                              </div>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                  <div ng-init="displayCodeS5 = 0" ng-click="displayCodeS5 = 1" class="btn btn-info open-copy-code">
+                     <i class="fa fa-code" aria-hidden="true"></i>
+                  </div>
+                  <div ng-show="displayCodeS5 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeS5 = 0">x
+                  </div>
+                  <pre id="codeS5" class="codesnipet" ng-show="displayCodeS5 == 1" readonly content-editable>
+<code><kbd> plugin.js:</kbd>
+   $scope.sendValueToCell = function (value) {
+      $tm1.cellUpdate(value, $scope.instance, $scope.defaults.systemCube, $scope.defaults.element1, $scope.defaults.element2).then(function (data) {
+         //console.log(data.status);
+         $scope.getValueFromCell();
+      });
+   };
+<kbd> template.html:</kbd>
+ng-click="sendValueToCell(selections.valueToBeSent)" 
+</code>
+                   </pre>
+               </div>
+            </div>
+         </uib-tab>
+         <uib-tab>
+            <uib-tab-heading>
+               Components
+            </uib-tab-heading>
+            <div class="row">
+               <div class="col-md-6 mt-2">
+                  <div class="card">
+                     <div class="card-header" style="padding: 5px 10px;">
+                        <label>
+                           <i class="fa fa-fw chores"></i> Open Subset Editor</label>
+                     </div>
+                     <div class="card-body text-center">
+                        <div>
+                           <button type="button" class="btn btn-secondary btn-sm" ng-click="editSubset(hierarchy, 'titles')">
+                              <i class="fa subset" title="{{'EDITSUBSET' | translate}}"></i>
+                           </button>
+                        </div>
+                        <div ng-if="elements">
+                           Result: {{elements}}
+                        </div>
+                     </div>
+                  </div>
+                  <div ng-init="displayCodeC0 = 0" ng-click="displayCodeC0 = 1" class="btn btn-info open-copy-code">
+                     <i class="fa fa-code" aria-hidden="true"></i>
+                  </div>
+                  <div ng-show="displayCodeC0 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeC0 = 0">x</div>
+                  <pre id="codeC0" class="codesnipet" ng-show="displayCodeC0 == 1" readonly content-editable>
+      <code><kbd> plugin.js:</kbd>
+   $scope.editSubset = function (hierarchy) {
+      var handler = function (subset, elements) {
+         // subset.selected has what element was clicked
+         $scope.elements = subset.selected;
+      };
+      var subset = {
+         name: hierarchy.subset,
+         expression: hierarchy.expression,
+         expressions: hierarchy.expressions,
+         alias: hierarchy.alias,
+         isSelector: true
+      };
+      $subsetDialogs.open($scope.instance, hierarchy.dimension, hierarchy.name, subset, handler);
+   };
+      <kbd> template.html:</kbd>
+   &lt;button type="button" 
+      class="btn btn-secondary btn-sm" 
+      ng-click="editSubset(hierarchy, 'titles')"&gt;
+         &lt;i class="fa subset" title="{{'EDITSUBSET' | translate}}"&gt;&lt;/i&gt;
+      &lt;/button&gt;
+      </code>
+                         </pre>
+               </div>
+               <div class="col-md-6 mt-2">
+                  <div class="card">
+                     <div class="card-header" style="padding: 5px 10px;">
+                        <label>
+                           <i class="fa fa-fw chores"></i> Open TM1 objects</label>
+                     </div>
+                     <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                           <li class="list-group-item">
+                              <i class="fa dimensions"></i> Hierarchy Editor:
+                              <a href="#/dimension/{{instance}}/{{selections.dimension}}/{{selections.hierarchy}}">
+                                 href="#/dimension/{{instance}}/{{selections.dimension}}/{{selections.hierarchy}}"</a>
+                           </li>
+                           <li class="list-group-item">
+                              <i class="fa subset"></i> Subset:
+                              <a href="#/dimension/{{instance}}/{{selections.dimension}}/{{selections.hierarchy}}/subset/{{selections.subset}}">
+                                 href="#/dimension/{{instance}}/{{selections.dimension}}/{{selections.hierarchy}}/subset/{{selections.subset}}"</a>
+                           </li>
+                           <li class="list-group-item">
+                              <i class="fa view"></i> View:
+                              <a href="#/cube/{{instance}}/{{selections.cube}}/view/{{selections.view}}">
+                                 href="#/cube/{{instance}}/{{selections.cube}}/view/{{selections.view}}"</a>
+                           </li>
+                           <li class="list-group-item">
+                              <i class="fa rule"></i> Rule Editor:
+                              <a href="#/cube/{{instance}}/{{selections.cube}}">
+                                 href="#/cube/{{instance}}/{{selections.cube}}"</a>
+                           </li>
+                           <li class="list-group-item">
+                                 <i class="fa processes"></i> Process:
+                                 <a href="#/process/{{instance}}/{{selections.process}}">
+                                    href="#/process/{{instance}}/{{selections.process}}"</a>
+                              </li>
+                              <li class="list-group-item">
+                                    <i class="fa chores"></i> Chore:
+                                    <a href="#/chore/{{instance}}/{{selections.chore}}">
+                                       href="#/chore/{{instance}}/{{selections.chore}}"</a>
+                                 </li>
+                        </ul>
+                     </div>
+                  </div>
+                  <div ng-init="displayCodeC1 = 0" ng-click="displayCodeC1 = 1" class="btn btn-info open-copy-code">
+                     <i class="fa fa-code" aria-hidden="true"></i>
+                  </div>
+                  <div ng-show="displayCodeC1 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeC1 = 0">x</div>
+                  <pre id="codeC1" class="codesnipet" ng-show="displayCodeC1 == 1" readonly content-editable>
+         <code><kbd> plugin.js:</kbd>
+      $scope.editSubset = function (hierarchy) {
+         var handler = function (subset, elements) {
+            // subset.selected has what element was clicked
+            $scope.elements = subset.selected;
+         };
+         var subset = {
+            name: hierarchy.subset,
+            expression: hierarchy.expression,
+            expressions: hierarchy.expressions,
+            alias: hierarchy.alias,
+            isSelector: true
+         };
+         $subsetDialogs.open($scope.instance, hierarchy.dimension, hierarchy.name, subset, handler);
+      };
+         <kbd> template.html:</kbd>
+      &lt;button type="button" 
+         class="btn btn-secondary btn-sm" 
+         ng-click="editSubset(hierarchy, 'titles')"&gt;
+            &lt;i class="fa subset" title="{{'EDITSUBSET' | translate}}"&gt;&lt;/i&gt;
+         &lt;/button&gt;
+         </code>
+                            </pre>
+               </div>
+            </div>
+         </uib-tab>
+         <uib-tab>
+            <uib-tab-heading>
+               TM1 REST API
+            </uib-tab-heading>
+            <p>Some examples about how to get data using the TM1 Rest API and display it in your page. More information
+               on the TM1 Rest API can be found
+               <a href="https://code.cubewise.com/tm1-rest-api" target="_blank">here</a>.
+               https://{{adminHost}}:{{httpPortNumber}}/api/v1/$metadata
+            </p>
+            <p>To dig deeper in the TM1 REST API, you should have a look at the metadata of your instance at
+               <a href="https://{{adminHost}}:{{httpPortNumber}}/api/v1/$metadata" target="_blank">https://{{adminHost}}:{{httpPortNumber}}/api/v1/$metadata</a>.
+            </p>
+            <div class="row">
+               <div class="col-md-4 mt-2">
+                  <div class="card">
+                     <div class="card-header" style="padding: 5px 10px;">
+                        <label>
+                           Get number of cubes
+                        </label>
+                     </div>
+                     <div class="card-body">
+                        <div class="alert alert-primary" role="alert">
+                           Query: <label>/Cubes/$count</label>
+                        </div>
+                        <div class="alert alert-primary" role="alert">
+                           Result: <label>value.data</label>
+                        </div>
+                        <div class="text-center">
+                           <label>{{nbCubes}}</label>
+                        </div>
+                     </div>
+                  </div>
+                  <div ng-init="displayCodeR0 = 0" ng-click="displayCodeR0 = 1" class="btn btn-info open-copy-code">
+                     <i class="fa fa-code" aria-hidden="true"></i>
+                  </div>
+                  <div ng-show="displayCodeR0 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeR0 = 0">x</div>
+                  <pre id="codeR0" class="codesnipet" ng-show="displayCodeR0 == 1" readonly content-editable>
+      <code>
+         
+         
+         <kbd> plugin.js:</kbd>
+$http.get(encodeURIComponent($scope.instance) + "/Cubes/$count").then(function (value) {
+   $scope.nbCubes = value.data;
+}); 
+      </code>
+                         </pre>
+               </div>
+               <div class="col-md-4 mt-2">
+                  <div class="card">
+                     <div class="card-header" style="padding: 5px 10px;">
+                        <label>
+                           Get names of Model cubes
+                        </label>
+                     </div>
+                     <div class="card-body">
+                        <div class="alert alert-primary" role="alert">
+                           Query: <label>/ModelCubes()?$select=Name</label>
+                        </div>
+                        <div class="alert alert-primary" role="alert">
+                           Result: <label>value.data.value</label>
+                        </div>
+                        <div>
+                           <span ng-repeat="cube in modelCubes" class="badge badge-dark mr-1">{{cube.Name}}</span>
+                        </div>
+                     </div>
+                  </div>
+                  <div ng-init="displayCodeR1 = 0" ng-click="displayCodeR1 = 1" class="btn btn-info open-copy-code">
+                     <i class="fa fa-code" aria-hidden="true"></i>
+                  </div>
+                  <div ng-show="displayCodeR1 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeR1 = 0">x</div>
+                  <pre id="codeR1" class="codesnipet" ng-show="displayCodeR1 == 1" readonly content-editable>
+         <code>
+            
+            
+            <kbd> plugin.js:</kbd>
+   $http.get(encodeURIComponent($scope.instance) + "/ModelCubes()?$select=Name").then(function (value) {
+      $scope.modelCubes = value.data;
+   }); 
+         </code>
+                            </pre>
+               </div>
+               <div class="col-md-4 mt-2">
+                  <div class="card">
+                     <div class="card-header" style="padding: 5px 10px;">
+                        <label>
+                           Get Product Version
+                        </label>
+                     </div>
+                     <div class="card-body">
+                        <div class="alert alert-primary" role="alert">
+                           Query: <label>/Configuration/ProductVersion/$value</label>
+                        </div>
+                        <div class="alert alert-primary" role="alert">
+                           Result: <label>value.data</label>
+                        </div>
+                        <div class="text-center">
+                           <label>{{productVersion}}</label>
+                        </div>
+                     </div>
+                  </div>
+                  <div ng-init="displayCodeR2 = 0" ng-click="displayCodeR2 = 1" class="btn btn-info open-copy-code">
+                     <i class="fa fa-code" aria-hidden="true"></i>
+                  </div>
+                  <div ng-show="displayCodeR2 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeR2 = 0">x</div>
+                  <pre id="codeR2" class="codesnipet" ng-show="displayCodeR2 == 1" readonly content-editable>
+      <code>
+         
+         
+         <kbd> plugin.js:</kbd>
+   $http.get(encodeURIComponent($scope.instance) + "/Configuration/ProductVersion/$value").then(function (value) {
+      $scope.productVersion = value.data;
+   }); 
+      </code>
+                         </pre>
+               </div>
+            </div>
+         </uib-tab>
+         <uib-tab>
+            <uib-tab-heading>
+               Bootstrap 4
+            </uib-tab-heading>
+            <p>This is a template showcasing the optional theme stylesheet included in Bootstrap. Use it as a starting
+               point
+               to create something more unique by building on or modifying it. More information on
+               <a href="https://getbootstrap.com/docs/4.0/components/buttons/">getbootstrap.com</a>.</p>
+
+            <div class="row">
+               <div class="col-md-12">
+                  <auto-height>
+                     <div class="row">
+                        <!--CARD-->
+                        <div class="col-md-4 mt-2">
+                           <div class="card">
+                              <div class="card-header">
+                                 Card
+                              </div>
+                              <div class="card-body">
+                                 <div class="card">
+                                    <div class="card-header">
+                                       Card Header
+                                    </div>
+                                    <div class="card-body">
+                                       Card Body
+                                    </div>
+                                    <div class="card-footer">
+                                       Card Footer
+                                    </div>
+                                 </div>
+                              </div>
+                           </div>
+                           <div ng-init="displayCodeB0 = 0" ng-click="displayCodeB0 = 1" class="btn btn-info open-copy-code">
+                              <i class="fa fa-code" aria-hidden="true"></i>
+                           </div>
+                           <div ng-show="displayCodeB0 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeB0 = 0">x</div>
+                           <pre id="codeB0" class="codesnipet" ng-show="displayCodeB0 == 1" readonly content-editable>
+   <code>&lt;div class="card"&gt;
+      &lt;div class="card-header"&gt;
+         Card Header
+      &lt;/div&gt;
+      &lt;div class="card-body"&gt;
+         Card Body
+      &lt;/div&gt;
+      &lt;div class="card-footer"&gt;
+         Card Footer
+      &lt;/div&gt;
+   &lt;/div&gt;</code>
+                      </pre>
+                        </div>
+                        <!--TABS-->
+                        <div class="col-md-4 mt-2">
+                           <div class="card">
+                              <div class="card-header">
+                                 Tabs
+                              </div>
+                              <div class="card-body">
+                                 <uib-tabset>
+                                    <uib-tab>
+                                       <uib-tab-heading>
+                                          Tab 1
+                                       </uib-tab-heading>
+                                       Tab 1 Body
+                                    </uib-tab>
+                                    <uib-tab>
+                                       <uib-tab-heading>
+                                          Tab 2
+                                       </uib-tab-heading>
+                                       Tab 2 Body
+                                    </uib-tab>
+                                 </uib-tabset>
+                              </div>
+                           </div>
+                           <div ng-init="displayCodeB1 = 0" ng-click="displayCodeB1 = 1" class="btn btn-info open-copy-code">
+                              <i class="fa fa-code" aria-hidden="true"></i>
+                           </div>
+                           <div ng-show="displayCodeB1 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeB1 = 0">x</div>
+                           <pre id="codeB1" class="codesnipet" ng-show="displayCodeB1 == 1" readonly content-editable>
+<code>&lt;uib-tabset&gt;
+      &lt;uib-tab&gt;
+         &lt;uib-tab-heading&gt;
+            Tab 1
+         &lt;/uib-tab-heading&gt;
+         Tab 1 Body
+      &lt;/uib-tab&gt;
+      &lt;uib-tab&gt;
+         &lt;uib-tab-heading&gt;
+            Tab 2
+         &lt;/uib-tab-heading&gt;
+         Tab 2 Body
+      &lt;/uib-tab&gt;
+   &lt;/uib-tabset&gt;</code>
+                     </pre>
+                        </div>
+                        <!--Badges-->
+                        <div class="col-md-4 mt-2">
+                           <div class="card">
+                              <div class="card-header">
+                                 Badges
+                              </div>
+                              <div class="card-body">
+                                 <span class="badge badge-primary">Primary</span>
+                                 <span class="badge badge-secondary">Secondary</span>
+                                 <span class="badge badge-success">Success</span>
+                                 <span class="badge badge-danger">Danger</span>
+                                 <span class="badge badge-warning">Warning</span>
+                                 <span class="badge badge-info">Info</span>
+                                 <span class="badge badge-light">Light</span>
+                                 <span class="badge badge-dark">Dark</span>
+                              </div>
+                           </div>
+                           <div ng-init="displayCodeB2 = 0" ng-click="displayCodeB2 = 1" class="btn btn-info open-copy-code">
+                              <i class="fa fa-code" aria-hidden="true"></i>
+                           </div>
+                           <div ng-show="displayCodeB2 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeB2 = 0">x</div>
+                           <pre id="codeB2" class="codesnipet" ng-show="displayCodeB2 == 1" readonly content-editable>
+                           <code>
+   &lt;span class="badge badge-primary">Primary&lt;/span&gt;
+   &lt;span class="badge badge-secondary"&gt;Secondary&lt;/span&gt;
+   &lt;span class="badge badge-success"&gt;Success&lt;/span&gt;
+   &lt;span class="badge badge-danger"&gt;Danger&lt;/span&gt;
+   &lt;span class="badge badge-warning"&gt;Warning&lt;/span&gt;
+   &lt;span class="badge badge-info"&gt;Info&lt;/span&gt;
+   &lt;span class="badge badge-light"&gt;Light&lt;/span&gt;
+   &lt;span class="badge badge-dark"&gt;Dark&lt;/span&gt;
+                           </code>
+                                                </pre>
+                        </div>
+                        <!--Buttons-->
+                        <div class="col-md-4 mt-2">
+                           <div class="card">
+                              <div class="card-header">
+                                 Buttons
+                              </div>
+                              <div class="card-body">
+                                 <button type="button" class="btn btn-primary">Primary</button>
+                                 <button type="button" class="btn btn-secondary">Secondary</button>
+                                 <button type="button" class="btn btn-success">Success</button>
+                                 <button type="button" class="btn btn-danger">Danger</button>
+                                 <button type="button" class="btn btn-warning">Warning</button>
+                                 <button type="button" class="btn btn-info">Info</button>
+                                 <button type="button" class="btn btn-light">Light</button>
+                                 <button type="button" class="btn btn-dark">Dark</button>
+
+                                 <button type="button" class="btn btn-link">Link</button>
+                              </div>
+                           </div>
+                           <div ng-init="displayCodeB4 = 0" ng-click="displayCodeB4 = 1" class="btn btn-info open-copy-code">
+                              <i class="fa fa-code" aria-hidden="true"></i>
+                           </div>
+                           <div ng-show="displayCodeB4 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeB4 = 0">x</div>
+                           <pre id="codeB4" class="codesnipet" ng-show="displayCodeB4 == 1" readonly content-editable>
+                                                      <code>
+   &lt;button type="button" class="btn btn-primary"&gt;Primary&lt;/button&gt;
+   &lt;button type="button" class="btn btn-secondary"&gt;Secondary&lt;/button&gt;
+   &lt;button type="button" class="btn btn-success"&gt;Success&lt;/button&gt;
+   &lt;button type="button" class="btn btn-danger"&gt;Danger&lt;/button&gt;
+   &lt;button type="button" class="btn btn-warning"&gt;Warning&lt;/button&gt;
+   &lt;button type="button" class="btn btn-info"&gt;Info&lt;/button&gt;
+   &lt;button type="button" class="btn btn-light"&gt;Light&lt;/button&gt;
+   &lt;button type="button" class="btn btn-dark"&gt;Dark&lt;/button&gt;
+   
+   &lt;button type="button" class="btn btn-link"&gt;Link&lt;/button&gt;
+                                                      </code>
+                                                                           </pre>
+                        </div>
+                        <!--Button Group-->
+                        <div class="col-md-4 mt-2">
+                           <div class="card">
+                              <div class="card-header">
+                                 Button Group
+                              </div>
+                              <div class="card-body">
+                                 <div class="btn-group" role="group" aria-label="Basic example">
+                                    <button type="button" class="btn btn-secondary">Left</button>
+                                    <button type="button" class="btn btn-secondary">Middle</button>
+                                    <button type="button" class="btn btn-secondary">Right</button>
+                                 </div>
+                              </div>
+                           </div>
+                           <div ng-init="displayCodeB5 = 0" ng-click="displayCodeB5 = 1" class="btn btn-info open-copy-code">
+                              <i class="fa fa-code" aria-hidden="true"></i>
+                           </div>
+                           <div ng-show="displayCodeB5 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeB5 = 0">x</div>
+                           <pre id="codeB5" class="codesnipet" ng-show="displayCodeB5 == 1" readonly content-editable>
+         <code>
+   &lt;div class="btn-group" role="group" aria-label="Basic example"&gt;
+   &lt;button type="button" class="btn btn-secondary"&gt;Left&lt;/button&gt;
+   &lt;button type="button" class="btn btn-secondary"&gt;Middle&lt;/button&gt;
+   &lt;button type="button" class="btn btn-secondary"&gt;Right&lt;/button&gt;
+   &lt;/div&gt;
+         </code>
+                              </pre>
+                        </div>
+                        <!--Input Group-->
+                        <div class="col-md-4 mt-2">
+                           <div class="card">
+                              <div class="card-header">
+                                 Input Group
+                              </div>
+                              <div class="card-body">
+                                 <div class="input-group mb-3">
+                                    <div class="input-group-prepend">
+                                       <span class="input-group-text" id="basic-addon1">@</span>
+                                    </div>
+                                    <input type="text" class="form-control" placeholder="Username" aria-label="Username"
+                                       aria-describedby="basic-addon1">
+                                    <div class="input-group-append">
+                                       <span class="input-group-text" id="basic-addon2">@example.com</span>
+                                    </div>
+                                 </div>
+                              </div>
+                           </div>
+                           <div ng-init="displayCodeB6 = 0" ng-click="displayCodeB6 = 1" class="btn btn-info open-copy-code">
+                              <i class="fa fa-code" aria-hidden="true"></i>
+                           </div>
+                           <div ng-show="displayCodeB6 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeB6 = 0">x</div>
+                           <pre id="codeB6" class="codesnipet" ng-show="displayCodeB6 == 1" readonly content-editable>
+                                    <code>
+   &lt;div class="input-group mb-3"&gt;
+   &lt;div class="input-group-prepend"&gt;
+      &lt;span class="input-group-text" id="basic-addon1"&gt;@&lt;/span&gt;
+   &lt;/div&gt;
+   &lt;input type="text" class="form-control" placeholder="Username" aria-label="Username"
+      aria-describedby="basic-addon1"&gt;
+   &lt;div class="input-group-append"&gt;
+      &lt;span class="input-group-text" id="basic-addon2"&gt;@example.com&lt;/span&gt;
+   &lt;/div&gt;
+   &lt;/div&gt;
+                                    </code>
+                                                         </pre>
+                        </div>
+                        <!--Alerts-->
+                        <div class="col-md-4 mt-2">
+                           <div class="card">
+                              <div class="card-header">
+                                 Alerts
+                              </div>
+                              <div class="card-body">
+                                 <div class="alert alert-primary" role="alert">
+                                    A simple primary alert—check it out!
+                                 </div>
+                                 <div class="alert alert-secondary" role="alert">
+                                    A simple secondary alert—check it out!
+                                 </div>
+                                 <div class="alert alert-success" role="alert">
+                                    A simple success alert—check it out!
+                                 </div>
+                                 <div class="alert alert-danger" role="alert">
+                                    A simple danger alert—check it out!
+                                 </div>
+                                 <div class="alert alert-warning" role="alert">
+                                    A simple warning alert—check it out!
+                                 </div>
+                                 <div class="alert alert-info" role="alert">
+                                    A simple info alert—check it out!
+                                 </div>
+                                 <div class="alert alert-light" role="alert">
+                                    A simple light alert—check it out!
+                                 </div>
+                                 <div class="alert alert-dark" role="alert">
+                                    A simple dark alert—check it out!
+                                 </div>
+                              </div>
+                           </div>
+                           <div ng-init="displayCodeB3 = 0" ng-click="displayCodeB3 = 1" class="btn btn-info open-copy-code">
+                              <i class="fa fa-code" aria-hidden="true"></i>
+                           </div>
+                           <div ng-show="displayCodeB3 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeB3 = 0">x</div>
+                           <pre id="codeB3" class="codesnipet" ng-show="displayCodeB3 == 1" readonly content-editable>
+                                                      <code>
+      &lt;div class="alert alert-primary" role="alert"&gt;
+      A simple primary alert—check it out!
+   &lt;/div&gt;
+   &lt;div class="alert alert-secondary" role="alert"&gt;
+      A simple secondary alert—check it out!
+   &lt;/div&gt;
+   &lt;div class="alert alert-success" role="alert"&gt;
+      A simple success alert—check it out!
+   &lt;/div&gt;
+   &lt;div class="alert alert-danger" role="alert"&gt;
+      A simple danger alert—check it out!
+   &lt;/div&gt;
+   &lt;div class="alert alert-warning" role="alert"&gt;
+      A simple warning alert—check it out!
+   &lt;/div&gt;
+   &lt;div class="alert alert-info" role="alert"&gt;
+      A simple info alert—check it out!
+   &lt;/div&gt;
+   &lt;div class="alert alert-light" role="alert"&gt;
+      A simple light alert—check it out!
+   &lt;/div&gt;
+   &lt;div class="alert alert-dark" role="alert"&gt;
+      A simple dark alert—check it out!
+   &lt;/div&gt;
+                                                                                 </code>
+                                                                                                      </pre>
+                        </div>
+                        <!--Lists-->
+                        <div class="col-md-4 mt-2">
+                           <div class="card">
+                              <div class="card-header">
+                                 Lists
+                              </div>
+                              <div class="card-body">
+                                 <ul class="list-group list-group-flush">
+                                    <li class="list-group-item">Item 1</li>
+                                    <li class="list-group-item">Item 2</li>
+                                    <li class="list-group-item">Item 3</li>
+                                 </ul>
+                              </div>
+                           </div>
+                           <div ng-init="displayCodeB7 = 0" ng-click="displayCodeB7 = 1" class="btn btn-info open-copy-code">
+                              <i class="fa fa-code" aria-hidden="true"></i>
+                           </div>
+                           <div ng-show="displayCodeB7 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeB7 = 0">x</div>
+                           <pre id="codeB7" class="codesnipet" ng-show="displayCodeB7 == 1" readonly content-editable>
+<code>
+   &lt;ul class="list-group list-group-flush"&gt;
+   &lt;li class="list-group-item"&gt;Item 1/li&gt;
+   &lt;li class="list-group-item"&gt;Item 2&lt;/li&gt;
+   &lt;li class="list-group-item"&gt;Item 3&lt;/li&gt;
+   &lt;/ul&gt;
+</code>
+                                                                                                                              </pre>
+                        </div>
+                     </div>
+                  </auto-height>
+               </div>
+            </div>
+
+         </uib-tab>
+         <uib-tab>
+            <uib-tab-heading>
+               AngularJS
+            </uib-tab-heading>
+            <p>This is a template showcasing the main AngularJS directives. AngularJS is a structural framework for
+               dynamic
+               web apps. More information on the
+               <a href="https://docs.angularjs.org/guide/introduction">AngularJS website</a>
+            </p>
+            <div class="row">
+               <div class="col-md-12">
+                  <auto-height>
+                     <div class="row">
+                        <div class="col-md-3 mb-3">
+                           <div class="card">
+                              <div class="card-header" style="padding: 5px 10px;">
+                                 <label>
+                                    ng-model
+                                 </label>
+                              </div>
+                              <div class="card-body">
+                                 <input type="text" class="form-control" ng-model="values.nameModel">
+                              </div>
+                              <div class="card-footer">
+                                 <span>Show the value stored using ng-model.</span>
+                              </div>
+                           </div>
+                           <div ng-init="displayCodeA1 = 0" ng-click="displayCodeA1 = 1" class="btn btn-info open-copy-code">
+                              <i class="fa fa-code" aria-hidden="true"></i>
+                           </div>
+                           <div ng-show="displayCodeA1 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeA1 = 0">x
+                           </div>
+                           <pre id="codeA1" class="codesnipet" ng-show="displayCodeA1 == 1" readonly content-editable>
+   <code>
+   <kbd> template.html:</kbd>
+   &lt;input type="text" 
+      class="form-control" 
+      ng-model="values.nameModel"&gt;
+   </code>
+                      </pre>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                           <div class="card">
+                              <div class="card-header" style="padding: 5px 10px;">
+                                 <label>
+                                    ng-init
+                                 </label>
+                              </div>
+                              <div class="card-body">
+                                 <span ng-init="values.nameModel='My New Variable'">{{values.nameModel}}</span>
+                              </div>
+                              <div class="card-footer">
+                                 <span>Initialize a variable</span>
+                              </div>
+                           </div>
+                           <div ng-init="displayCodeA2 = 0" ng-click="displayCodeA2 = 1" class="btn btn-info open-copy-code">
+                              <i class="fa fa-code" aria-hidden="true"></i>
+                           </div>
+                           <div ng-show="displayCodeA2 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeA2 = 0">x
+                           </div>
+                           <pre id="codeA2" class="codesnipet" ng-show="displayCodeA2 == 1" readonly content-editable>
+   <code>
+   <kbd> template.html:</kbd>
+   ng-init="values.nameModel='My New Variable'"
+   </code>
+                      </pre>
+                        </div>
+                        <!--ng-change-->
+                        <div class="col-md-3 mb-3">
+                           <div class="card">
+                              <div class="card-header" style="padding: 5px 10px;">
+                                 <label>
+                                    ng-change
+                                 </label>
+                              </div>
+                              <div class="card-body text-center">
+                                 <div class="row">
+                                    <div class="col-md-6">
+                                       <input type="text" class="form-control" ng-change="countChange = countChange + 1"
+                                          ng-init="countChange=0" ng-model="myValue" />
+                                    </div>
+                                    <div class="col-md-6">
+                                       <h2>{{countChange}}</h2>
+                                    </div>
+                                 </div>
+                              </div>
+                              <div class="card-footer">
+                                 <span>Input to increase the value</span>
+                              </div>
+                           </div>
+                           <div ng-init="displayCodeA3 = 0" ng-click="displayCodeA3 = 1" class="btn btn-info open-copy-code">
+                              <i class="fa fa-code" aria-hidden="true"></i>
+                           </div>
+                           <div ng-show="displayCodeA3 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeA3 = 0">x
+                           </div>
+                           <pre id="codeA3" class="codesnipet" ng-show="displayCodeA3 == 1" readonly content-editable>
+      <code>
+      <kbd> template.html:</kbd>
+      ng-change="countChange = countChange + 1"
+      </code>
+                         </pre>
+                        </div>
+                        <!--ng-click-->
+                        <div class="col-md-3 mb-3">
+                           <div class="card">
+                              <div class="card-header" style="padding: 5px 10px;">
+                                 <label>
+                                    ng-click
+                                 </label>
+                              </div>
+                              <div class="card-body text-center">
+                                 <div class="row">
+                                    <div class="col-md-6">
+                                       <button type="button" class="btn btn-primary" ng-click="countClick = countClick + 1"
+                                          ng-init="countClick=0">Click</button>
+
+                                    </div>
+                                    <div class="col-md-6">
+                                       <h2>{{countClick}}</h2>
+                                    </div>
+                                 </div>
+                              </div>
+                              <div class="card-footer">
+                                 <span>Click to increase the value</span>
+                              </div>
+                           </div>
+                           <div ng-init="displayCodeA4 = 0" ng-click="displayCodeA4 = 1" class="btn btn-info open-copy-code">
+                              <i class="fa fa-code" aria-hidden="true"></i>
+                           </div>
+                           <div ng-show="displayCodeA4 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeA4 = 0">x
+                           </div>
+                           <pre id="codeA4" class="codesnipet" ng-show="displayCodeA4 == 1" readonly content-editable>
+      <code>
+      <kbd> template.html:</kbd>
+      ng-click="countClick = countClick + 1"
+      </code>
+                         </pre>
+                        </div>
+                        <!--ng-focus-->
+                        <div class="col-md-3 mb-3">
+                           <div class="card">
+                              <div class="card-header" style="padding: 5px 10px;">
+                                 <label>
+                                    ng-focus
+                                 </label>
+                              </div>
+                              <div class="card-body text-center">
+                                 <div class="row">
+                                    <div class="col-md-6">
+                                       <input type="text" class="form-control" ng-focus="countFocus = countFocus + 1"
+                                          ng-init="countFocus=0" />
+
+                                    </div>
+                                    <div class="col-md-6">
+                                       <h2>{{countFocus}}</h2>
+                                    </div>
+                                 </div>
+                              </div>
+                              <div class="card-footer">
+                                 <span>Click inside to increase the value</span>
+                              </div>
+                           </div>
+                           <div ng-init="displayCodeA5 = 0" ng-click="displayCodeA5 = 1" class="btn btn-info open-copy-code">
+                              <i class="fa fa-code" aria-hidden="true"></i>
+                           </div>
+                           <div ng-show="displayCodeA5 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeA5 = 0">x
+                           </div>
+                           <pre id="codeA5" class="codesnipet" ng-show="displayCodeA5 == 1" readonly content-editable>
+<code>
+<kbd> template.html:</kbd>
+   ng-focus="countFocus = countFocus + 1"
+</code>
+                         </pre>
+                        </div>
+                        <!--ng-blur-->
+                        <div class="col-md-3 mb-3">
+                           <div class="card">
+                              <div class="card-header" style="padding: 5px 10px;">
+                                 <label>
+                                    ng-blur
+                                 </label>
+                              </div>
+                              <div class="card-body text-center">
+                                 <div class="row">
+                                    <div class="col-md-6">
+                                       <input type="text" class="form-control" ng-blur="countBlur = countBlur + 1"
+                                          ng-init="countBlur=0" />
+                                    </div>
+                                    <div class="col-md-6">
+                                       <h2>{{countBlur}}</h2>
+                                    </div>
+                                 </div>
+                              </div>
+                              <div class="card-footer">
+                                 <span>Exit to increase the value</span>
+                              </div>
+                           </div>
+                           <div ng-init="displayCodeA6 = 0" ng-click="displayCodeA6 = 1" class="btn btn-info open-copy-code">
+                              <i class="fa fa-code" aria-hidden="true"></i>
+                           </div>
+                           <div ng-show="displayCodeA6 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeA6 = 0">x
+                           </div>
+                           <pre id="codeA6" class="codesnipet" ng-show="displayCodeA6 == 1" readonly content-editable>
+<code>
+<kbd> template.html:</kbd>
+   ng-blur="countBlur = countBlur + 1"
+</code>
+                         </pre>
+                        </div>
+                        <!--ng-class-->
+                        <div class="col-md-3 mb-3">
+                           <div class="card" ng-class="{'bg-dark text-white':changeClass==true}">
+                              <div class="card-header" style="padding: 5px 10px;">
+                                 <label>
+                                    ng-class
+                                 </label>
+                              </div>
+                              <div class="card-body text-center">
+                                 <div class="text-center" ng-init="changeClass=false">
+                                    <button type="button" class="btn btn-primary" ng-click="changeClass=!changeClass">Click</button>
+                                 </div>
+                              </div>
+                              <div class="card-footer">
+                                 <span>Click to change the class</span>
+                              </div>
+                           </div>
+                           <div ng-init="displayCodeA7 = 0" ng-click="displayCodeA7 = 1" class="btn btn-info open-copy-code">
+                              <i class="fa fa-code" aria-hidden="true"></i>
+                           </div>
+                           <div ng-show="displayCodeA7 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeA7 = 0">x
+                           </div>
+                           <pre id="codeA7" class="codesnipet" ng-show="displayCodeA7 == 1" readonly content-editable>
+<code>
+<kbd> template.html:</kbd>
+   ng-class="{'bg-dark text-white':changeClass==true}"
+</code>
+                         </pre>
+                        </div>
+                        <!--ng-if-->
+                        <div class="col-md-3 mb-3">
+                           <div class="card">
+                              <div class="card-header" style="padding: 5px 10px;">
+                                 <label>
+                                    ng-if
+                                 </label>
+                              </div>
+                              <div class="card-body text-center">
+                                 <div class="row" ng-init="showValue=true">
+                                    <div class="col-md-6">
+                                       <button type="button" class="btn btn-primary" ng-click="showValue =! showValue"
+                                          ng-init="countClick=0">Click</button>
+                                    </div>
+                                    <div class="col-md-6">
+                                       <h2 ng-if="showValue">{{countFocus}}</h2>
+                                    </div>
+                                 </div>
+                              </div>
+                              <div class="card-footer">
+                                 <span>Show/Hide content</span>
+                              </div>
+                           </div>
+                           <div ng-init="displayCodeA8 = 0" ng-click="displayCodeA8 = 1" class="btn btn-info open-copy-code">
+                              <i class="fa fa-code" aria-hidden="true"></i>
+                           </div>
+                           <div ng-show="displayCodeA8 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeA8 = 0">x
+                           </div>
+                           <pre id="codeA8" class="codesnipet" ng-show="displayCodeA8 == 1" readonly content-editable>
+<code>
+<kbd> template.html:</kbd>
+   ng-if="showValue"
+</code>
+                                                    </pre>
+                        </div>
+                        <!--ng-repeat-->
+                        <div class="col-md-3 mb-3">
+                           <div class="card">
+                              <div class="card-header" style="padding: 5px 10px;">
+                                 <label>
+                                    ng-repeat
+                                 </label>
+                              </div>
+                              <div class="card-body text-center">
+                                 <div class="row" ng-init="showValue=true">
+                                    <div>
+                                       <span ng-repeat="cube in modelCubes" class="badge badge-dark mr-1">{{cube.Name}}</span>
+                                    </div>
+                                 </div>
+                              </div>
+                              <div class="card-footer">
+                                 <span>Repeat a component</span>
+                              </div>
+                           </div>
+                           <div ng-init="displayCodeA9 = 0" ng-click="displayCodeA9 = 1" class="btn btn-info open-copy-code">
+                              <i class="fa fa-code" aria-hidden="true"></i>
+                           </div>
+                           <div ng-show="displayCodeA9 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeA9 = 0">x
+                           </div>
+                           <pre id="codeA9" class="codesnipet" ng-show="displayCodeA9 == 1" readonly content-editable>
+   <code>
+   <kbd> template.html:</kbd>
+   &lt;span ng-repeat="cube in modelCubes" class="badge badge-dark mr-1"&gt;<code ng-non-bindable>{{cube.Name}}</code>&lt;/span&gt;
+   </code>
+                              </pre>
+                        </div>
+                     </div>
+                  </auto-height>
+               </div>
+            </div>
+         </uib-tab>
+         <uib-tab>
+            <uib-tab-heading>
+               Third Party Libraries
+            </uib-tab-heading>
+            <p>To see all third party libraries available in Arc, check the About page by clicking the
+               <button class="btn btn-dark btn-sm" ng-click="" title="About">
+                  <i class="fa fa-info fa-fw"></i>
+               </button>
+               button at the top right corner. Below the most popular:
+            </p>
+            <div class="row">
+               <div class="col-md-4 mt-2">
+                  <div class="card">
+                     <div class="card-header" style="padding: 5px 10px;">
+                        <label><a href="https://github.com/likeastore/ngDialog" target="_blank">ngDialog</a></label>
+                     </div>
+                     <div class="card-body">
+                        <p>Modals and popups
+                        </p>
+                        <div class="text-center">
+                           <div class="btn-group" role="group" aria-label="Basic example">
+                              <button type="button" class="btn btn-primary" ng-click="openModal('My small modal','My message','small')">small</button>
+                              <button type="button" class="btn btn-primary" ng-click="openModal('My medium modal','My message','medium')">medium</button>
+                              <button type="button" class="btn btn-primary" ng-click="openModal('My large modal','My message','large')">large</button>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                  <div ng-init="displayCodeL1 = 0" ng-click="displayCodeL1 = 1" class="btn btn-info open-copy-code">
+                     <i class="fa fa-code" aria-hidden="true"></i>
+                  </div>
+                  <div ng-show="displayCodeL1 == 1" class="btn btn-default closecodebtn" ng-click="displayCodeL1 = 0">x
+                  </div>
+                  <pre id="codeL1" class="codesnipet" ng-show="displayCodeL1 == 1" readonly content-editable>
+   <code>
+   <kbd> plugin.js</kbd>
+   $scope.openModal = function (title, message, size) {
+      var dialog = ngDialog.open({
+         className: "ngdialog-theme-default "+size,
+         template: "__/plugins/cheatsheet/modal.html",
+         name: "Instances",
+         controller: ['$rootScope', '$scope', function ($rootScope, $scope) {
+
+            $scope.title = $scope.ngDialogData.title;
+            $scope.message = $scope.ngDialogData.message;
+
+         }],
+         data: {
+            title: title,
+            message: message
+         }
+      });
+   };
+   <kbd> template.html:</kbd>
+   ng-click="openModal('My small modal','My message','small')"
+   </code>
+                   </pre>
+               </div>
+               <div class="col-md-4 mt-2">
+                  <div class="card">
+                     <div class="card-header" style="padding: 5px 10px;">
+                        <label><a href="https://lodash.com/docs/4.17.11" target="_blank">Lodash</a></label>
+                     </div>
+                     <div class="card-body">
+                        <p>A modern JavaScript utility library delivering modularity, performance & extras.</p>
+                     </div>
+                  </div>
+               </div>
+               <div class="col-md-4 mt-2">
+                  <div class="card">
+                     <div class="card-header" style="padding: 5px 10px;">
+                        <label><a href="https://morgul.github.io/ui-bootstrap4/" target="_blank">UI Bootstrap 4</a></label>
+                     </div>
+                     <div class="card-body text-center">
+                        <p>Bootstrap components written in pure AngularJS by the AngularUI Team</p>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </uib-tab>
+
+      </uib-tabset>
+
+   </div>

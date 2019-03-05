@@ -1,0 +1,94 @@
+[
+   { "title":"Monthly", "stepPercentage":0, "content":[
+   {
+       "title": "1 - Update System Info Parameters",
+       "open": true,
+       "actions": [{
+           "category": "bg-info",
+           "name": "Open System Info cube",
+           "cube": "System Info",
+           "view": "Default"
+       },{
+           "category": "bg-info",
+           "name": "Check Region Subset",
+           "dimension": "Region",
+           "hierarchy": "Region",
+           "subset": "All Countries"
+       },{
+           "category": "bg-warning",
+           "name": "Run Time subsets update",
+           "process": "Dim.Date.LoadFromODBC"
+       }]
+   },
+   {
+       "title": "2 - Load General Ledger Data",
+       "open": true,
+       "actions": [{
+           "category": "bg-warning",
+           "name": "Load from File",
+           "process": "Cube.GeneralLedger.LoadFromFile"
+       },
+       {
+           "category": "bg-warning",
+           "name": "Run Migrate Daily chore",
+           "chore": "Migrate Daily"
+       },
+       {
+           "category": "bg-info",
+           "name": "Save Data",
+           "process": "Bedrock.Server.SaveDataAll"
+       }]
+   },
+   {
+       "title": "3 - Run TI and then check view",
+       "open": true,
+       "actions": [{
+           "category": "bg-warning",
+           "name": "Bedrock Server Wait",
+           "process": "Bedrock.Server.Wait"
+       },
+       {
+           "category": "bg-success",
+           "name": "System Info",
+           "type": "openView",
+           "cube": "System Info",
+           "view": "Default"
+       }]
+   },
+   {
+       "title": "4 - Check Reporting",
+       "open": true,
+       "actions": [{
+           "category": "bg-warning",
+           "name": "Load from File",
+           "process": "Cube.GeneralLedger.LoadFromFile"
+       },
+       {
+           "category": "bg-success",
+           "name": "System Info",
+           "type": "openView",
+           "cube": "System Info",
+           "view": "Default"
+       }]
+   }
+] },
+{ 
+   "title":"Weekly", "stepPercentage":0, "content":[
+   {
+       "title": "Update System Info Parameters",
+       "open": true,
+       "actions": [{
+           "category": "",
+           "name": "Open System Info cube",
+           "cube": "System Info",
+           "view": "Default"
+       },{
+           "category": "",
+           "name": "Check Region Subset",
+           "dimension": "Region",
+           "hierarchy": "Region",
+           "subset": "All Countries"
+       }]
+   }
+] }
+]
