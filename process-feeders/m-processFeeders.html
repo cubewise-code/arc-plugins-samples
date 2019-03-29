@@ -1,0 +1,36 @@
+<div>
+   <div class="modal-header text-white bg-dark">
+      <span>
+         <i class="fa fa-rocket"></i>
+         <span>Execute CubeProcessFeeders per cube
+         </span>
+      </span>
+   </div>
+   <div class="modal-body">
+      <div class="row">
+         <div class="col-md-12">
+            <span>
+                  Process Feeders for the following cubes:
+            </span>
+            <ul>
+               <li ng-repeat="cube in cubesToSave">{{cube.Name}} 
+                  <span ng-if="cube.responseTimeMs>0" class="badge ml-1 badge-success" ng-style="generateHSLColour(cube.responseTimeMs)">
+                        {{cube.responseTimeMs}} Ms
+                  </span>
+                   </li>
+            </ul>
+         </div>
+      </div>
+      <div class="row" ng-if="selections.responseTimeMs>0" style="margin-top:10px">
+            <div class="col-md-12">
+               <div class="alert alert-success" role="alert">
+                     <i class="fa fa-check-circle" aria-hidden="true" style="cursor:pointer"></i> Process feeders for all cubes in {{selections.responseTimeMs}} Ms
+               </div>
+            </div>
+         </div>
+   </div>
+   <div class="modal-footer">
+      <button type="button" class="btn btn-warning action ng-scope" ng-click="processFeedersPerCubes()">processFeeders</button>
+      <button type="button" class="btn btn-default action ng-scope" ng-click="closeThisDialog(0)">Cancel</button>
+   </div>
+</div>
