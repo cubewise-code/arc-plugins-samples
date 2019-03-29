@@ -1,0 +1,105 @@
+<div>
+   <style>
+      .card-button:hover {
+         background-color: #FFF3CD;
+         color: #856404;
+         border-color: #FFEEBA
+      }
+   </style>
+   <div class="toolbar">
+      <label class="page-title">
+         <i class="fa fa-rocket" style="padding-right:5px" aria-hidden="true"></i>
+         Process Feeders</label>
+      <span class="btn-toolbar pull-right">
+         <div class="input-group">
+            <span class="input-group-prepend">
+               <input class="form-control ng-pristine ng-untouched ng-valid ng-empty" style="display:inline;width:300px" type="text" ng-model="selections.cubeFilter"
+                  placeholder="Search for cubes">
+            </span>
+            <span class="input-group-append">
+               <button class="btn btn-secondary" ng-click="getCubes()" uib-popover="Refresh" popover-append-to-body="true" popover-trigger="'mouseenter'"
+                  popover-class="popover-class-success">
+                  <i class="fa fa-refresh" aria-hidden="true"></i>
+               </button>
+            </span>
+            <span class="input-group-append">
+               <button ng-disabled="cubesToSave.length==0" class="btn btn-warning" ng-click="openModalprocessFeeders()" uib-popover="Process Feeders for selected cubes"
+                  popover-append-to-body="true" popover-trigger="'mouseenter'" popover-class="popover-class-success">
+                  <i class="fa fa-rocket" aria-hidden="true"></i>
+               </button>
+            </span>
+         </div>
+      </span>
+   </div>
+   <div class="row">
+      <div class="col-md-12">
+         <auto-height>
+               <table class="table table-hover table-sm ng-scope">
+                     <thead>
+                        <tr>
+                           <th style="width: 30px;" class="text-center">
+                              <input style="margin-top:5px" type="checkbox" ng-model="defaults.selectAllCubes" ng-change="toggleAllCubeToSave(  )" class="ng-pristine ng-untouched ng-valid ng-empty"
+                                 uib-popover="Select All" popover-append-to-body="true" popover-trigger="'mouseenter'" popover-class="popover-class-default"> </th>
+                           <th></th>
+                           <th> Cube (All                   <a href>
+                              <i class="fa fa-toggle-on" ng-if="selections.showAllCubes" ng-click="selections.showAllCubes=!selections.showAllCubes"></i>
+                              <i class="fa fa-toggle-off" ng-if="!selections.showAllCubes" ng-click="selections.showAllCubes=!selections.showAllCubes"></i>
+                           </a>)</th>
+                           <th> Dimensions 
+                              <span ng-if="selections.cubeFilter" class="badge"
+                        style="font-size:0.9em;cursor: pointer" ng-style="generateHSLColour(selections.cubeFilter)" ng-click="clearFilter()">
+                           {{selections.cubeFilter}}
+                           <i class="fa fa-fw fa-close"></i>
+                        </span>
+                           </th>
+                        </tr>
+                     </thead>
+         
+                     <tbody>
+                        <tr ng-if="selections.showAllCubes" ng-repeat="cube in lists.cubes |filter:selections.cubeFilter track by cube.Name">
+                           <td class="text-center">
+                              <input ng-if="cube.Rules.length>0" style="margin-top:5px" type="checkbox" ng-model="cube.processFeeders" ng-change="toggleCubeToSave(cube)" class="ng-pristine ng-untouched ng-valid ng-empty"> </td>
+                           <td class="text-center">
+                              <button ng-if="cube.Rules.length>0" class="btn btn-warning btn-sm" uib-popover="Process Feeders" popover-append-to-body="true" popover-trigger="'mouseenter'"
+                                 popover-class="popover-class-default" style="cursor:pointer" ng-click="processFeedersForOneCube(cube)">
+                                 <i class="fa fa-rocket" aria-hidden="true"></i>
+                              </button>
+                           </td>
+                           <td> {{cube.Name}}
+                              <span ng-if="cube.responseTimeMs>0 && cube.showBadgeTime" class="badge ml-1 badge-success" ng-style="generateHSLColour(cube.responseTimeMs)">
+                                 {{cube.responseTimeMs}} Ms
+                              </span>
+                           </td>
+                           <td>
+                              <span ng-repeat="dimension in cube.dimensions" ng-click="addToFilter(dimension.Name)"
+                           class="badge badge-success mr-1" style="font-size:0.9em;cursor: pointer;"
+                           ng-style="generateHSLColour(dimension.Name)">{{dimension.Name}}</span>
+                        </td>
+                        </tr>
+                        <tr ng-if="!selections.showAllCubes" ng-repeat="cube in lists.cubesWithRules |filter:selections.cubeFilter track by cube.Name">
+                           <td class="text-center">
+                              <input ng-if="cube.Rules.length>0" style="margin-top:5px" type="checkbox" ng-model="cube.processFeeders" ng-change="toggleCubeToSave(cube)" class="ng-pristine ng-untouched ng-valid ng-empty"> </td>
+                           <td class="text-center">
+                              <button ng-if="cube.Rules.length>0" class="btn btn-warning btn-sm" uib-popover="Process Feeders" popover-append-to-body="true" popover-trigger="'mouseenter'"
+                                 popover-class="popover-class-default" style="cursor:pointer" ng-click="processFeedersForOneCube(cube)">
+                                 <i class="fa fa-rocket" aria-hidden="true"></i>
+                              </button>
+                           </td>
+                           <td> {{cube.Name}}
+                              <span ng-if="cube.responseTimeMs>0 && cube.showBadgeTime" class="badge ml-1 badge-success" ng-style="generateHSLColour(cube.responseTimeMs)">
+                                 {{cube.responseTimeMs}} Ms
+                              </span>
+                           </td>
+                           <td>
+                              <span ng-repeat="dimension in cube.dimensions" ng-click="addToFilter(dimension.Name)"
+                           class="badge badge-success mr-1" style="font-size:0.9em;cursor: pointer;"
+                           ng-style="generateHSLColour(dimension.Name)">{{dimension.Name}}</span>
+                        </td>
+                        </tr>
+                     </tbody>
+         
+                  </table>
+         </auto-height>
+      </div>
+   </div>
+</div>
