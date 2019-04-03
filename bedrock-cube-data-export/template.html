@@ -1,0 +1,142 @@
+<head>
+      <style type="text/css">
+         .ngdialog.ngdialog-theme-default .ngdialog-content {
+            width: 70%;
+            max-width: 650px;
+         }
+         #parameterSeparator{
+            margin-bottom: 0;
+            border: 0;
+            height: 1px;
+            background-image: linear-gradient(to right, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0));
+         }
+   
+         .disabled{
+            color: rgba(0,0,0,0.25);
+         }
+         
+         
+      </style>
+   </head>
+   <body>
+   <div>
+      <!-- Title -->
+      <div class="modal-header text-white bg-secondary" style="display:block">
+         <i class="fa fa-cloud-download"></i>
+         <span>Export {{ngDialogData.cubeName}} data to file</span>
+         <i class="fa fa-info-circle" aria-hidden="true" uib-popover="Execute the process Bedrock.Cube.Data.Export" popover-trigger="'mouseenter'"
+            popover-class="popover-class-default"></i>
+         </div>      
+      </div>
+      
+      <!-- Body -->
+      <div class="modal-body">
+         <!-- File name input box -->
+         <label ng-if="label" translate="NAME">:</label>
+         <div style="margin-top:5px">
+            <div>File name:</div>
+            <input class="form-control" type="text" ng-model="ngDialogData.fileName" />
+         </div>
+         <!-- File path input box -->
+         <div style="margin-top:5px">
+            <div>File path:</div>
+            <input class="form-control" type="text" ng-model="ngDialogData.filePath" />
+         </div>
+         <!-- Filter definition -->
+         <div style="margin-top:5px">
+            <div>
+               <!-- Pop-up information -->
+               <i class="fa fa-info-circle" aria-hidden="true" uib-popover="Specify element filter manually, as shown in Example, or through subset editor. To choose multiple elements per dimension you need to reopen subset editor each time." popover-trigger="'mouseenter'"
+               popover-class="popover-class-default"></i> 
+               <!-- Turn on/off manual filter definition -->
+               <span>Filter: </span>
+               <a href class="click" ng-click="ngDialogData.manualFilter = !ngDialogData.manualFilter">
+                  <i class="fa fa-toggle-on" ng-if="ngDialogData.manualFilter"></i>
+                  <i class="fa fa-toggle-off" ng-if="!ngDialogData.manualFilter"></i>
+               </a>
+               <span> Manual</span>
+            </div>
+            <!-- IF manual definition turned off, then display each dimension in a cube -->
+            <!-- Additionally: Skip Sandbox dimension with ng-if -->
+            <div class="row" ng-if="!ngDialogData.manualFilter">
+               <div class="col-md-6" ng-repeat="dim in ngDialogData.dimensions" ng-if="dim.Name!='Sandboxes'">
+                  <div>
+                     {{dim.Name}}:
+                  </div>
+                  <div class="input-group">
+                     <span class="input-group-prepend" style="width:80%">
+                        <input class="form-control" type="text" ng-model="dim.filter">
+                     </span>
+                     <span class="input-group-append">
+                        <button type="button" class="btn btn-secondary" ng-click="editSubset(dim, 'titles')">
+                           <i class="fa subset" title="{{'OPENSUBSETEDITOR' | translate}}"></i>
+                        </button>
+                     </span>
+                  </div>
+               </div>
+            </div>
+            <!-- IF manual definition turned off, then display additional information -->
+            <div ng-if="ngDialogData.manualFilter">
+               <input class="form-control" type="text" ng-model="ngDialogData.filter" />
+            </div>
+            <!-- Filter delimiters -->
+            <div style="margin-top:5px">
+               <span>Filter Delimiters:</span>
+            </div>
+            <div class="input-group mb-6">
+               <div class="input-group-prepend">
+                  <span class="input-group-text" style="border-radius: 0 0 0 .25rem">Dimension</span>
+               </div> 
+               <input type="text" class="form-control" placeholder="&&" ng-model="ngDialogData.dimensionDelim">
+               <div class="input-group-prepend">
+                  <span class="input-group-text">ElementStart</span>
+               </div> 
+               <input type="text" class="form-control" placeholder="::" ng-model="ngDialogData.elementStartDelim">
+               <div class="input-group-prepend">
+                  <span class="input-group-text">Element</span>
+               </div> 
+               <input type="text" id="elementDelim" class="form-control ng-pristine ng-untouched ng-valid ng-not-empty" placeholder="++" ng-model="ngDialogData.elementDelim" style="border-radius:0 0 .25rem 0">
+            </div>
+            <!-- Text - Filter example  -->
+            <div>Example: <em>Year {{ngDialogData.elementStartDelim}} 2006 {{ngDialogData.elementDelim}} 2007 {{ngDialogData.dimensionDelim}} 
+               Scenario{{ngDialogData.elementStartDelim}} Actual {{ngDialogData.elementDelim}} Budget {{ngDialogData.dimensionDelim}} Organization{{ngDialogData.elementStartDelim}} Europe
+            </em></div>
+         </div>
+         <!-- Additional parameters -->
+         <hr id="parameterSeparator">
+         <div class="row m-3">
+            <!-- Export file separator -->
+               <!-- Disabled until bedrock v4 -->
+                  <div class="col disabled"
+                     uib-popover="Not yet available" popover-trigger="'mouseenter'" popover-class="popover-class-default" 
+                     popover-placement="auto top-left"> 
+                     <div class="col">
+                        <span>TAB</span> 
+                        <a href class="click" ng-click="ngDialogData.exportSeparatorCSV = !ngDialogData.exportSeparatorCSV">  
+                           <i class="fa fa-toggle-on" ng-if="ngDialogData.exportSeparatorCSV"></i>
+                           <i class="fa fa-toggle-on fa-rotate-180" ng-if="!ngDialogData.exportSeparatorCSV"></i>
+                        </a>
+                        <span>CSV</span>
+                     </div>
+                  </div>
+            <!-- Checkboxes: Skip rules & Skip consolidations -->
+            <div class="col">
+               <input type="checkbox" ng-model="ngDialogData.skipRules" />
+               <span translate="SKIPRULES"></span>
+            </div>
+            <div class="col">
+               <input type="checkbox" ng-model="ngDialogData.skipCons" />
+               <span translate="SKIPCONS"></span>
+            </div>
+         </div>
+      </div>
+      <!-- Footer: Cancel / Run buttons -->
+      <div class="modal-footer">
+         <button type="button" class="btn btn-secondary action" ng-disabled="!ngDialogData.fileName.length" ng-click="ngDialogData.action(ngDialogData)"
+            translate="OK"></button>
+         <button type="button" class="btn action" ng-click="closeThisDialog(0)" translate="CANCEL"></button>
+      </div>
+   
+   </div>
+   
+   </body>
