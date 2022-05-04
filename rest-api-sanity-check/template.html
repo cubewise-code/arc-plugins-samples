@@ -1,0 +1,44 @@
+<div>
+    <div class="row">
+        <div class="col-md-12">
+            <h2><i class="fa fa-adjust" style="padding-right:5px" aria-hidden="true"></i> TM1 REST API Sanity Check</h2>
+            <h5> To check the most important REST API calls</h5>
+        </div>
+    </div> 
+    <div class="row">
+      <div class="col-md-12">
+         <auto-height>
+            <table class="table table-hover table-sm">
+               <thead>
+                  <tr >
+                     <th ng-repeat="column in lists.columns"> {{column.desc}} 
+ 
+                     </th>
+                  </tr>
+               </thead>
+               <tbody>
+                  <tr ng-repeat="item in requests">
+                     <td>
+                        <i ng-if="item.executing" class="fa fa-fw fa-refresh fa-spin"></i>
+                        <i ng-if="!item.executing" class="fa fa-fw {{item.icon}}"></i>
+                     </td>
+                     <td>
+                       {{item.method}}
+                     </td>
+                     <td>
+                        {{item.query}}
+                      </td>
+                      <td>
+                        {{item.statusCodeExpected}}
+                      </td>
+                      <td>
+                        {{item.statusResult}}
+                      </td>
+                  </tr>
+               </tbody>
+            </table>
+         </auto-height>
+      </div>
+
+   </div>  
+</div>
