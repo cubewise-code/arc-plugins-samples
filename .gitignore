@@ -1,1 +1,8 @@
 *.json
+general-ledger-load/
+mdx/
+rest-api-query/
+subset-view/
+to-do-list/
+
+
