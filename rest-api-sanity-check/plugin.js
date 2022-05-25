@@ -1,4 +1,3 @@
-
 // Uncomment the code arc.run.. below to enable this plugin
 
 
@@ -29,7 +28,7 @@ arc.directive("arcSanityCheck", function () {
       link: function ($scope, element, attrs) {
 
       },
-      controller: ["$scope", "$rootScope", "$http", "$tm1", "$translate", "$timeout", function ($scope, $rootScope, $http, $tm1, $translate, $timeout) {
+      controller: ["$scope", "$rootScope", "$http", "$tm1", "$translate", "$timeout", "ngDialog", function ($scope, $rootScope, $http, $tm1, $translate, $timeout, ngDialog) {
 
          //Variables area
          $scope.defaults = {};
@@ -42,6 +41,7 @@ arc.directive("arcSanityCheck", function () {
                {desc: "Status Expected", align:"center"},
                {desc: "Status Result", align:"center"},
                {desc: "Query", align:"left"},
+               {desc: "See Details", align:"center"},
                {desc: "Runtime", align:"center"}, 
             ],
          };
@@ -72,6 +72,7 @@ arc.directive("arcSanityCheck", function () {
                      const item = $scope.requests[index];
                      const indexToShow = index+1;
                      item.index = indexToShow;
+                     $scope.totalResult ++;
                   }
                } else {
                   $scope.values.settingFilesFound = false;
@@ -102,23 +103,28 @@ arc.directive("arcSanityCheck", function () {
                      if( item.statusResult == item.statusCodeExpected){
                         item.icon = "fa-check-circle"
                         item.queryStatus = 'success';
+                        console.info(result.data);
                      } else {
                         item.icon = "fa-exclamation-triangle"
-                        item.queryStatus = 'warning';     
+                        item.queryStatus = 'warning';   
+                        console.warn("%o warning info:", result.data);  
                      }
                   } else {
-                     item.icon = "fa-thin fa-bomb";
+                     item.icon = "fa-thin fa-times";
                      item.queryStatus = 'failed';
                      item.resultQuery = result.data.error;
                      item.message = result.data.error.message;
+                     console.error("%o error info:r", result.data);  
+                     
                   }
                   var receiveDate = (new Date()).getTime();
                   item.responseTimeMs = receiveDate - sendDate;
                   $scope.globalRuntime = $scope.globalRuntime + item.responseTimeMs;
+                  item.wasExecuted = true;
                   item.executing = false;
                   $scope.setResultsCount(item);
                   $scope.requestPending--;
-                  
+                  console.info(item);
                });
             };
          };
@@ -143,12 +149,8 @@ arc.directive("arcSanityCheck", function () {
                } else if (item.queryStatus == "failed") {
                   $scope.errorsResult++;
                };
-               $scope.calcGlobalCount();
          };
 
-         $scope.calcGlobalCount = function() {
-            $scope.totalResult = $scope.successesResult + $scope.warningsResult + $scope.errorsResult;
-         }
 
          $scope.resetStatus = function(item) {
                if (["success", "warning", "failed"].includes(item.queryStatus)) {
@@ -159,12 +161,11 @@ arc.directive("arcSanityCheck", function () {
                   } else if (item.queryStatus == "failed") {
                      $scope.errorsResult--;
                   };
-
                   item.queryStatus = null;
                   item.icon = null;
                   item.statusResult = null;
+                  item.wasExecuted = false;
                };
-               $scope.calcGlobalCount();
             };
 
          $scope.resetStatusAll = function() {
@@ -213,9 +214,7 @@ arc.directive("arcSanityCheck", function () {
                $scope.uncheckItem(item);
             });
          };
-
-            
-  
+          
 
          var init = function () {
             loadSettingsFile();
@@ -224,20 +223,82 @@ arc.directive("arcSanityCheck", function () {
 
          //Initial executions:
          init();
+     
+         //PopUps area
+         //Rules makes the dialog template look too messy and it's not really important to check the rule itself but if it gets returned.
+         // avoidShowingRules = function(item) {
+         //    if(item.resultQuery.value) {
+         //       for (let index = 0; index < item.resultQuery.value.length; index++) {
+         //          const element = item.resultQuery.value[index];
+         //          if (element.Rules != null) {
+         //             element.Rules = 'Avoiding showing too much code here';
+         //          };
+         //       };
+         //    } else if (item.resultQuery.Rules != null) {
+         //          const element = item.resultQuery.value[index];
+         //          if (element.Rules != null) {
+         //             element.Rules = 'Avoiding showing too much code here';
+         //          };
+         //    };
+         // };
 
+         $scope.showRequestBody = function (item) {
+            var dialog = ngDialog.open({
+               className: "ngdialog-theme-default medium",
+               template: "__/plugins/rest-api-sanity-check/m-request-body.html",
+               name: "Instances",
+               scope: $scope,
+               controller: ['$rootScope', '$scope', function ($rootScope, $scope) {
+                  if (item.method == "POST") {
+                     if (JSON.stringify(item.body).includes("MDX")) {
+                        stringifiedMDX = JSON.stringify(item.body);
+                        // Pendiente de iterar MDX y dejarlo bonito
+                        // Mostrarlo como código con su linting y todo??
+                        $scope.resultJSON = stringifiedMDX;
+                     } else {
+                        console.log("Entro en el else del includes");
+                        $scope.resultJSON = JSON.stringify(item.body, false, 2);
+                        // Añadir un botón de copiar mdx?
+                     }        
+                  } else if (item.method == "GET") {
+                     avoidRulesMessage = 'Avoiding showing too much code here';
+                     if(item.resultQuery.value) {
+                        for (let index = 0; index < item.resultQuery.value.length; index++) {
+                           const element = item.resultQuery.value[index];
+                           if (element.Rules != null) {
+                              element.Rules = avoidRulesMessage;
+                           };
+                        };
+                     } else if (item.resultQuery.Rules != null) {
+                           const element = item.resultQuery;
+                           console.log(element);
+                           if (element.Rules != null) {
+                              element.Rules = avoidRulesMessage;
+                           };
+                     };
+                     console.log(item.resultQuery.value);
+
+                     $scope.queryData = JSON.stringify(item.resultQuery, false, 2);
+                     // }     
+                  };
+                  $scope.itemMethod = item.method;
+               }],
+            });
+         };
+
+         
 
          //Trigger an event after the login screen
          $scope.$on("login-reload", function (event, args) {
 
          });
+
          
          //Reloads the page, not using it at the moment
          $scope.reload = function() {
                console.log("loading...");
                location.reload(true);
            };
-
-
 
 
          //Close the tab

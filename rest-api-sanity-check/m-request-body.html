@@ -1,0 +1,19 @@
+<div>
+    <div class="modal-header bg-light dialogforpopup">
+        <div ng-if="itemMethod=='POST'">
+            <h4>
+                Body:
+            </h4>
+            <pre><code>{{resultJSON}}</code></pre>
+        </div>
+        <div ng-if="itemMethod=='GET'">
+            <h4>
+                Query data:
+            </h4>
+            <pre><code>{{queryData}}</code></pre>
+        </div>
+        <div ng-if="itemMethod=='DELETE'">
+            {{message}}
+        </div>
+    </div>
+</div>

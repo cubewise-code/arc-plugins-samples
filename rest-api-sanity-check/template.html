@@ -44,7 +44,8 @@
                   </tr>
                </thead>
                <tbody>
-                  <tr ng-if="item.queryStatus==statusFilter || statusFilter==null" ng-repeat="item in requests" class="ng-scope" ng-class="{'alert alert-success': item.queryStatus == 'success', 'alert alert-danger': item.queryStatus == 'failed', 'alert alert-warning': item.queryStatus == 'warning'}">              
+                  <!-- <tr ng-if="item.queryStatus==statusFilter || statusFilter==null" ng-dblclick="showRequestBody(item)" ng-repeat="item in requests" style="cursor:pointer;" class="ng-scope" ng-class="{'alert alert-success': item.queryStatus == 'success', 'alert alert-danger': item.queryStatus == 'failed', 'alert alert-warning': item.queryStatus == 'warning'}"> -->
+                     <tr ng-if="item.queryStatus==statusFilter || statusFilter==null" ng-repeat="item in requests" class="ng-scope" ng-class="{'alert alert-success': item.queryStatus == 'success', 'alert alert-danger': item.queryStatus == 'failed', 'alert alert-warning': item.queryStatus == 'warning'}">   
                      <td>
                         <div class="click mt-1 mb-1 ml-2" style="white-space:nowrap;">
                            <i ng-if="item.checked==false || item.checked==null" ng-click="checkItem(item)" class="fa fa-square-o text-info" title="unchecked"></i>
@@ -70,8 +71,17 @@
                       <td style="text-align:left">
                         {{item.query}}
                       </td>
+                      <td ng-if="item.wasExecuted && item.method != 'DELETE'" style="text-align:center">
+                        <button type="button" class="btn btn-secondary btn-sm" ng-click="showRequestBody(item)">
+                           <i class="fa fa-eye"></i>
+                        </button>
+                      </td>
+                      <td ng-if="!item.wasExecuted || item.method == 'DELETE'">
+                        {{blank}}
+                     </td>
                       <td ng-if="item.queryStatus!='success'">
                         {{blank}}
+                     </td>
                       <td ng-if="item.queryStatus == 'success'" class="badge mt-2 ml-5 badge-success text-center">
                         {{item.responseTimeMs | num:0}} ms
                      </td>
