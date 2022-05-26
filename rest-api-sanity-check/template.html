@@ -2,7 +2,7 @@
    <div class="row-flex">
       <div class="col-sm-12 align-baseline" display="flex">
             <div class="btn-group">
-               <button type ="button" class="btn btn-secondary" title="Execute" ng-disabled="requestPending > 0" ng-click="executeAllQueries()">
+               <button type ="button" class="btn btn-secondary" title="Execute" ng-disabled="requestPending > 0" ng-click="executeQueries(0)">
                   <i ng-if="!options.executing" class="fa fa-fw fa-bolt ng-scope"></i>
                   Execute
                </button>

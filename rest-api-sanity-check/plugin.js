@@ -1,7 +1,3 @@
-// Uncomment the code arc.run.. below to enable this plugin
-
-
-
 arc.run(['$rootScope', function ($rootScope) {
 
    $rootScope.plugin("arcSanityCheck", "TM1 REST API Sanity Check", "page", {
@@ -57,45 +53,24 @@ arc.directive("arcSanityCheck", function () {
          $scope.blank = "";
          $scope.isProcessing = false;
          $scope.globalRuntime = 0;
+         executeQueriesIndex = 0;
 
 
-         //Functions
-         var loadSettingsFile = function () {
-            $scope.requests = [];
-            $scope.values.settingsFileJSONError = false;
-            $http.get("__/plugins/rest-api-sanity-check/requests.json").then(function (result) {
-               if (result.status === 200) {
-                  $scope.values.settingFilesFound = true;
-                  $scope.requests = result.data;            
-                  $scope.checkAllItems();
-                  for (let index = 0; index < $scope.requests.length; index++) {
-                     const item = $scope.requests[index];
-                     const indexToShow = index+1;
-                     item.index = indexToShow;
-                     $scope.totalResult ++;
-                  }
-               } else {
-                  $scope.values.settingFilesFound = false;
-                  $scope.values.settingsFileErrorMessage = result.data;
-               }
-            }, function (error) {
-               $scope.values.settingsFileJSONError = true;
-            }
-            );
+         // original
+         $scope.executeQueries = function () {
 
-           
-         };
-
-         //Execute Query
-        $scope.executeOneQuery = function (item) {
-           if(item.checked) {
-              $scope.requestPending++;
-               var sendDate = (new Date()).getTime();
+            console.log(executeQueriesIndex);
+            item = $scope.requests[executeQueriesIndex];
+            $scope.requestPending = 1;
+            // console.log(item);
+            if(item.checked) {       
                $scope.resetStatus(item);
                item.executing = true;
                var restApiQuery = "/" + item.query;
                var sendDate = (new Date()).getTime();
-               $tm1.async($scope.instance, item.method, restApiQuery, item.body).then(function (result) {
+               //look for a way to run this sync
+               $tm1.async($scope.instance, item.method, restApiQuery, item.body).then(function (result) {            
+                  // var sendDate = (new Date()).getTime();
                   item.statusResult = result.status;
                   if ($scope.goodHttpStatus.includes(result.status)) {
                      item.resultQuery = result.data;
@@ -122,25 +97,54 @@ arc.directive("arcSanityCheck", function () {
                   $scope.globalRuntime = $scope.globalRuntime + item.responseTimeMs;
                   item.wasExecuted = true;
                   item.executing = false;
-                  $scope.setResultsCount(item);
-                  $scope.requestPending--;
-                  console.info(item);
+                  $scope.setResultsCount(item);           
+
+                  if($scope.requests.length > executeQueriesIndex + 1) {
+                     executeQueriesIndex++;
+                     $scope.executeQueries();
+                  } else {
+                     $scope.requestPending = 0;
+                  }
+                  // console.log(item);
                });
-            };
+            } else {
+               executeQueriesIndex++;
+               if($scope.requests.length >= executeQueriesIndex + 1) {
+                  $scope.executeQueries();
+                  $scope.requestPending = 0;
+               };
+            }; 
          };
 
 
-         $scope.executeAllQueries = function (){
-            /*requestPending set to 0 to disable the execution button
-            we set globalRuntime to 0 to reset the global runtime*/
-            $scope.requestPending = 0;
-            $scope.globalRuntime = 0;
-            $scope.requests.forEach(item => {
-               $scope.executeOneQuery(item)              
-            })
+         //Functions
+
+         //loads the requests
+         var loadSettingsFile = function () {
+            $scope.requests = [];
+            $scope.values.settingsFileJSONError = false;
+            $http.get("__/plugins/rest-api-sanity-check/requests.json").then(function (result) {
+               if (result.status === 200) {
+                  $scope.values.settingFilesFound = true;
+                  $scope.requests = result.data;            
+                  $scope.checkAllItems();
+                  for (let index = 0; index < $scope.requests.length; index++) {
+                     const item = $scope.requests[index];
+                     const indexToShow = index+1;
+                     item.index = indexToShow;
+                     $scope.totalResult ++;
+                  }
+               } else {
+                  $scope.values.settingFilesFound = false;
+                  $scope.values.settingsFileErrorMessage = result.data;
+               }
+            }, function (error) {
+               $scope.values.settingsFileJSONError = true;
+            }
+            );     
          };
 
-         
+         //Set the count of successes, warnings and errors
          $scope.setResultsCount = function(item) {
                if(item.queryStatus == "success") {
                   $scope.successesResult++;
@@ -151,7 +155,7 @@ arc.directive("arcSanityCheck", function () {
                };
          };
 
-
+         //Resets the query status to the initial one
          $scope.resetStatus = function(item) {
                if (["success", "warning", "failed"].includes(item.queryStatus)) {
                   if (item.queryStatus == "success") {
@@ -173,8 +177,10 @@ arc.directive("arcSanityCheck", function () {
                $scope.resetStatus(item);
             });
             $scope.globalRuntime = 0;
+            executeQueriesIndex = 0;
          };
 
+         //
          $scope.setStatusFilter = function(text) { 
             if($scope.statusFilter == text) {
                $scope.statusFilter = null;
@@ -183,6 +189,7 @@ arc.directive("arcSanityCheck", function () {
             };
          };
 
+         //check - uncheck query items
          $scope.checkItem = function(item) {
             item.checked = true;
          };
@@ -224,23 +231,6 @@ arc.directive("arcSanityCheck", function () {
          //Initial executions:
          init();
      
-         //PopUps area
-         //Rules makes the dialog template look too messy and it's not really important to check the rule itself but if it gets returned.
-         // avoidShowingRules = function(item) {
-         //    if(item.resultQuery.value) {
-         //       for (let index = 0; index < item.resultQuery.value.length; index++) {
-         //          const element = item.resultQuery.value[index];
-         //          if (element.Rules != null) {
-         //             element.Rules = 'Avoiding showing too much code here';
-         //          };
-         //       };
-         //    } else if (item.resultQuery.Rules != null) {
-         //          const element = item.resultQuery.value[index];
-         //          if (element.Rules != null) {
-         //             element.Rules = 'Avoiding showing too much code here';
-         //          };
-         //    };
-         // };
 
          $scope.showRequestBody = function (item) {
             var dialog = ngDialog.open({
@@ -252,15 +242,12 @@ arc.directive("arcSanityCheck", function () {
                   if (item.method == "POST") {
                      if (JSON.stringify(item.body).includes("MDX")) {
                         stringifiedMDX = JSON.stringify(item.body);
-                        // Pendiente de iterar MDX y dejarlo bonito
-                        // Mostrarlo como código con su linting y todo??
                         $scope.resultJSON = stringifiedMDX;
                      } else {
-                        console.log("Entro en el else del includes");
                         $scope.resultJSON = JSON.stringify(item.body, false, 2);
-                        // Añadir un botón de copiar mdx?
+
                      }        
-                  } else if (item.method == "GET") {
+                  } else if (item.method == "GET" || item.method == "PATCH") {
                      avoidRulesMessage = 'Avoiding showing too much code here';
                      if(item.resultQuery.value) {
                         for (let index = 0; index < item.resultQuery.value.length; index++) {
@@ -271,15 +258,13 @@ arc.directive("arcSanityCheck", function () {
                         };
                      } else if (item.resultQuery.Rules != null) {
                            const element = item.resultQuery;
-                           console.log(element);
                            if (element.Rules != null) {
                               element.Rules = avoidRulesMessage;
                            };
                      };
                      console.log(item.resultQuery.value);
 
-                     $scope.queryData = JSON.stringify(item.resultQuery, false, 2);
-                     // }     
+                     $scope.queryData = JSON.stringify(item.resultQuery, false, 2);  
                   };
                   $scope.itemMethod = item.method;
                }],
@@ -287,7 +272,6 @@ arc.directive("arcSanityCheck", function () {
          };
 
          
-
          //Trigger an event after the login screen
          $scope.$on("login-reload", function (event, args) {
 
@@ -314,6 +298,8 @@ arc.directive("arcSanityCheck", function () {
          $scope.$on("$destroy", function (event) {
 
          });
+
+         
 
       }]
    };
