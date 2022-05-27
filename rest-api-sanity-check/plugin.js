@@ -286,26 +286,30 @@ arc.directive("arcSanityCheck", function () {
                scope: $scope,
                controller: ['$rootScope', '$scope', function ($rootScope, $scope) {
                   if (item.method == "POST") {
-                     if (JSON.stringify(item.body).includes("MDX")) {
-                        stringifiedMDX = JSON.stringify(item.body);
+                     itemBody = item.body;
+                     dataWithoutBody = item.body = "see body on the body tab";
+                     if (JSON.stringify(itemBody).includes("MDX")) {
+                        stringifiedMDX = JSON.stringify(itemBody);
                         $scope.resultJSON = stringifiedMDX;
                      } else {
-                        $scope.resultJSON = JSON.stringify(item.body, false, 2);
-   
-                     }        
+                        $scope.resultJSON = JSON.stringify(itemBody, false, 2);
+                     }
+                     $scope.queryData = JSON.stringify(item, false, 2);
                   } else if (item.method == "GET" || item.method == "PATCH") {
-                     avoidRulesMessage = 'Avoiding showing too much code here';
+                     // avoidRulesMessage = 'Avoiding showing too much code here';
                      if(item.resultQuery.value) {
                         for (let index = 0; index < item.resultQuery.value.length; index++) {
                            const element = item.resultQuery.value[index];
                            if (element.Rules != null) {
-                              element.Rules = avoidRulesMessage;
+                              shortenedRule = element.Rules.substring(0, 100) + "...";
+                              element.Rules = shortenedRule;
                            };
                         };
                      } else if (item.resultQuery.Rules != null) {
                            const element = item.resultQuery;
                            if (element.Rules != null) {
-                              element.Rules = avoidRulesMessage;
+                              shortenedRule = element.Rules.substring(0, 100) + "...";
+                              element.Rules = shortenedRule;
                            };
                      };
                      $scope.queryData = JSON.stringify(item.resultQuery, false, 2);  
