@@ -72,7 +72,7 @@ arc.directive("arcSanityCheck", function () {
          $scope.executeQueriesSync = function () {
             item = $scope.requests[executeQueriesIndex];
             console.debug(item.name + "'s index is " + item.dependencyIndex);
-            if(item.dependencyIndex > 0) {  
+            if(item.isDependent) {  
                if(item.checked) {       
                   $scope.resetStatus(item);
                   item.executing = true;
@@ -108,7 +108,7 @@ arc.directive("arcSanityCheck", function () {
                      $scope.setResultsCount(item);                             
                      tryNextItem();
                      tryToEnableButton();
-                     // something weird happeing here but doesn't look to have an impact on the plugin
+                     // something weird happening here but doesn't look to have an impact on the plugin
                      // console.log(item);
                   });
                } else {
@@ -120,12 +120,69 @@ arc.directive("arcSanityCheck", function () {
 
          };
 
+         //running next query waiting for the current one to end
          tryNextItem = function() {
             executeQueriesIndex++;
             if($scope.requests.length >= executeQueriesIndex + 1) {
                $scope.executeQueriesSync();
             };
          };
+
+         //for those which are async:
+         $scope.executeOneQuery = function (item) {
+            if(item.checked && !item.isDependent) {
+                  // $scope.requestPending++;
+                  var sendDate = (new Date()).getTime();
+                  $scope.resetStatus(item);
+                  item.executing = true;
+                  var restApiQuery = "/" + item.query;
+                  var sendDate = (new Date()).getTime();
+                  $tm1.async($scope.instance, item.method, restApiQuery, item.body).then(function (result) {
+                     item.statusResult = result.status;
+                     if ($scope.goodHttpStatus.includes(result.status)) {
+                        item.resultQuery = result.data;
+                        item.message = null;
+                        if( item.statusResult == item.statusCodeExpected){
+                           item.icon = "fa-check-circle"
+                           item.queryStatus = 'success';
+                           console.info(result.data);
+                        } else {
+                           item.icon = "fa-exclamation-triangle"
+                           item.queryStatus = 'warning';   
+                           console.warn("%o warning info:", result.data);  
+                        }
+                     } else {
+                        item.icon = "fa-thin fa-times";
+                        item.queryStatus = 'failed';
+                        item.resultQuery = result.data.error;
+                        item.message = result.data.error.message;
+                        console.error("%o error info:r", result.data);  
+                        
+                     }
+                     var receiveDate = (new Date()).getTime();
+                     item.responseTimeMs = receiveDate - sendDate;
+                     $scope.globalRuntime = $scope.globalRuntime + item.responseTimeMs;
+                     item.wasExecuted = true;
+                     item.executing = false;
+                     $scope.setResultsCount(item);
+                     console.info(item);
+                     tryToEnableButton();
+                     // $scope.requestPending--;
+                  });
+               };
+            };
+   
+   
+            $scope.executeQueriesAsync = function (){
+               /*requestPending set to 0 to disable the execution button
+               we set globalRuntime to 0 to reset the global runtime*/
+               //  $scope.requestPending = 0;
+               $scope.globalRuntime = 0;
+               _.each($scope.requests, function(item) {
+                  $scope.executeOneQuery(item)              
+               });
+            };
+
 
          tryToEnableButton = function() {
             checkedItemsCount = 0;
@@ -143,60 +200,7 @@ arc.directive("arcSanityCheck", function () {
          };
 
 
-         //for those which are async:
-         $scope.executeOneQuery = function (item) {
-         if(item.checked && item.dependencyIndex == null) {
-               // $scope.requestPending++;
-               var sendDate = (new Date()).getTime();
-               $scope.resetStatus(item);
-               item.executing = true;
-               var restApiQuery = "/" + item.query;
-               var sendDate = (new Date()).getTime();
-               $tm1.async($scope.instance, item.method, restApiQuery, item.body).then(function (result) {
-                  item.statusResult = result.status;
-                  if ($scope.goodHttpStatus.includes(result.status)) {
-                     item.resultQuery = result.data;
-                     item.message = null;
-                     if( item.statusResult == item.statusCodeExpected){
-                        item.icon = "fa-check-circle"
-                        item.queryStatus = 'success';
-                        console.info(result.data);
-                     } else {
-                        item.icon = "fa-exclamation-triangle"
-                        item.queryStatus = 'warning';   
-                        console.warn("%o warning info:", result.data);  
-                     }
-                  } else {
-                     item.icon = "fa-thin fa-times";
-                     item.queryStatus = 'failed';
-                     item.resultQuery = result.data.error;
-                     item.message = result.data.error.message;
-                     console.error("%o error info:r", result.data);  
-                     
-                  }
-                  var receiveDate = (new Date()).getTime();
-                  item.responseTimeMs = receiveDate - sendDate;
-                  $scope.globalRuntime = $scope.globalRuntime + item.responseTimeMs;
-                  item.wasExecuted = true;
-                  item.executing = false;
-                  $scope.setResultsCount(item);
-                  console.info(item);
-                  tryToEnableButton();
-                  // $scope.requestPending--;
-               });
-            };
-         };
 
-
-         $scope.executeQueriesAsync = function (){
-            /*requestPending set to 0 to disable the execution button
-            we set globalRuntime to 0 to reset the global runtime*/
-            //  $scope.requestPending = 0;
-            $scope.globalRuntime = 0;
-            _.each($scope.requests, function(item) {
-               $scope.executeOneQuery(item)              
-            });
-         };
 
          //Functions
 
@@ -280,7 +284,7 @@ arc.directive("arcSanityCheck", function () {
          //See Details PopUp
          $scope.seeDetails = function (item) {
             var dialog = ngDialog.open({
-               className: "ngdialog-theme-default medium",
+               className: "ngdialog-theme-default large",
                template: "__/plugins/rest-api-sanity-check/m-request-body.html",
                name: "Instances",
                scope: $scope,
@@ -294,7 +298,7 @@ arc.directive("arcSanityCheck", function () {
                      } else {
                         $scope.resultJSON = JSON.stringify(itemBody, false, 2);
                      }
-                     $scope.queryData = JSON.stringify(item, false, 2);
+                     // $scope.queryData = JSON.stringify(item, false, 2);
                   } else if (item.method == "GET" || item.method == "PATCH") {
                      // avoidRulesMessage = 'Avoiding showing too much code here';
                      if(item.resultQuery.value) {
@@ -312,8 +316,9 @@ arc.directive("arcSanityCheck", function () {
                               element.Rules = shortenedRule;
                            };
                      };
-                     $scope.queryData = JSON.stringify(item.resultQuery, false, 2);  
+                     // $scope.queryData = JSON.stringify(item.resultQuery, false, 2);  
                   };
+                  $scope.queryData = JSON.stringify(item, false, 2);
                   $scope.itemMethod = item.method;
                }],
             });

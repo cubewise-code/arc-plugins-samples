@@ -71,12 +71,12 @@
                       <td style="text-align:left">
                         {{item.query}}
                       </td>
-                      <td ng-if="item.wasExecuted && item.method != 'DELETE'" style="text-align:center">
+                     <td ng-if="item.wasExecuted" style="text-align:center">
                         <button type="button" class="btn btn-secondary btn-sm" ng-click="seeDetails(item)">
                            <i class="fa fa-eye"></i>
                         </button>
                       </td>
-                      <td ng-if="!item.wasExecuted || item.method == 'DELETE'">
+                      <td ng-if="!item.wasExecuted">
                         {{blank}}
                      </td>
                       <td ng-if="item.queryStatus!='success'">
