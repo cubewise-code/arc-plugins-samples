@@ -3,17 +3,32 @@
          <uib-tab-heading>
             Data
          </uib-tab-heading>
-            <div>
-                <pre><code>{{queryData}}</code></pre>
+            <div class="card-body">
+               <auto-height>
+                  <json-formatter json="queryData" open="1"></json-formatter>
+               </auto-height>
             </div>
+            <!-- </div> -->
          </uib-tab>
       <uib-tab>
          <uib-tab-heading>
-            Body
+            {{bodyTitle}}
          </uib-tab-heading>
-         <div>
-            <pre><code>{{resultJSON}}</code></pre>
-        </div>
+
+         <div class="card-body">
+            <div ng-if="showBodyTabAsMDX == false">
+               <auto-height>
+                  <json-formatter json="resultBody" open="1"></json-formatter>
+               </auto-height>
+            </div>
+            <div ng-if="showBodyTabAsMDX">
+               <pre ui-ace="{ onLoad : editorLoaded }" ng-model="resultBody"
+                  auto-height auto-height-options="{noScroll: true, watchTab: true}">
+                  <div ng-bind-html="resultBody" style="overflow-y: auto;"></div>
+               </pre>
+               
+            </div>
+         </div>
       </uib-tab>
    </uib-tabset>
 

@@ -12,7 +12,6 @@ arc.run(['$rootScope', function ($rootScope) {
 }]);
 
 
-
 arc.directive("arcSanityCheck", function () {
    return {
       restrict: "EA",
@@ -63,18 +62,18 @@ arc.directive("arcSanityCheck", function () {
          $scope.executeQueries = function() {
                $scope.resetStatusAll();
                $scope.requestPending = 1;
-               $scope.executeQueriesSync();
-               $scope.executeQueriesAsync();
+               executeQueriesSync();
+               executeQueriesAsync();
          };
 
 
-         //for those which are not async:
-         $scope.executeQueriesSync = function () {
+         //for those which are not async/dependent:
+         var executeQueriesSync = function () {
             item = $scope.requests[executeQueriesIndex];
-            console.debug(item.name + "'s index is " + item.dependencyIndex);
-            if(item.isDependent) {  
+            // console.debug(item.name + "'s index is " + item.dependencyIndex);
+            if(item.isDependent) {
                if(item.checked) {       
-                  $scope.resetStatus(item);
+                  resetStatus(item);
                   item.executing = true;
                   var restApiQuery = "/" + item.query;
                   var sendDate = (new Date()).getTime();
@@ -86,18 +85,18 @@ arc.directive("arcSanityCheck", function () {
                         if( item.statusResult == item.statusCodeExpected){
                            item.icon = "fa-check-circle"
                            item.queryStatus = 'success';
-                           console.info(result.data);
+                           // console.info(result.data);
                         } else {
                            item.icon = "fa-exclamation-triangle"
                            item.queryStatus = 'warning';   
-                           console.warn("%o warning info:", result.data);  
+                           // console.warn("%o warning info:", result.data);  
                         }
                      } else {
                         item.icon = "fa-thin fa-times";
                         item.queryStatus = 'failed';
                         item.resultQuery = result.data.error;
                         item.message = result.data.error.message;
-                        console.error("%o error info:r", result.data);  
+                        // console.error("%o error info:r", result.data);  
                         
                      }
                      var receiveDate = (new Date()).getTime();
@@ -105,11 +104,10 @@ arc.directive("arcSanityCheck", function () {
                      $scope.globalRuntime = $scope.globalRuntime + item.responseTimeMs;
                      item.wasExecuted = true;
                      item.executing = false;
-                     $scope.setResultsCount(item);                             
+                     console.info(item);
+                     setResultsCount(item);                             
                      tryNextItem();
                      tryToEnableButton();
-                     // something weird happening here but doesn't look to have an impact on the plugin
-                     // console.log(item);
                   });
                } else {
                   tryNextItem();
@@ -121,19 +119,18 @@ arc.directive("arcSanityCheck", function () {
          };
 
          //running next query waiting for the current one to end
-         tryNextItem = function() {
+         var tryNextItem = function() {
             executeQueriesIndex++;
             if($scope.requests.length >= executeQueriesIndex + 1) {
-               $scope.executeQueriesSync();
+               executeQueriesSync();
             };
          };
 
-         //for those which are async:
-         $scope.executeOneQuery = function (item) {
+         //for those which are async/not-dependent:
+         var executeOneQuery = function (item) {
             if(item.checked && !item.isDependent) {
-                  // $scope.requestPending++;
                   var sendDate = (new Date()).getTime();
-                  $scope.resetStatus(item);
+                  resetStatus(item);
                   item.executing = true;
                   var restApiQuery = "/" + item.query;
                   var sendDate = (new Date()).getTime();
@@ -145,46 +142,45 @@ arc.directive("arcSanityCheck", function () {
                         if( item.statusResult == item.statusCodeExpected){
                            item.icon = "fa-check-circle"
                            item.queryStatus = 'success';
-                           console.info(result.data);
+                           // console.info(result.data);
                         } else {
                            item.icon = "fa-exclamation-triangle"
                            item.queryStatus = 'warning';   
-                           console.warn("%o warning info:", result.data);  
+                           // console.warn("%o warning info:", result.data);  
                         }
                      } else {
                         item.icon = "fa-thin fa-times";
                         item.queryStatus = 'failed';
                         item.resultQuery = result.data.error;
                         item.message = result.data.error.message;
-                        console.error("%o error info:r", result.data);  
+                        // console.error("%o error info:r", result.data);  
                         
                      }
                      var receiveDate = (new Date()).getTime();
                      item.responseTimeMs = receiveDate - sendDate;
                      $scope.globalRuntime = $scope.globalRuntime + item.responseTimeMs;
                      item.wasExecuted = true;
-                     item.executing = false;
-                     $scope.setResultsCount(item);
+                     item.executing = false;           
                      console.info(item);
+                     setResultsCount(item);
                      tryToEnableButton();
-                     // $scope.requestPending--;
                   });
                };
             };
    
    
-            $scope.executeQueriesAsync = function (){
-               /*requestPending set to 0 to disable the execution button
-               we set globalRuntime to 0 to reset the global runtime*/
-               //  $scope.requestPending = 0;
-               $scope.globalRuntime = 0;
-               _.each($scope.requests, function(item) {
-                  $scope.executeOneQuery(item)              
-               });
-            };
+         var executeQueriesAsync = function (){
+            /*requestPending set to 0 to disable the execution button
+            we set globalRuntime to 0 to reset the global runtime*/
+            //  $scope.requestPending = 0;
+            $scope.globalRuntime = 0;
+            _.each($scope.requests, function(item) {
+               executeOneQuery(item)              
+            });
+         };
 
 
-         tryToEnableButton = function() {
+         var tryToEnableButton = function() {
             checkedItemsCount = 0;
             _.each($scope.requests, function(item) {
                if(item.checked == true) {
@@ -192,20 +188,17 @@ arc.directive("arcSanityCheck", function () {
                   executedItemsCount = $scope.successesResult + $scope.errorsResult + $scope.warningsResult;
                };
             });
-            console.debug("checked items: " + checkedItemsCount + " executed items: " + executedItemsCount);
+            // console.debug("checked items: " + checkedItemsCount + " executed items: " + executedItemsCount);
             if(checkedItemsCount == executedItemsCount) {
                $scope.requestPending = 0;
                checkedItemsCount = 0;
             };
          };
 
-
-
-
          //Functions
 
          //Set the count of successes, warnings and errors
-         $scope.setResultsCount = function(item) {
+         var setResultsCount = function(item) {
             if(item.queryStatus == "success") {
                $scope.successesResult++;
             } else if (item.queryStatus == "warning") {
@@ -216,7 +209,7 @@ arc.directive("arcSanityCheck", function () {
          };
 
          //Resets the query status to the initial one
-         $scope.resetStatus = function(item) {
+         var resetStatus = function(item) {
             if (["success", "warning", "failed"].includes(item.queryStatus)) {
                if (item.queryStatus == "success") {
                   $scope.successesResult--;
@@ -234,7 +227,7 @@ arc.directive("arcSanityCheck", function () {
 
          $scope.resetStatusAll = function() {
             _.each($scope.requests, function(item) {
-               $scope.resetStatus(item);
+               resetStatus(item);
             });
             $scope.globalRuntime = 0;
             executeQueriesIndex = 0;
@@ -249,35 +242,35 @@ arc.directive("arcSanityCheck", function () {
          };
 
          //check - uncheck query items
-         $scope.checkItem = function(item) {
+         var checkItem = function(item) {
             item.checked = true;
          };
 
-         $scope.uncheckItem = function(item) {
+         var uncheckItem = function(item) {
             item.checked = false;
          };
 
          $scope.checkUncheckAll = function() {
             var uncheckedItems = $scope.requests.filter(item => !item.checked);
                if(uncheckedItems.length > 0)  {
-                  $scope.checkAllItems();
+                  checkAllItems();
                   $scope.checkActivated = true;
                } else {
-                  $scope.uncheckAllItems();
+                  uncheckAllItems();
                   $scope.checkActivated = false;
                };
             };
 
-         $scope.checkAllItems = function() {
+         var checkAllItems = function() {
             _.each($scope.requests, function(item) {
-               $scope.checkItem(item);
+               checkItem(item);
             });
          };
 
 
-         $scope.uncheckAllItems = function() {
+         var uncheckAllItems = function() {
             _.each($scope.requests, function(item) {
-               $scope.uncheckItem(item);
+               uncheckItem(item);
             });
          };
 
@@ -291,16 +284,19 @@ arc.directive("arcSanityCheck", function () {
                controller: ['$rootScope', '$scope', function ($rootScope, $scope) {
                   if (item.method == "POST") {
                      itemBody = item.body;
-                     dataWithoutBody = item.body = "see body on the body tab";
                      if (JSON.stringify(itemBody).includes("MDX")) {
-                        stringifiedMDX = JSON.stringify(itemBody);
-                        $scope.resultJSON = stringifiedMDX;
+                        stringifiedMDX = JSON.stringify(itemBody.MDX).replace(",", ", \n").replace("ROWS", "ROWS \n").replace("WHERE", "\n WHERE").slice(1,-1);
+                        $scope.resultBody = stringifiedMDX;
+                        $scope.showBodyTabAsMDX = true;
+                        console.log("He entrado");
+                        $scope.bodyTitle = "MDX";
                      } else {
-                        $scope.resultJSON = JSON.stringify(itemBody, false, 2);
+                        $scope.resultBody = itemBody;
+                        console.log($scope.resultBody);
+                        $scope.showBodyTabAsMDX = false;
+                        $scope.bodyTitle = "Body";
                      }
-                     // $scope.queryData = JSON.stringify(item, false, 2);
                   } else if (item.method == "GET" || item.method == "PATCH") {
-                     // avoidRulesMessage = 'Avoiding showing too much code here';
                      if(item.resultQuery.value) {
                         for (let index = 0; index < item.resultQuery.value.length; index++) {
                            const element = item.resultQuery.value[index];
@@ -315,13 +311,26 @@ arc.directive("arcSanityCheck", function () {
                               shortenedRule = element.Rules.substring(0, 100) + "...";
                               element.Rules = shortenedRule;
                            };
-                     };
-                     // $scope.queryData = JSON.stringify(item.resultQuery, false, 2);  
+                     }; 
                   };
-                  $scope.queryData = JSON.stringify(item, false, 2);
+
+                  $scope.queryData = item;
+                 
+                  console.log($scope.queryData);
                   $scope.itemMethod = item.method;
                }],
             });
+         };
+
+         $scope.editorLoaded = function (_editor) {
+            // Initialise the editor settings
+            _editor.setTheme($rootScope.uiPrefs.editorTheme);
+            _editor.getSession().setMode("ace/mode/mdx");
+            _editor.getSession().setOptions({ tabSize: $rootScope.uiPrefs.editorTabSpaces, useSoftTabs: true });
+            _editor.$blockScrolling = Infinity;
+            _editor.setFontSize($rootScope.uiPrefs.fontSize);
+            _editor.setShowPrintMargin(false);
+            _editor.getSession().setUseWrapMode($rootScope.uiPrefs.editorWrapLongLines);
          };
 
          //loads the requests
@@ -332,7 +341,7 @@ arc.directive("arcSanityCheck", function () {
                if (result.status === 200) {
                   $scope.values.settingFilesFound = true;
                   $scope.requests = result.data;            
-                  $scope.checkAllItems();
+                  checkAllItems();
                   for (let index = 0; index < $scope.requests.length; index++) {
                      const item = $scope.requests[index];
                      const indexToShow = index+1;
