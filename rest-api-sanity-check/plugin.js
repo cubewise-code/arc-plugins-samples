@@ -1,3 +1,4 @@
+
 arc.run(['$rootScope', function ($rootScope) {
 
    $rootScope.plugin("arcSanityCheck", "TM1 REST API Sanity Check", "page", {
@@ -56,12 +57,11 @@ arc.directive("arcSanityCheck", function () {
          checkedItemsCount = 0;
          executedItemsCount = 0;
 
-
          
          // querys execution    
          $scope.executeQueries = function() {
-               $scope.resetStatusAll();
                $scope.requestPending = 1;
+               $scope.resetStatusAll();
                executeQueriesSync();
                executeQueriesAsync();
          };
@@ -105,7 +105,8 @@ arc.directive("arcSanityCheck", function () {
                      item.wasExecuted = true;
                      item.executing = false;
                      console.info(item);
-                     setResultsCount(item);                             
+                     setResultsCount(item);  
+                     updateProgressBar();                           
                      tryNextItem();
                      tryToEnableButton();
                   });
@@ -164,6 +165,7 @@ arc.directive("arcSanityCheck", function () {
                      console.info(item);
                      setResultsCount(item);
                      tryToEnableButton();
+                     updateProgressBar();
                   });
                };
             };
@@ -194,6 +196,15 @@ arc.directive("arcSanityCheck", function () {
                checkedItemsCount = 0;
             };
          };
+
+
+
+         var updateProgressBar = function () {
+            nbStepsDone++;
+            $scope.stepsDone = Math.round(nbStepsDone / $scope.totalResult * 100);
+            $scope.stepsDoneFormatted = $scope.stepsDone +"%";
+         };
+
 
          //Functions
 
@@ -231,6 +242,10 @@ arc.directive("arcSanityCheck", function () {
             });
             $scope.globalRuntime = 0;
             executeQueriesIndex = 0;
+            nbStepsDone = 0;
+            $scope.stepsDone = 0;
+            $scope.stepsDoneFormatted = 0;
+            
          };
 
          $scope.setStatusFilter = function(text) { 
