@@ -42,7 +42,7 @@ arc.directive("arcSanityCheck", function () {
             ],
          };
 
-         $scope.methods = {
+         $scope.methodsBadgeType = {
             "GET": "btn btn-success",
             "POST": "btn btn-primary",
             "PATCH": "btn btn-warning",
@@ -79,7 +79,7 @@ arc.directive("arcSanityCheck", function () {
             we set globalRuntime to 0 to reset the global runtime*/
             //  $scope.requestPending = 0;
             $scope.globalRuntime = 0;
-            firstItem = $scope.checkedRequests[0];
+            var firstItem = $scope.checkedRequests[0];
             if (firstItem.isDependent) {
                executeOneQuery(firstItem);
             };
@@ -191,9 +191,9 @@ arc.directive("arcSanityCheck", function () {
             _.each($scope.requests, function(item) {
                resetStatus(item);
             });
+            nbStepsDone = 0;
             $scope.globalRuntime = 0;
             executeQueriesIndex = 0;
-            nbStepsDone = 0;
             $scope.stepsDone = 0;
             $scope.stepsDoneFormatted = 0;
             
@@ -252,7 +252,7 @@ arc.directive("arcSanityCheck", function () {
                scope: $scope,
                controller: ['$rootScope', '$scope', function ($rootScope, $scope) {
                   if (item.method == "POST") {
-                     itemBody = item.body;
+                     var itemBody = item.body;
                      if (JSON.stringify(itemBody).includes("MDX")) {
                         stringifiedMDX = JSON.stringify(itemBody.MDX).replace(",", ", \n").replace("ROWS", "ROWS \n").replace("WHERE", "\n WHERE").slice(1,-1);
                         $scope.resultBody = stringifiedMDX;
@@ -269,14 +269,14 @@ arc.directive("arcSanityCheck", function () {
                         for (let index = 0; index < item.resultQuery.value.length; index++) {
                            const element = item.resultQuery.value[index];
                            if (element.Rules != null) {
-                              shortenedRule = element.Rules.substring(0, 100) + "...";
+                              var shortenedRule = element.Rules.substring(0, 100) + "...";
                               element.Rules = shortenedRule;
                            };
                         };
                      } else if (item.resultQuery.Rules != null) {
                            const element = item.resultQuery;
                            if (element.Rules != null) {
-                              shortenedRule = element.Rules.substring(0, 100) + "...";
+                              var shortenedRule = element.Rules.substring(0, 100) + "...";
                               element.Rules = shortenedRule;
                            };
                      }; 
@@ -301,8 +301,8 @@ arc.directive("arcSanityCheck", function () {
          };
 
          var methodBadgeType = function(item) {
-            method = item.method;
-            badgeType = $scope.methods[method];
+            var method = item.method;
+            var badgeType = $scope.methodsBadgeType[method];
             item.badgeType = "badge " + badgeType + " d-inline-flex align-items-center text-left";
          };
 
