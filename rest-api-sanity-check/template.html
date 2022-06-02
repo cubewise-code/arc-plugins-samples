@@ -83,32 +83,32 @@
                      </div>
                   </td>  
                   <td style="text-align:center">
-                     {{item.index}}
-                     </td>       
+                     <span>{{item.index+1}}</span>
+                  </td>       
                   <td style="text-align:center">
                      <i ng-if="item.executing" class="fa fa-fw fa-refresh fa-spin"></i>
                      <i ng-if="!item.executing" class="fa fa-fw {{item.icon}}"></i>
                   </td>
                   <td> 
-                     <b ng-class="item.badgeType">
+                     <span ng-class="item.badgeType">
                         {{item.method}}
-                     </b>
+                     </span>
                   </td>
                   <td style="text-align:center">
-                     {{item.statusCodeExpected}}
+                     <span>{{item.statusCodeExpected}}</span>
                   </td>
                    <td style="text-align:center">
-                     {{item.statusResult}}
+                     <span>{{item.statusResult}}</span>
                   </td>
                   <td style="text-align:left">
-                     {{item.query}}
+                     <span>{{item.query}}</span>
                   </td>
                   <td ng-if="item.wasExecuted" style="text-align:center">
                      <button type="button" class="btn btn-secondary btn-sm" ng-click="seeDetails(item)">
                         <i class="fa fa-eye"></i>
                      </button>
                   </td>
-                  <td ng-if="!item.wasExecuted || item.queryStatus != 'success'">
+                  <td ng-if="!item.wasExecuted">
                      {{blank}}
                   </td>
                   <td>

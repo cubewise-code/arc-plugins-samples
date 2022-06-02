@@ -49,7 +49,7 @@ arc.directive("arcSanityCheck", function () {
             "DELETE": "btn btn-danger"
          };
          
-
+         $scope.checkedRequests = [];
          $scope.values = {};
          $scope.goodHttpStatus = [200, 201, 204];
          $scope.successesResult = 0;
@@ -66,156 +66,100 @@ arc.directive("arcSanityCheck", function () {
          executedItemsCount = 0;
 
          
-         // querys execution    
+         // querys execution
+         // dependent queries must be placed sequencially before not-dependent ones in request.json
          $scope.executeQueries = function() {
                $scope.requestPending = 1;
                $scope.resetStatusAll();
-               executeQueriesSync();
-               executeQueriesAsync();
+               executeQueries();           
          };
 
-
-         //for those which are not async/dependent:
-         var executeQueriesSync = function () {
-            item = $scope.requests[executeQueriesIndex];
-            // console.debug(item.name + "'s index is " + item.dependencyIndex);
-            if(item.isDependent) {
-               if(item.checked) {       
-                  resetStatus(item);
-                  item.executing = true;
-                  var restApiQuery = "/" + item.query;
-                  var sendDate = (new Date()).getTime();
-                  $tm1.async($scope.instance, item.method, restApiQuery, item.body).then(function (result) {     
-                     item.statusResult = result.status;
-                     if ($scope.goodHttpStatus.includes(result.status)) {
-                        item.resultQuery = result.data;
-                        item.message = null;
-                        if( item.statusResult == item.statusCodeExpected){
-                           item.icon = "fa-check-circle"
-                           item.queryStatus = 'success';
-                           // console.info(result.data);
-                        } else {
-                           item.icon = "fa-exclamation-triangle"
-                           item.queryStatus = 'warning';   
-                           // console.warn("%o warning info:", result.data);  
-                        }
-                     } else {
-                        item.icon = "fa-thin fa-times";
-                        item.queryStatus = 'failed';
-                        item.resultQuery = result.data.error;
-                        item.message = result.data.error.message;
-                        // console.error("%o error info:r", result.data);  
-                        
-                     }
-                     var receiveDate = (new Date()).getTime();
-                     item.responseTimeMs = receiveDate - sendDate;
-                     $scope.globalRuntime = $scope.globalRuntime + item.responseTimeMs;
-                     item.wasExecuted = true;
-                     item.executing = false;
-                     console.info(item);
-                     setResultsCount(item);  
-                     updateProgressBar();                           
-                     tryNextItem();
-                     tryToEnableButton();
-                  });
-               } else {
-                  tryNextItem();
-               };
-            } else {
-               tryNextItem();
-            };
-
-         };
-
-         //running next query waiting for the current one to end
-         var tryNextItem = function() {
-            executeQueriesIndex++;
-            if($scope.requests.length >= executeQueriesIndex + 1) {
-               executeQueriesSync();
-            };
-         };
-
-         //for those which are async/not-dependent:
-         var executeOneQuery = function (item) {
-            if(item.checked && !item.isDependent) {
-                  var sendDate = (new Date()).getTime();
-                  resetStatus(item);
-                  item.executing = true;
-                  var restApiQuery = "/" + item.query;
-                  var sendDate = (new Date()).getTime();
-                  $tm1.async($scope.instance, item.method, restApiQuery, item.body).then(function (result) {
-                     item.statusResult = result.status;
-                     if ($scope.goodHttpStatus.includes(result.status)) {
-                        item.resultQuery = result.data;
-                        item.message = null;
-                        if( item.statusResult == item.statusCodeExpected){
-                           item.icon = "fa-check-circle"
-                           item.queryStatus = 'success';
-                           // console.info(result.data);
-                        } else {
-                           item.icon = "fa-exclamation-triangle"
-                           item.queryStatus = 'warning';   
-                           // console.warn("%o warning info:", result.data);  
-                        }
-                     } else {
-                        item.icon = "fa-thin fa-times";
-                        item.queryStatus = 'failed';
-                        item.resultQuery = result.data.error;
-                        item.message = result.data.error.message;
-                        // console.error("%o error info:r", result.data);  
-                        
-                     }
-                     var receiveDate = (new Date()).getTime();
-                     item.responseTimeMs = receiveDate - sendDate;
-                     $scope.globalRuntime = $scope.globalRuntime + item.responseTimeMs;
-                     item.wasExecuted = true;
-                     item.executing = false;           
-                     console.info(item);
-                     setResultsCount(item);
-                     tryToEnableButton();
-                     updateProgressBar();
-                  });
-               };
-            };
-   
-   
-         var executeQueriesAsync = function (){
+         var executeQueries = function (){
             /*requestPending set to 0 to disable the execution button
             we set globalRuntime to 0 to reset the global runtime*/
             //  $scope.requestPending = 0;
             $scope.globalRuntime = 0;
-            _.each($scope.requests, function(item) {
-               executeOneQuery(item)              
-            });
-         };
-
-
-         var tryToEnableButton = function() {
-            checkedItemsCount = 0;
-            _.each($scope.requests, function(item) {
-               if(item.checked == true) {
-                  checkedItemsCount++;
-                  executedItemsCount = $scope.successesResult + $scope.errorsResult + $scope.warningsResult;
-               };
-            });
-            // console.debug("checked items: " + checkedItemsCount + " executed items: " + executedItemsCount);
-            if(checkedItemsCount == executedItemsCount) {
-               $scope.requestPending = 0;
-               checkedItemsCount = 0;
+            firstItem = $scope.checkedRequests[0];
+            if (firstItem.isDependent) {
+               executeOneQuery(firstItem);
+            };
+            if(executeQueriesIndex >= 0) {
+               _.each($scope.checkedRequests, function(item) {
+                  if(!item.isDependent) {
+                  executeOneQuery(item)
+                  };           
+               });
             };
          };
 
 
+         //running next query waiting for the current one to end
+         var tryItem = function(item) {
+            // item = $scope.requests[executeQueriesIndex]; 
+            executeOneQuery(item);
+         };
+
+         //for those which are async/not-dependent:
+         var executeOneQuery = function (item) {
+            var nextItem = $scope.requests[item.index+1]; 
+            if (!item.checked && nextItem != undefined) {
+               executeOneQuery(nextItem);
+            } else if (item.checked) {
+               console.log(item.index);
+               var sendDate = (new Date()).getTime();           
+               var restApiQuery = "/" + item.query;
+               var sendDate = (new Date()).getTime();
+               $tm1.async($scope.instance, item.method, restApiQuery, item.body).then(function (result) {
+                  item.executing = true;
+                  item.statusResult = result.status;
+                  if ($scope.goodHttpStatus.includes(result.status)) {
+                     item.resultQuery = result.data;
+                     item.message = null;
+                     if( item.statusResult == item.statusCodeExpected){
+                        item.icon = "fa-check-circle"
+                        item.queryStatus = 'success';
+                        console.info(result.data);
+                     } else {
+                        item.icon = "fa-exclamation-triangle"
+                        item.queryStatus = 'warning';   
+                        console.warn("%o warning info:", result.data);  
+                     }
+                  } else {
+                     item.icon = "fa-thin fa-times";
+                     item.queryStatus = 'failed';
+                     item.resultQuery = result.data.error;
+                     item.message = result.data.error.message;
+                     console.error("%o error info:r", result.data);            
+                  };
+
+                  var receiveDate = (new Date()).getTime();
+                  item.responseTimeMs = receiveDate - sendDate;
+                  $scope.globalRuntime = $scope.globalRuntime + item.responseTimeMs;
+                  item.wasExecuted = true;
+                  item.executing = false;           
+                  setResultsCount(item);
+                  updateProgressBar();
+                  tryToEnableButton();
+                  if(item.isDependent && nextItem != undefined && nextItem.isDependent) {
+                     tryItem(nextItem);
+                  };
+               });
+            }
+         };
+            
+         var tryToEnableButton = function() {
+            if($scope.stepsDone == 100) {
+               $scope.requestPending = 0;
+            };
+         };
 
          var updateProgressBar = function () {
             nbStepsDone++;
-            $scope.stepsDone = Math.round(nbStepsDone / $scope.totalResult * 100);
+            $scope.stepsDone = Math.round(nbStepsDone / $scope.checkedRequests.length * 100);
             $scope.stepsDoneFormatted = $scope.stepsDone +"%";
          };
 
-
          //Functions
-
          //Set the count of successes, warnings and errors
          var setResultsCount = function(item) {
             if(item.queryStatus == "success") {
@@ -229,7 +173,7 @@ arc.directive("arcSanityCheck", function () {
 
          //Resets the query status to the initial one
          var resetStatus = function(item) {
-            if (["success", "warning", "failed"].includes(item.queryStatus)) {
+            // if (["success", "warning", "failed"].includes(item.queryStatus)) {
                if (item.queryStatus == "success") {
                   $scope.successesResult--;
                } else if (item.queryStatus == "warning") {
@@ -241,7 +185,6 @@ arc.directive("arcSanityCheck", function () {
                item.icon = null;
                item.statusResult = null;
                item.wasExecuted = false;
-            };
          };
 
          $scope.resetStatusAll = function() {
@@ -265,12 +208,27 @@ arc.directive("arcSanityCheck", function () {
          };
 
          //check - uncheck query items
-         var checkItem = function(item) {
+         $scope.checkItem = function(item) {
             item.checked = true;
+            $scope.checkedRequests = $scope.requests.filter(item => item.checked);
          };
 
-         var uncheckItem = function(item) {
+         var checkAllItems = function() {
+            _.each($scope.requests, function(item) {
+               $scope.checkItem(item);
+            });
+         };
+
+
+         $scope.uncheckItem = function(item) {
             item.checked = false;
+            $scope.checkedRequests = $scope.requests.filter(item => item.checked);
+         };
+
+         var uncheckAllItems = function() {
+            _.each($scope.requests, function(item) {
+               $scope.uncheckItem(item);
+            });
          };
 
          $scope.checkUncheckAll = function() {
@@ -284,18 +242,6 @@ arc.directive("arcSanityCheck", function () {
                };
             };
 
-         var checkAllItems = function() {
-            _.each($scope.requests, function(item) {
-               checkItem(item);
-            });
-         };
-
-
-         var uncheckAllItems = function() {
-            _.each($scope.requests, function(item) {
-               uncheckItem(item);
-            });
-         };
 
          //See Details PopUp
          $scope.seeDetails = function (item) {
@@ -311,14 +257,13 @@ arc.directive("arcSanityCheck", function () {
                         stringifiedMDX = JSON.stringify(itemBody.MDX).replace(",", ", \n").replace("ROWS", "ROWS \n").replace("WHERE", "\n WHERE").slice(1,-1);
                         $scope.resultBody = stringifiedMDX;
                         $scope.showBodyTabAsMDX = true;
-                        console.log("He entrado");
                         $scope.bodyTitle = "MDX";
                      } else {
                         $scope.resultBody = itemBody;
-                        console.log($scope.resultBody);
+                        console.debug($scope.resultBody);
                         $scope.showBodyTabAsMDX = false;
                         $scope.bodyTitle = "Body";
-                     }
+                     };
                   } else if (item.method == "GET" || item.method == "PATCH") {
                      if(item.resultQuery.value) {
                         for (let index = 0; index < item.resultQuery.value.length; index++) {
@@ -337,9 +282,8 @@ arc.directive("arcSanityCheck", function () {
                      }; 
                   };
 
-                  $scope.queryData = item;
-                 
-                  console.log($scope.queryData);
+                  $scope.queryData = item;      
+                  console.debug($scope.queryData);
                   $scope.itemMethod = item.method;
                }],
             });
@@ -358,10 +302,8 @@ arc.directive("arcSanityCheck", function () {
 
          var methodBadgeType = function(item) {
             method = item.method;
-            console.log(method);
             badgeType = $scope.methods[method];
             item.badgeType = "badge " + badgeType + " d-inline-flex align-items-center text-left";
-            console.log(item.badgeType);
          };
 
          //loads the requests
@@ -376,8 +318,7 @@ arc.directive("arcSanityCheck", function () {
                   for (let index = 0; index < $scope.requests.length; index++) {
                      const item = $scope.requests[index];
                      methodBadgeType(item);
-                     const indexToShow = index+1;
-                     item.index = indexToShow;
+                     item.index = index;
                      $scope.totalResult ++;
                   }
                } else {
