@@ -42,6 +42,14 @@ arc.directive("arcSanityCheck", function () {
             ],
          };
 
+         $scope.methods = {
+            "GET": "btn btn-success",
+            "POST": "btn btn-primary",
+            "PATCH": "btn btn-warning",
+            "DELETE": "btn btn-danger"
+         };
+         
+
          $scope.values = {};
          $scope.goodHttpStatus = [200, 201, 204];
          $scope.successesResult = 0;
@@ -348,6 +356,14 @@ arc.directive("arcSanityCheck", function () {
             _editor.getSession().setUseWrapMode($rootScope.uiPrefs.editorWrapLongLines);
          };
 
+         var methodBadgeType = function(item) {
+            method = item.method;
+            console.log(method);
+            badgeType = $scope.methods[method];
+            item.badgeType = "badge " + badgeType + " d-inline-flex align-items-center text-left";
+            console.log(item.badgeType);
+         };
+
          //loads the requests
          var loadSettingsFile = function () {
             $scope.requests = [];
@@ -359,6 +375,7 @@ arc.directive("arcSanityCheck", function () {
                   checkAllItems();
                   for (let index = 0; index < $scope.requests.length; index++) {
                      const item = $scope.requests[index];
+                     methodBadgeType(item);
                      const indexToShow = index+1;
                      item.index = indexToShow;
                      $scope.totalResult ++;
