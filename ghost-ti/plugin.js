@@ -28,7 +28,7 @@ arc.directive("ghostti", function () {
             $scope.code = {
                 "prolog": "",
                 "epilog": ""
-            }
+            };
             
             $scope.tabActivated = "Prolog";
 
