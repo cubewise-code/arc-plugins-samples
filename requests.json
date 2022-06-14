@@ -1,0 +1,233 @@
+[
+   {
+      "name": "Dimension Creation",
+      "method": "POST",
+      "query": "Dimensions",
+      "body": {
+         "Name": "Test"
+      },
+      "statusCodeExpected": 201,
+      "isDependent": true
+   },
+   {
+      "name": "Hierarchy Creation",
+      "method": "POST",
+      "query": "Dimensions('Test')/Hierarchies",
+      "body": {
+         "Name": "TestHierarchy"
+      },
+      "statusCodeExpected": 201,
+      "isDependent": true
+   },
+   {
+      "name": "Element Creation",
+      "method": "POST",
+      "query": "Dimensions('Test')/Hierarchies('TestHierarchy')/Elements",
+      "body": {
+         "Name": "Test Element"
+      },
+      "statusCodeExpected": 201,
+      "isDependent": true
+   },
+   {
+      "name": "Get Dimension",
+      "method": "GET",
+      "query": "Dimensions('Test')",
+      "statusCodeExpected": 200,
+      "isDependent": true
+   },
+   {
+      "name": "Get Hierarchy",
+      "method": "GET",
+      "query": "Dimensions('Test')/Hierarchies('TestHierarchy')",
+      "statusCodeExpected": 200,
+      "isDependent": true
+   },
+   {
+      "name": "Get Element",
+      "method": "GET",
+      "query": "Dimensions('Test')/Hierarchies('TestHierarchy')/Elements('Test Element')",
+      "statusCodeExpected": 200,
+      "isDependent": true
+   },
+   {
+      "name": "Delete Element",
+      "method": "DELETE",
+      "query": "Dimensions('Test')/Hierarchies('TestHierarchy')/Elements('Test Element')",
+      "statusCodeExpected": 204,
+      "isDependent": true
+   },
+   {
+      "name": "Delete Hierarchy",
+      "method": "DELETE",
+      "query": "Dimensions('Test')/Hierarchies('TestHierarchy')",
+       "statusCodeExpected": 204,
+       "isDependent": true
+   },
+   {
+      "name": "Delete Dimension",
+      "method": "DELETE",
+      "query": "Dimensions('Test')",
+       "statusCodeExpected": 204,
+       "isDependent": true
+   },
+   {
+      "name": "View Creation",
+      "method": "POST",
+      "query": "Cubes('System Info')/Views",
+      "body": {
+            "@odata.type":"ibm.tm1.api.v1.NativeView",
+            "Name":"TempView",
+            "Columns":[
+               {
+                  "Subset@odata.bind":"Dimensions('System Info Parameter')/Hierarchies('System Info Parameter')/Subsets('Default')"
+               }
+            ],
+            "Rows":[
+               {
+                  "Subset@odata.bind":"Dimensions('System Info Measures')/Hierarchies('System Info Measures')/Subsets('Level 0')"
+               }
+            ],
+            "SuppressEmptyColumns":false,
+            "SuppressEmptyRows":false,
+            "FormatString":"0.#########\fG|0|"
+       },
+       "statusCodeExpected": 201,
+       "isDependent": true
+   },
+   {
+      "name": "Update View",
+      "method": "PATCH",
+      "query": "Cubes('System Info')/Views('TempView')",
+      "body": 
+      {
+         "Columns":[
+            {
+               "Subset@odata.bind":"Dimensions('System Info Parameter')/Hierarchies('System Info Parameter')/Subsets('TempSubset1')"
+            }
+         ]
+      },
+      "statusCodeExpected": 200,
+      "isDependent": true
+   },
+   {
+      "name": "View Delete",
+      "method": "DELETE",
+      "query": "Cubes('System Info')/Views('TempView')",
+      "statusCodeExpected": 204,
+      "isDependent": true
+   },
+   {
+      "name": "Get all cubes",
+      "method": "GET",
+      "query": "Cubes?&$top=5",
+      "statusCodeExpected": 200,
+      "isDependent": false
+   },
+   {
+      "name": "Get all cube names",
+      "method": "GET",
+      "query": "Cubes?$select=Name&$top=5",
+      "statusCodeExpected": 200,
+      "isDependent": false
+   },
+   {
+      "name": "Get cubes contains specific dimension",
+      "method": "GET",
+      "query": "Cubes?$select=Name&$filter=Dimensions/any(dimension: dimension/Name eq 'Account')",
+      "statusCodeExpected": 200,
+      "isDependent": false
+   },
+   {
+      "name": "Get specific cube",
+      "method": "GET",
+      "query": "Cubes('General Ledger')",
+      "statusCodeExpected": 200,
+      "isDependent": false
+   },
+   {
+      "name": "Get dimensions from specific cube",
+      "method": "GET",
+      "query": "Cubes('General Ledger')/Dimensions",
+      "statusCodeExpected": 200,
+      "isDependent": false
+   },
+   {
+      "name": "Cell Update",
+      "method": "POST",
+      "query": "Cubes('General Ledger')/tm1.Update",
+      "body": {
+         "Cells":[
+             {"Tuple@odata.bind": [
+                 "Dimensions('Version')/Hierarchies('Version')/Elements('Actual')",
+                 "Dimensions('Year')/Hierarchies('Year')/Elements('2018')",
+                 "Dimensions('Period')/Hierarchies('Period')/Elements('Jan')",
+                 "Dimensions('Currency')/Hierarchies('Currency')/Elements('Local')",
+                 "Dimensions('Region')/Hierarchies('Region')/Elements('England')",
+                 "Dimensions('Department')/Hierarchies('Department')/Elements('Executive General and Administration')",
+                 "Dimensions('Account')/Hierarchies('Account')/Elements('Meals')",
+                 "Dimensions('General Ledger Measure')/Hierarchies('General Ledger Measure')/Elements('Amount')"
+                 ]
+             }
+          ],
+         "Value":"1234"
+      },
+      "statusCodeExpected": 204,
+      "isDependent": false
+   },
+   {
+      "name": "Cube Execute MDX",
+      "method": "POST",
+      "query": "ExecuteMDX?$expand=Cells",
+      "body": {
+         "MDX": "SELECT  NON EMPTY {[Version].[Actual], [Version].[Budget]} ON COLUMNS, NON EMPTY {TM1SUBSETALL([Account])} ON ROWS  FROM [General Ledger]  WHERE ([Department].[Corporate], [Year].[2012])"
+       },
+       "statusCodeExpected": 201,
+       "isDependent": false
+   },
+   {
+      "name": "Process Execute With Return",
+      "method": "POST",
+      "query": "ExecuteProcessWithReturn?$expand=ErrorLogFile",
+      "body": {
+         "Process": {"Name":"Test"}
+       },
+       "statusCodeExpected": 201,
+       "isDependent": false
+   },
+   {
+      "name": "Get all Processes",
+      "method": "GET",
+      "query": "Processes",
+      "statusCodeExpected": 200,
+      "isDependent": false
+   },
+   {
+      "name": "Get Sessions",
+      "method": "GET",
+      "query": "Sessions?$expand=User",
+      "statusCodeExpected": 200,
+      "isDependent": false
+   },
+   {
+      "name": "Get First 20 Messages",
+      "method": "GET",
+      "query": "MessageLogEntries?$orderby=ID desc&$top=20",
+      "statusCodeExpected": 200,
+      "isDependent": false
+   },
+   {
+      "name": "Get Threads",
+      "method": "GET",
+      "query": "Threads?$expand=Session",
+      "statusCodeExpected": 200,
+      "isDependent": false
+   },
+   {
+      "name": "Get Metadata",
+      "method": "GET",
+      "query": "$metadata",
+      "statusCodeExpected": 200,
+      "isDependent": false
+   }
+]
