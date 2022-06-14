@@ -41,10 +41,22 @@
                </div>
                <div class="btn-group">
                   <div class="buttons btn-group align-middle text-align:right">
-                     <button type="button" class="btn btn-secondary ng-scope" ng-class="{'active font-weight-bold': statusFilter==null} "ng-click="setStatusFilter(null)">Total: {{totalResult}}</button>
-                     <button type="button" class="btn btn-secondary ng-scope" ng-class="{'active font-weight-bold': statusFilter=='success'} "ng-click="setStatusFilter('success')">Successes: {{successesResult}}</button>
-                     <button type="button" class="btn btn-secondary ng-scope" ng-class="{'active font-weight-bold': statusFilter=='warning'} " ng-click="setStatusFilter('warning')">Warnings: {{warningsResult}}</button>
-                     <button type="button" class="btn btn-secondary ng-scope" ng-class="{'active font-weight-bold': statusFilter=='failed'}  " ng-click="setStatusFilter('failed')">Errors: {{errorsResult}}</button>
+                     <button type="button" class="btn btn-secondary ng-scope" ng-class="{'active': statusFilter==null}" ng-click="setStatusFilter(null)">
+                        Total: {{totalResult}}
+                        <i ng-if="statusFilter==null" class="fa fa-check fa-mark"></i>
+                     </button>
+                     <button type="button" class="btn btn-secondary ng-scope" ng-class="{'active': statusFilter=='success'}" ng-click="setStatusFilter('success')">
+                        Successes: {{successesResult}}
+                        <i ng-if="statusFilter=='success'" class="fa fa-check fa-mark"></i>
+                     </button>
+                     <button type="button" class="btn btn-secondary ng-scope" ng-class="{'active': statusFilter=='warning'}" ng-click="setStatusFilter('warning')">
+                        Warnings: {{warningsResult}}
+                        <i ng-if="statusFilter=='warning'" class="fa fa-check fa-mark"></i>
+                     </button>
+                     <button type="button" class="btn btn-secondary ng-scope" ng-class="{'active': statusFilter=='failed'}" ng-click="setStatusFilter('failed')">
+                        Errors: {{errorsResult}}
+                        <i ng-if="statusFilter=='failed'" class="fa fa-check fa-mark"></i>
+                     </button>
                   </div>       
                </div>
             <div ng-if="globalRuntime > 0" class="badge p3 ml-2 mr-1 mt-3 badge-success pull-right" style="text-align:center">
