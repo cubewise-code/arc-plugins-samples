@@ -102,7 +102,6 @@ arc.directive("arcSanityCheck", function () {
 
          //running next query waiting for the current one to end
          var tryItem = function(item) {
-            // item = $scope.requests[executeQueriesIndex]; 
             executeOneQuery(item);
          };
 
@@ -122,32 +121,34 @@ arc.directive("arcSanityCheck", function () {
                      item.message = null;
                      if( item.statusResult == item.statusCodeExpected){
                         var statusResult = "success"
-                        item.icon = "fa-check-circle"
+                        // item.icon = "fa-check-circle"
                         item.queryStatus = statusResult;
-                        // console.info(result.data);
                      } else {
                         var statusResult = "warning"
                         item.icon = "fa-exclamation-triangle"
-                        item.queryStatus = statusResult;   
-                        // console.warn("%o warning info:", result.data);  
+                        item.queryStatus = statusResult;     
                      }
                   } else {
                      var statusResult = "error"
                      item.icon = "fa-thin fa-times-circle";
                      item.queryStatus = 'failed';
                      item.resultQuery = result.data.error;
-                     item.message = result.data.error.message;
-                     // console.error("%o error info:r", result.data);            
+                     item.message = result.data.error.message;         
                   };
                   
-
                   var receiveDate = (new Date()).getTime();
-                  item.responseTimeMs = receiveDate - sendDate;
-                  $scope.globalRuntime = $scope.globalRuntime + item.responseTimeMs;
+                  if (item.queryStatus != "error") {
+                     item.responseTimeMs = receiveDate - sendDate;
+                     $scope.globalRuntime = $scope.globalRuntime + item.responseTimeMs;
+                  };
                   item.wasExecuted = true;
                   item.executing = false;
+                  if(item.method != "DELETE") {
+                     item.seeDetails = "pointer";
+                  };
                   setResultsCount(item);
                   updateProgressBar(item.queryStatus);
+                  // console.log(item);
                   tryToEnableButton();
                   if(item.isDependent && nextItem.isDependent && nextItem != undefined) {
                      tryItem(nextItem);
@@ -163,17 +164,18 @@ arc.directive("arcSanityCheck", function () {
          };
 
          var updateProgressBar = function (itemResult) {
+
             if (itemResult == "success") {
                nbSuccessfulStepsDone++
-               $scope.successfulStepsDone = Math.round(nbSuccessfulStepsDone / $scope.checkedRequests.length * 100);
+               $scope.successfulStepsDone = nbSuccessfulStepsDone / $scope.checkedRequests.length * 100;
                $scope.successfulStepsDoneFormatted = $scope.successfulStepsDone + "%";
             } else if (itemResult == "warning") {
                nbWarnStepsDone++
-               $scope.warnStepsDone = Math.round(nbWarnStepsDone / $scope.checkedRequests.length * 100);
+               $scope.warnStepsDone = nbWarnStepsDone / $scope.checkedRequests.length * 100;
                $scope.warnStepsDoneFormatted = $scope.warnStepsDone + "%";            
             } else {
                nbErrorStepsDone++
-               $scope.errorStepsDone = Math.round(nbErrorStepsDone / $scope.checkedRequests.length * 100);
+               $scope.errorStepsDone = nbErrorStepsDone / $scope.checkedRequests.length * 100;
                $scope.errorStepsDoneFormatted = $scope.errorStepsDone + "%";   
             };
 
@@ -208,6 +210,7 @@ arc.directive("arcSanityCheck", function () {
                item.icon = null;
                item.statusResult = null;
                item.wasExecuted = false;
+               item.seeDetails = "default";
          };
 
          $scope.resetStatusAll = function() {
@@ -279,8 +282,10 @@ arc.directive("arcSanityCheck", function () {
                name: "Instances",
                scope: $scope,
                controller: ['$rootScope', '$scope', function ($rootScope, $scope) {
+                  var itemBody = item.body;
+                  $scope.queryStatus = item.queryStatus;
+                  console.log($scope.queryStatus);
                   if (item.method == "POST") {
-                     var itemBody = item.body;
                      if (JSON.stringify(itemBody).includes("MDX")) {
                         stringifiedMDX = JSON.stringify(itemBody.MDX).replace(",", ", \n").replace("ROWS", "ROWS \n").replace("WHERE", "\n WHERE").slice(1,-1);
                         $scope.resultBody = stringifiedMDX;
@@ -293,6 +298,10 @@ arc.directive("arcSanityCheck", function () {
                         $scope.bodyTitle = "Body";
                      };
                   } else if (item.method == "GET" || item.method == "PATCH") {
+                     if (item.method == "PATCH") {
+                        $scope.resultBody = itemBody;
+                        $scope.bodyTitle = "Body";
+                     };
                      if(item.resultQuery.value) {
                         for (let index = 0; index < item.resultQuery.value.length; index++) {
                            const element = item.resultQuery.value[index];
@@ -310,8 +319,8 @@ arc.directive("arcSanityCheck", function () {
                      }; 
                   };
 
-                  $scope.queryData = item;      
-                  console.debug($scope.queryData);
+                  $scope.queryData = item.resultQuery;  
+                  console.debug(item);
                   $scope.itemMethod = item.method;
                }],
             });
