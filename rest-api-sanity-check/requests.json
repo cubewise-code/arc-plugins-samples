@@ -121,14 +121,14 @@
       "name": "Get all cubes",
       "method": "GET",
       "query": "Cubes?&$top=5",
-      "statusCodeExpected": 201,
+      "statusCodeExpected": 200,
       "isDependent": false
    },
    {
       "name": "Get all cube names",
       "method": "GET",
       "query": "Cubes?$select=Name&$top=5",
-      "statusCodeExpected": 201,
+      "statusCodeExpected": 200,
       "isDependent": false
    },
    {
