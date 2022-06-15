@@ -1,15 +1,20 @@
-
 arc.run(['$rootScope', function ($rootScope) {
 
    $rootScope.plugin("arcSanityCheck", "TM1 REST API Sanity Check", "page", {
       menu: "tools",
-      icon: "fa-adjust",
+      icon: "fa-check-circle",
       description: "This plugin can be used as a starting point for building new page plugins",
       author: "Cubewise",
       url: "https://github.com/cubewise-code/arc-plugins",
       version: "1.0.0"
    });
 
+}]);
+
+arc.filter("humanizeDuration", [function () {
+   return function (value, options) {
+      return humanizeDuration (value, options);
+   }
 }]);
 
 
@@ -32,23 +37,22 @@ arc.directive("arcSanityCheck", function () {
          $scope.lists = {
             columns : [
                {desc: "#", align:"center"},
-               {desc: ""},
                {desc: "Method", align:"center"},
-               {desc: "Status Expected", align:"center"},
-               {desc: "Status Result", align:"center"},
                {desc: "Query", align:"left"},
-               {desc: "See Details", align:"center"},
+               {desc: "Status Expected", align:"center"},
+               {desc: "Result", align:"center"},
                {desc: "Runtime", align:"center"}, 
             ],
          };
 
          $scope.methodsBadgeType = {
-            "GET": "btn btn-success",
-            "POST": "btn btn-primary",
-            "PATCH": "btn btn-warning",
-            "DELETE": "btn btn-danger"
+            "GET": "btn-success",
+            "POST": "btn-primary",
+            "PATCH": "btn-warning",
+            "DELETE": "btn-danger"
          };
-         
+
+
          $scope.checkedRequests = [];
          $scope.values = {};
          $scope.goodHttpStatus = [200, 201, 204];
@@ -64,6 +68,9 @@ arc.directive("arcSanityCheck", function () {
          executeQueriesIndex = 0;
          checkedItemsCount = 0;
          executedItemsCount = 0;
+         $scope.successBar = 0;
+         $scope.warningBar = 0;
+         $scope.errorsBar = 0;
 
          
          // querys execution
@@ -79,6 +86,7 @@ arc.directive("arcSanityCheck", function () {
             we set globalRuntime to 0 to reset the global runtime*/
             //  $scope.requestPending = 0;
             $scope.globalRuntime = 0;
+            
             var firstItem = $scope.checkedRequests[0];
             if (firstItem.isDependent) {
                executeOneQuery(firstItem);
@@ -92,20 +100,16 @@ arc.directive("arcSanityCheck", function () {
             };
          };
 
-
          //running next query waiting for the current one to end
          var tryItem = function(item) {
-            // item = $scope.requests[executeQueriesIndex]; 
             executeOneQuery(item);
          };
 
-         //for those which are async/not-dependent:
          var executeOneQuery = function (item) {
-            var nextItem = $scope.requests[item.index+1]; 
+            var nextItem = $scope.requests[item.index+1];
             if (!item.checked && nextItem != undefined) {
                executeOneQuery(nextItem);
             } else if (item.checked) {
-               console.log(item.index);
                var sendDate = (new Date()).getTime();           
                var restApiQuery = "/" + item.query;
                var sendDate = (new Date()).getTime();
@@ -116,31 +120,37 @@ arc.directive("arcSanityCheck", function () {
                      item.resultQuery = result.data;
                      item.message = null;
                      if( item.statusResult == item.statusCodeExpected){
-                        item.icon = "fa-check-circle"
-                        item.queryStatus = 'success';
-                        console.info(result.data);
+                        var statusResult = "success"
+                        // item.icon = "fa-check-circle"
+                        item.queryStatus = statusResult;
                      } else {
+                        var statusResult = "warning"
                         item.icon = "fa-exclamation-triangle"
-                        item.queryStatus = 'warning';   
-                        console.warn("%o warning info:", result.data);  
+                        item.queryStatus = statusResult;     
                      }
                   } else {
-                     item.icon = "fa-thin fa-times";
+                     var statusResult = "error"
+                     item.icon = "fa-thin fa-times-circle";
                      item.queryStatus = 'failed';
                      item.resultQuery = result.data.error;
-                     item.message = result.data.error.message;
-                     console.error("%o error info:r", result.data);            
+                     item.message = result.data.error.message;         
                   };
-
+                  
                   var receiveDate = (new Date()).getTime();
-                  item.responseTimeMs = receiveDate - sendDate;
-                  $scope.globalRuntime = $scope.globalRuntime + item.responseTimeMs;
+                  if (item.queryStatus != "error") {
+                     item.responseTimeMs = receiveDate - sendDate;
+                     $scope.globalRuntime = $scope.globalRuntime + item.responseTimeMs;
+                  };
                   item.wasExecuted = true;
-                  item.executing = false;           
+                  item.executing = false;
+                  if(item.method != "DELETE") {
+                     item.seeDetails = "pointer";
+                  };
                   setResultsCount(item);
-                  updateProgressBar();
+                  updateProgressBar(item.queryStatus);
+                  // console.log(item);
                   tryToEnableButton();
-                  if(item.isDependent && nextItem != undefined && nextItem.isDependent) {
+                  if(item.isDependent && nextItem.isDependent && nextItem != undefined) {
                      tryItem(nextItem);
                   };
                });
@@ -153,7 +163,22 @@ arc.directive("arcSanityCheck", function () {
             };
          };
 
-         var updateProgressBar = function () {
+         var updateProgressBar = function (itemResult) {
+
+            if (itemResult == "success") {
+               nbSuccessfulStepsDone++
+               $scope.successfulStepsDone = nbSuccessfulStepsDone / $scope.checkedRequests.length * 100;
+               $scope.successfulStepsDoneFormatted = $scope.successfulStepsDone + "%";
+            } else if (itemResult == "warning") {
+               nbWarnStepsDone++
+               $scope.warnStepsDone = nbWarnStepsDone / $scope.checkedRequests.length * 100;
+               $scope.warnStepsDoneFormatted = $scope.warnStepsDone + "%";            
+            } else {
+               nbErrorStepsDone++
+               $scope.errorStepsDone = nbErrorStepsDone / $scope.checkedRequests.length * 100;
+               $scope.errorStepsDoneFormatted = $scope.errorStepsDone + "%";   
+            };
+
             nbStepsDone++;
             $scope.stepsDone = Math.round(nbStepsDone / $scope.checkedRequests.length * 100);
             $scope.stepsDoneFormatted = $scope.stepsDone +"%";
@@ -185,6 +210,7 @@ arc.directive("arcSanityCheck", function () {
                item.icon = null;
                item.statusResult = null;
                item.wasExecuted = false;
+               item.seeDetails = "default";
          };
 
          $scope.resetStatusAll = function() {
@@ -192,10 +218,15 @@ arc.directive("arcSanityCheck", function () {
                resetStatus(item);
             });
             nbStepsDone = 0;
+            nbErrorStepsDone = 0;
+            nbSuccessfulStepsDone = 0;
+            nbWarnStepsDone = 0;
             $scope.globalRuntime = 0;
             executeQueriesIndex = 0;
             $scope.stepsDone = 0;
-            $scope.stepsDoneFormatted = 0;
+            $scope.successfulStepsDoneFormatted = 0;
+            $scope.warnStepsDoneFormatted = 0;
+            $scope.errorStepsDoneFormatted = 0;
             
          };
 
@@ -251,8 +282,10 @@ arc.directive("arcSanityCheck", function () {
                name: "Instances",
                scope: $scope,
                controller: ['$rootScope', '$scope', function ($rootScope, $scope) {
+                  var itemBody = item.body;
+                  $scope.queryStatus = item.queryStatus;
+                  console.log($scope.queryStatus);
                   if (item.method == "POST") {
-                     var itemBody = item.body;
                      if (JSON.stringify(itemBody).includes("MDX")) {
                         stringifiedMDX = JSON.stringify(itemBody.MDX).replace(",", ", \n").replace("ROWS", "ROWS \n").replace("WHERE", "\n WHERE").slice(1,-1);
                         $scope.resultBody = stringifiedMDX;
@@ -265,6 +298,10 @@ arc.directive("arcSanityCheck", function () {
                         $scope.bodyTitle = "Body";
                      };
                   } else if (item.method == "GET" || item.method == "PATCH") {
+                     if (item.method == "PATCH") {
+                        $scope.resultBody = itemBody;
+                        $scope.bodyTitle = "Body";
+                     };
                      if(item.resultQuery.value) {
                         for (let index = 0; index < item.resultQuery.value.length; index++) {
                            const element = item.resultQuery.value[index];
@@ -282,8 +319,8 @@ arc.directive("arcSanityCheck", function () {
                      }; 
                   };
 
-                  $scope.queryData = item;      
-                  console.debug($scope.queryData);
+                  $scope.queryData = item.resultQuery;  
+                  console.debug(item);
                   $scope.itemMethod = item.method;
                }],
             });
@@ -303,8 +340,9 @@ arc.directive("arcSanityCheck", function () {
          var methodBadgeType = function(item) {
             var method = item.method;
             var badgeType = $scope.methodsBadgeType[method];
-            item.badgeType = "badge " + badgeType + " d-inline-flex align-items-center text-left";
+            item.badgeType = "badge " + badgeType;
          };
+
 
          //loads the requests
          var loadSettingsFile = function () {
@@ -320,7 +358,7 @@ arc.directive("arcSanityCheck", function () {
                      methodBadgeType(item);
                      item.index = index;
                      $scope.totalResult ++;
-                  }
+                  };
                } else {
                   $scope.values.settingFilesFound = false;
                   $scope.values.settingsFileErrorMessage = result.data;

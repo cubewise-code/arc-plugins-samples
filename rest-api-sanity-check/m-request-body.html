@@ -1,34 +1,43 @@
-<uib-tabset>
-      <uib-tab>
-         <uib-tab-heading>
-            Data
-         </uib-tab-heading>
+
+
+   <div style="overflow-y: hidden; height: 600px">
+      <uib-tabset>
+         <uib-tab ng-if="queryData">
+            <uib-tab-heading>
+               Data
+            </uib-tab-heading>
             <div class="card-body">
                <auto-height>
                   <json-formatter json="queryData" open="1"></json-formatter>
+                  <br>
+                  <code ng-if="queryStatus == 'warning'" style="color: orange">
+                     Status expected might not be correct.
+                  </code>
                </auto-height>
             </div>
-            <!-- </div> -->
-         </uib-tab>
-      <uib-tab>
-         <uib-tab-heading>
-            {{bodyTitle}}
-         </uib-tab-heading>
+            </uib-tab>
+         <uib-tab ng-if="bodyTitle">
+            <uib-tab-heading>
+               {{bodyTitle}}
+            </uib-tab-heading>
 
-         <div class="card-body">
-            <div ng-if="showBodyTabAsMDX == false">
-               <auto-height>
-                  <json-formatter json="resultBody" open="1"></json-formatter>
-               </auto-height>
+            <div class="card-body">
+               <div ng-if="!showBodyTabAsMDX">
+                  <auto-height>
+                     <json-formatter json="resultBody" open="1"></json-formatter>
+                  </auto-height>
+               </div>
+               <div ng-if="showBodyTabAsMDX">
+                  <pre ui-ace="{ onLoad : editorLoaded }" ng-model="resultBody"
+                     auto-height auto-height-options="{noScroll: true, watchTab: true}">
+                     <div ng-bind-html="resultBody" style="overflow-y: auto; height: 400px"></div>
+
+                  </pre>
+                  
+               </div>
             </div>
-            <div ng-if="showBodyTabAsMDX">
-               <pre ui-ace="{ onLoad : editorLoaded }" ng-model="resultBody"
-                  auto-height auto-height-options="{noScroll: true, watchTab: true}">
-                  <div ng-bind-html="resultBody" style="overflow-y: auto; height: 400px"></div>
-               </pre>
-               
-            </div>
-         </div>
-      </uib-tab>
-   </uib-tabset>
+         </uib-tab>
+      </uib-tabset>
+   </div>
+   
 

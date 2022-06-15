@@ -2,58 +2,98 @@
    <style>
       td {
         height: 40px;
-        /*width: 160px; */
         text-align: center;
         vertical-align: middle;
-      }
+      };
+
       .badge {
          text-align: center;
          vertical-align: middle;
-      }
+      };
+
+      .theme-dark .text-info {
+         color: red !important;
+      };
+
+      .theme-dark .alert .text-info {
+         color: #FFFFFF !important;
+      };
+
+      .theme-dark .json-formatter-row .key {
+         color: lightblue;
+      };
+
 
    </style>
 
-<div>
-   <div class="row-flex">
-      <div class="col-sm-12 align-baseline" display="flex">
-            <div class="btn-group">
-               <button type ="button" class="btn btn-secondary" title="Execute" ng-disabled="requestPending > 0" ng-click="executeQueries(0)">
-                  <i ng-if="!options.executing" class="fa fa-fw fa-bolt ng-scope"></i>
-                  Execute
-               </button>
-               <button type="button" class="btn btn-secondary" title="Execute" ng-disabled="requestPending > 0" ng-click="resetStatusAll()">
-                  <i ng-if="!options.executing" class="fa fa-fw fa-refresh ng-scope"> </i>
-                  Refresh
-               </button>
+<div class= "{{ 'theme-' + $root.uiPrefs.theme }}">
+      <div class="row-flex">
+         <div class="col-sm-12 align-baseline" display="flex">
+               <div class="btn-group">
+                  <button type ="button" class="btn btn-secondary" title="Execute" ng-disabled="requestPending > 0 || checkedRequests.length == 0" ng-click="executeQueries()">
+                     <i ng-if="!options.executing" class="fa fa-fw fa-bolt ng-scope"></i>
+                     Execute
+                  </button>
+                  <button type="button" class="btn btn-secondary" title="Execute" ng-disabled="requestPending > 0" ng-click="resetStatusAll()">
+                     <i ng-if="!options.executing" class="fa fa-fw fa-refresh ng-scope"> </i>
+                     Reset
+                  </button>
+               </div>
+               <div class="btn-group">
+                  <div class="buttons btn-group align-middle text-align:right">
+                     <button type="button" class="btn btn-secondary ng-scope" ng-class="{'active': statusFilter==null}" ng-click="setStatusFilter(null)">
+                        Total: {{totalResult}}
+                        <i ng-if="statusFilter==null" class="fa fa-check fa-mark"></i>
+                     </button>
+                     <button type="button" class="btn btn-secondary ng-scope" ng-class="{'active': statusFilter=='success'}" ng-click="setStatusFilter('success')">
+                        Successes: {{successesResult}}
+                        <i ng-if="statusFilter=='success'" class="fa fa-check fa-mark"></i>
+                     </button>
+                     <button type="button" class="btn btn-secondary ng-scope" ng-class="{'active': statusFilter=='warning'}" ng-click="setStatusFilter('warning')">
+                        Warnings: {{warningsResult}}
+                        <i ng-if="statusFilter=='warning'" class="fa fa-check fa-mark"></i>
+                     </button>
+                     <button type="button" class="btn btn-secondary ng-scope" ng-class="{'active': statusFilter=='failed'}" ng-click="setStatusFilter('failed')">
+                        Errors: {{errorsResult}}
+                        <i ng-if="statusFilter=='failed'" class="fa fa-check fa-mark"></i>
+                     </button>
+                  </div>       
+               </div>
+            <div ng-if="globalRuntime > 0" class="badge p3 ml-2 mr-1 mt-3 badge-success pull-right" style="text-align:center">
+               <div style = "font-size:0.9rem">
+                  Global Runtime: {{globalRuntime | humanizeDuration : {maxDecimalPoints : 2} }}
+               </div>
             </div>
-            <div class="btn-group">
-               <div class="buttons btn-group align-middle text-align:right">
-                  <button type="button" class="btn btn-secondary ng-scope" ng-class="{'active font-weight-bold': statusFilter==null} "ng-click="setStatusFilter(null)">Total: {{totalResult}}</button>
-                  <button type="button" class="btn btn-secondary ng-scope" ng-class="{'active font-weight-bold': statusFilter=='success'} "ng-click="setStatusFilter('success')">Successes: {{successesResult}}</button>
-                  <button type="button" class="btn btn-secondary ng-scope" ng-class="{'active font-weight-bold': statusFilter=='warning'} " ng-click="setStatusFilter('warning')">Warnings: {{warningsResult}}</button>
-                  <button type="button" class="btn btn-secondary ng-scope" ng-class="{'active font-weight-bold': statusFilter=='failed'}  " ng-click="setStatusFilter('failed')">Errors: {{errorsResult}}</button>
-               </div>       
-            </div>
-         <div ng-if="globalRuntime > 0" class="badge p3 ml-2 mr-1 mt-3 badge-success pull-right" style="text-align:center">
-            <div style = "font-size:0.9rem">
-               Global Runtime: {{globalRuntime | num:0}} ms
-            </div>
-         </div>
+      </div>
    </div>
 
    <br>
 
-   <div class="row-flex">
-      <div class="col-sm-12 align-baseline" display="flex">
-         <div class="progress mb-2" style="height: 15px;font-size:0.9em">
-            <div class="progress-bar bg-success"
-               ng-class="{'progress-bar-striped progress-bar-animated':stepsDone<100}"
-               role="progressbar" 
-               ng-style="{'width': stepsDoneFormatted}"
-               aria-valuenow="{{stepsDone | num:0}}" aria-valuemin="0" aria-valuemax="100">
-               <span ng-if="stepsDone>10">{{stepsDone | num:1}}%</span>
-            </div>
-         </div>
+   <div class="row-flex col-sm-12 align-baseline">
+      <div class="progress" style="height: 15px;font-size:0.9em">
+               <div class="progress-bar bg-success"
+                  ng-class="{'progress-bar-striped progress-bar-animated':stepsDone<100}"
+                  role="progressbar" 
+                  ng-style="{'width': successfulStepsDoneFormatted}"
+                  aria-valuenow="{{successfulStepsDone | num:0}}" aria-valuemin="0" aria-valuemax="100">
+                  <span ng-if="successfulStepsDone>1">{{successfulStepsDone | num:1}}%</span>
+               </div>
+         
+               <div class="progress-bar bg-warning"
+                  ng-class="{'progress-bar-striped progress-bar-animated':stepsDone<100}"
+                  role="progressbar" 
+                  ng-style="{'width': warnStepsDoneFormatted}"
+                  aria-valuenow="{{warnStepsDone | num:0}}" aria-valuemin="0" aria-valuemax="100">
+                  <span ng-if="warnStepsDone>1">{{warnStepsDone | num:1}}%</span>
+               </div>
+
+               <div class="progress-bar bg-danger"
+                  ng-class="{'progress-bar-striped progress-bar-animated':stepsDone<100}"
+                  role="progressbar" 
+                  ng-style="{'width': errorStepsDoneFormatted}"
+                  aria-valuenow="{{errorStepsDone | num:0}}" aria-valuemin="0" aria-valuemax="100">
+                  <span ng-if="errorStepsDone>1">{{errorStepsDone | num:1}}%</span>
+               </div>
       </div>
    </div>
 
@@ -75,8 +115,8 @@
                </tr>
             </thead>
             <tbody>
-               <tr ng-if="item.queryStatus==statusFilter || statusFilter==null" ng-repeat="item in requests" class="ng-scope" ng-class="{'alert alert-success': item.queryStatus == 'success', 'alert alert-danger': item.queryStatus == 'failed', 'alert alert-warning': item.queryStatus == 'warning'}">   
-                  <td>
+               <tr ng-style="{'cursor':item.seeDetails}" ng-if="item.queryStatus==statusFilter || statusFilter==null" ng-repeat="item in requests" ng-click="item.wasExecuted && item.method != 'DELETE' && seeDetails(item)">   
+                  <td ng-click="$event.stopPropagation()">
                      <div class="click" style="white-space:nowrap;text-align: center">
                         <i ng-if="item.checked==false || item.checked==null" ng-click="checkItem(item)" class="fa fa-square-o text-info" title="unchecked"></i>
                         <i ng-if="item.checked==true" ng-click="uncheckItem(item)"class="fa fa-check-square-o text-info" title="checked"></i>
@@ -84,36 +124,34 @@
                   </td>  
                   <td style="text-align:center">
                      <span>{{item.index+1}}</span>
-                  </td>       
-                  <td style="text-align:center">
-                     <i ng-if="item.executing" class="fa fa-fw fa-refresh fa-spin"></i>
-                     <i ng-if="!item.executing" class="fa fa-fw {{item.icon}}"></i>
                   </td>
                   <td> 
                      <span ng-class="item.badgeType">
                         {{item.method}}
                      </span>
                   </td>
-                  <td style="text-align:center">
-                     <span>{{item.statusCodeExpected}}</span>
-                  </td>
-                   <td style="text-align:center">
-                     <span>{{item.statusResult}}</span>
-                  </td>
                   <td style="text-align:left">
                      <span>{{item.query}}</span>
                   </td>
-                  <td ng-if="item.wasExecuted" style="text-align:center">
-                     <button type="button" class="btn btn-secondary btn-sm" ng-click="seeDetails(item)">
-                        <i class="fa fa-eye"></i>
-                     </button>
+                  <td style="text-align:center">
+                     <span>{{item.statusCodeExpected}}</span>
                   </td>
+                   <td style="text-align:center"  class ="click" ng-if="item.wasExecuted">
+                     <span>{{item.statusResult}}</span>
+                     <!-- <i ng-if="item.executing" class="fa fa-fw fa-refresh fa-spin"></i> -->
+                     <!-- <i ng-if="!item.executing" class="fa fa-fw {{item.icon}}" ng-class="{'text-success': item.queryStatus == 'success', 'text-danger': item.queryStatus == 'failed', 'text-warning': item.queryStatus == 'warning'}"></i> -->
+                     <!-- <i class="fa fa-info-circle" ng-if="item.wasExecuted"></i> -->
+                  </td>                         
                   <td ng-if="!item.wasExecuted">
                      <span>{{blank}}</span>
                   </td>
                   <td>
                      <span ng-if="item.queryStatus == 'success'" class="badge badge-success">
-                        {{item.responseTimeMs | num:0}} ms
+                        {{item.responseTimeMs | humanizeDuration : {maxDecimalPoints : 2} }}
+                     </span>
+                     <span ng-if="item.queryStatus == 'failed' && item.wasExecuted" class="fa fa-fw {{item.icon}}" style="color: red">
+                     </span>
+                     <span ng-if="item.queryStatus == 'warning' && item.wasExecuted" class="fa fa-fw {{item.icon}}" style="color: orange">
                      </span>
                   </td>
                </tr>
@@ -121,7 +159,4 @@
          </table>
       </auto-height>
    </div>
-
 </div>
-
-</html>
