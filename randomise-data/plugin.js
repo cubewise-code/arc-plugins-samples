@@ -126,14 +126,13 @@ arc.directive("arcRandomiseData", function () {
 
                      var createFolderProcess = {
                         Process: {
-                           PrologProcedure: "ExecuteCommand('cmd /c if not exist \"" + folderPath + "\" mkdir \"" + folderPath + "\"', 0);"
+                           PrologProcedure: "ExecuteCommand('cmd /c if not exist \"" + folderPath + "\" mkdir \"" + folderPath + "\"', 1);"
                         }
                      };
 
                      var createFolderUrl = encodeURIComponent($scope.instance) + "/ExecuteProcess";
                      $http.post(createFolderUrl, createFolderProcess).then(function () {
 
-                        $timeout(function () {
                            var prolog = "DebugUtility( 114, 0, 0, '" + cube + "', '" + $scope.selections.targetFolder + "', '') ;";
 
                            body = {
@@ -151,8 +150,6 @@ arc.directive("arcRandomiseData", function () {
                                  $scope.lists.cubesRandomized.push(cube);
                               }
                            });
-
-                        }, 1000);
                      });
                   };
                }],
