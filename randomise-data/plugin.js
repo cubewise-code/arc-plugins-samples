@@ -121,24 +121,37 @@ arc.directive("arcRandomiseData", function () {
                      }
                   };
                   $scope.randomiseOneCube = function (cube) {
-                     var prolog = "DebugUtility( 114, 0, 0, '" + cube + "', '" + $scope.selections.targetFolder + "', '') ;";
-                     body = {
+
+                     var folderPath = $scope.selections.targetFolder.replace(/\//g, "\\");
+
+                     var createFolderProcess = {
                         Process: {
-                           PrologProcedure: prolog
+                           PrologProcedure: "ExecuteCommand('cmd /c if not exist \"" + folderPath + "\" mkdir \"" + folderPath + "\"', 1);"
                         }
                      };
-                     var config = {
-                        method: "POST",
-                        url: encodeURIComponent($scope.instance) + "/ExecuteProcess",
-                        data: body
-                     };
-                     $http(config).then(function (result) {
-                        if (result.status == 200 || result.status == 201 || result.status == 204) {
-                           $scope.lists.cubesRandomized.push(cube);
-                        } else {
-                        }
+
+                     var createFolderUrl = encodeURIComponent($scope.instance) + "/ExecuteProcess";
+                     $http.post(createFolderUrl, createFolderProcess).then(function () {
+
+                           var prolog = "DebugUtility( 114, 0, 0, '" + cube + "', '" + $scope.selections.targetFolder + "', '') ;";
+
+                           body = {
+                              Process: {
+                                 PrologProcedure: prolog
+                              }
+                           };
+                           var config = {
+                              method: "POST",
+                              url: encodeURIComponent($scope.instance) + "/ExecuteProcess",
+                              data: body
+                           };
+                           $http(config).then(function (result) {
+                              if (result.status == 200 || result.status == 201 || result.status == 204) {
+                                 $scope.lists.cubesRandomized.push(cube);
+                              }
+                           });
                      });
-                  }
+                  };
                }],
                data: {
                   cubesTarget: $scope.lists.cubesTarget,
