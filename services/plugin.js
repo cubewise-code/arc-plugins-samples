@@ -147,7 +147,7 @@ arc.directive("arcServices", function () {
          });
 
          $scope.sendValueToCell = function (value) {
-            $tm1.cellUpdate(value, $scope.instance, $scope.defaults.systemCube, $scope.defaults.element1, $scope.defaults.element2).then(function (data) {
+            $tm1.cellUpdate(value, $scope.instance, $scope.defaults.systemCube, null, $scope.defaults.element1, $scope.defaults.element2).then(function (data) {
                //console.log(data.status);
                $scope.getValueFromCell();
             });
