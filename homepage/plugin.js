@@ -4,9 +4,9 @@ arc.run(['$rootScope', function ($rootScope) {
     $rootScope.plugin("overviewButton", "Home", "page", {
         menu: "tools",
         icon: "fa-home",
-        description: "Instance Overview",
+        description: "A home page for an instance with shortcuts to cubes, dimensions, processes, chores and the server pages",
         author: "Cubewise",
-        url: "https://github.com/cubewise-code/arc-plugins",
+        url: "https://github.com/cubewise-code/arc-plugins-samples/tree/master/homepage",
         version: "1.0.0"
     });
 
@@ -52,9 +52,8 @@ arc.directive("overviewButton", function () {
                 { key: 'Threads', description: 'All Threads',value: '', icon: 'fa-users', class: 'admin',link:'#/threads/' }
              ]
 
-            $scope.plugins = [
-                { key: 'MDX Query', description: 'Test MDX Query',value: '', icon: 'fa-table', class: 'plugins',link:'#/cubewise-mdx/' }
-            ]
+            // Shortcuts to other plugins go here
+            $scope.plugins = []
 
             $scope.$on("login-reload", function (event, args) {
 
