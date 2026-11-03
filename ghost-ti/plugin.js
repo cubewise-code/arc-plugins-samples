@@ -3,9 +3,9 @@ arc.run(['$rootScope', function ($rootScope) {
     $rootScope.plugin("ghostti", "Ghost TI", "page", {
         menu: "tools",
         icon: "fa-snapchat-ghost",
-        description: "Short desc",
+        description: "Run Turbo Integrator code on an instance without creating a process",
         author: "Cubewise",
-        url: "https//:github.com/cubewise.code/arc-plugins-samples",
+        url: "https://github.com/cubewise-code/arc-plugins-samples/tree/master/ghost-ti",
         version: "1.0.0",
 
     });
