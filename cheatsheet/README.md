@@ -4,9 +4,11 @@ This plugin can be used as a starting point to build your own plugins
 <img src="https://s3.amazonaws.com/cubewise-downloads/web_assets/arc-plugins/cheatsheet.png" />
 
 ## Add this plugin to your application
-1. Download the folder
-2. Paste the folder insite your plugins folder (Arc\plugins)
-3. After clearing the cache you should now see the new plugin under **Tools**
+1. In Arc, open **Tools > Plugins Manager**.
+2. Find this plugin and click **Install**, then reload Arc.
+3. The plugin appears in the menu it registers in (see the table in the repository [README](../README.md)).
+
+To install it by hand instead, copy this folder into the `plugins` folder of your Arc installation and reload Arc.
 
 ## About Plugins
 Before going any further we recommend you reading these two Help articles:

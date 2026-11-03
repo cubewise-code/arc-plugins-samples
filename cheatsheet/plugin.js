@@ -5,11 +5,40 @@ arc.run(['$rootScope', function ($rootScope) {
       icon: "fa-archive",
       description: "This plugin gathers everything you should now about how to build plugins",
       author: "Cubewise",
-      url: "https://github.com/cubewise-code/arc-plugins-samples",
-      version: "1.0.0"
+      url: "https://github.com/cubewise-code/arc-plugins-samples/tree/master/cheatsheet",
+      version: "1.1.0"
    });
 
 }]);
+
+arc.run(["$dialogs", function ($dialogs) {
+
+   // One registration per size so the cheatsheet can show them side by side
+   _.forEach(["small", "medium", "large"], function (size) {
+      $dialogs.registerDialog("arcCheatSheet" + _.upperFirst(size) + "Dialog", {
+         title: "Cheatsheet",
+         directive: "arcCheatSheetMessage",
+         icon: "fa-archive",
+         size: size,
+         okButtonClass: "d-none",
+         cancelButtonLabel: "CLOSE"
+      });
+   });
+
+}]);
+
+arc.directive("arcCheatSheetMessage", function () {
+   return {
+      restrict: "E",
+      replace: true,
+      scope: {
+         data: "=arcModelData",
+         options: "=arcOptions",
+         dialog: "=arcDialog"
+      },
+      template: "<div>{{data.message}}</div>"
+   };
+});
 
 arc.directive("arcCheatSheet", function () {
    return {
@@ -22,7 +51,7 @@ arc.directive("arcCheatSheet", function () {
       link: function ($scope, element, attrs) {
 
       },
-      controller: ["$scope", "$rootScope", "$http", "$tm1", "$translate", "$timeout", "ngDialog", "$q", "$helper", "$subsetDialogs", function ($scope, $rootScope, $http, $tm1, $translate, $timeout, ngDialog, $q, $helper, $subsetDialogs) {
+      controller: ["$scope", "$rootScope", "$http", "$tm1", "$translate", "$timeout", "$dialogs", "$q", "$helper", "$subsetDialogs", function ($scope, $rootScope, $http, $tm1, $translate, $timeout, $dialogs, $q, $helper, $subsetDialogs) {
 
          $scope.defaults = {
             systemCube: 'System info',
@@ -130,7 +159,6 @@ arc.directive("arcCheatSheet", function () {
             var mdxQuery = "SELECT NON EMPTY {[System Info Parameter].[" + $scope.defaults.element1 + "]} ON COLUMNS,NON EMPTY {[System Info Measures].[" + $scope.defaults.element2 + "]} ON ROWS FROM [" + $scope.defaults.systemCube + "]";
             var mdxJSON = { MDX: mdxQuery };
             $http.post(encodeURIComponent($scope.instance) + "/ExecuteMDX?$expand=Cells", mdxJSON).then(function (values) {
-               //console.log(values.data.Cells[0].Value);
                // $scope.values.CurrentDate = values.data.Cells[0].Value;
             });
          };
@@ -139,7 +167,6 @@ arc.directive("arcCheatSheet", function () {
 
          $scope.sendValueToCell = function (value) {
             $tm1.cellUpdate(value, $scope.instance, $scope.defaults.systemCube, null, $scope.defaults.element1, $scope.defaults.element2).then(function (data) {
-               //console.log(data.status);
                $scope.getValueFromCell();
             });
          };
@@ -196,39 +223,12 @@ arc.directive("arcCheatSheet", function () {
          });
 
          $scope.openModalInstances = function (title, message) {
-            var dialog = ngDialog.open({
-               className: "ngdialog-theme-default large",
-               template: "__/plugins/cheatsheet/modal-json-formater.html",
-               name: "Instances",
-               controller: ['$rootScope', '$scope', function ($rootScope, $scope) {
-
-                  $scope.title = $scope.ngDialogData.title;
-                  $scope.message = $scope.ngDialogData.message;
-
-               }],
-               data: {
-                  title: title,
-                  message: message
-               }
-            });
+            // jsonViewerDialog is built into Arc
+            $dialogs.showDialog("jsonViewerDialog", { json: message }, { title: title });
          };
 
          $scope.openModal = function (title, message, size) {
-            var dialog = ngDialog.open({
-               className: "ngdialog-theme-default " + size,
-               template: "__/plugins/cheatsheet/modal.html",
-               name: "Instances",
-               controller: ['$rootScope', '$scope', function ($rootScope, $scope) {
-
-                  $scope.title = $scope.ngDialogData.title;
-                  $scope.message = $scope.ngDialogData.message;
-
-               }],
-               data: {
-                  title: title,
-                  message: message
-               }
-            });
+            $dialogs.showDialog("arcCheatSheet" + _.upperFirst(size) + "Dialog", { message: message }, { title: title });
          };
 
          //Function require to open subset editor

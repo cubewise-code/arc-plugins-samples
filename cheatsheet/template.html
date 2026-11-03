@@ -505,8 +505,8 @@ ng-click="getCubeDimensions(selections.cube)"
                   <pre id="codeS5" class="codesnipet" ng-show="displayCodeS5 == 1" readonly content-editable>
 <code><kbd> plugin.js:</kbd>
    $scope.sendValueToCell = function (value) {
-      $tm1.cellUpdate(value, $scope.instance, $scope.defaults.systemCube, $scope.defaults.element1, $scope.defaults.element2).then(function (data) {
-         //console.log(data.status);
+      // The 4th argument is the sandbox, null writes to the base data
+      $tm1.cellUpdate(value, $scope.instance, $scope.defaults.systemCube, null, $scope.defaults.element1, $scope.defaults.element2).then(function (data) {
          $scope.getValueFromCell();
       });
    };
@@ -1413,7 +1413,7 @@ $http.get(encodeURIComponent($scope.instance) + "/Cubes/$count").then(function (
                <div class="col-md-4 mt-2">
                   <div class="card">
                      <div class="card-header" style="padding: 5px 10px;">
-                        <label><a href="https://github.com/likeastore/ngDialog" target="_blank">ngDialog</a></label>
+                        <label>$dialogs</label>
                      </div>
                      <div class="card-body">
                         <p>Modals and popups
@@ -1435,22 +1435,19 @@ $http.get(encodeURIComponent($scope.instance) + "/Cubes/$count").then(function (
                   <pre id="codeL1" class="codesnipet" ng-show="displayCodeL1 == 1" readonly content-editable>
    <code>
    <kbd> plugin.js</kbd>
-   $scope.openModal = function (title, message, size) {
-      var dialog = ngDialog.open({
-         className: "ngdialog-theme-default "+size,
-         template: "__/plugins/cheatsheet/modal.html",
-         name: "Instances",
-         controller: ['$rootScope', '$scope', function ($rootScope, $scope) {
-
-            $scope.title = $scope.ngDialogData.title;
-            $scope.message = $scope.ngDialogData.message;
-
-         }],
-         data: {
-            title: title,
-            message: message
-         }
+   // Register the dialog once, in arc.run
+   arc.run(["$dialogs", function ($dialogs) {
+      $dialogs.registerDialog("arcCheatSheetSmallDialog", {
+         title: "Cheatsheet",
+         directive: "arcCheatSheetMessage", // the directive that is the dialog body
+         icon: "fa-archive",
+         size: "small"
       });
+   }]);
+
+   // Open it with the data the body needs
+   $scope.openModal = function (title, message) {
+      $dialogs.showDialog("arcCheatSheetSmallDialog", { message: message }, { title: title });
    };
    <kbd> template.html:</kbd>
    ng-click="openModal('My small modal','My message','small')"
