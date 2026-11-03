@@ -5,22 +5,81 @@ arc.run(['$rootScope', function ($rootScope) {
 
    $rootScope.plugin("cubewiseBedrockCubeDataExport", "Bedrock Export", "menu/cube", {
       icon: "fa-cloud-download",
-      description: "This plugin exports cube data using Bedrock.Cube.Data.Export process. You can specify:....",
+      description: "Exports cube data to a file with the Bedrock.Cube.Data.Export process. Choose the file name and folder, and filter by dimension.",
       author: "Cubewise",
-      url: "https://github.com/cubewise-code/arc-plugins",
-      version: "1.0.2"
+      url: "https://github.com/cubewise-code/arc-plugins-samples/tree/master/bedrock-cube-data-export",
+      version: "1.1.0"
       
    });
 
 }]);
 
-arc.service('cubewiseBedrockCubeDataExport', ['$rootScope', '$tm1', 'ngDialog', '$dialogs', '$http', function ($rootScope, $tm1, ngDialog, $dialogs, $http) {
+arc.run(["$dialogs", function ($dialogs) {
+
+   $dialogs.registerDialog("cubewiseBedrockCubeDataExportDialog", {
+      title: "Export data to file",
+      directive: "cubewiseBedrockCubeDataExportForm",
+      icon: "fa-cloud-download",
+      size: "large",
+      okButtonLabel: "OK",
+      okButtonDisabled: function (data, options) {
+         return !data.fileName.length;
+      }
+   });
+
+}]);
+
+arc.directive("cubewiseBedrockCubeDataExportForm", function () {
+   return {
+      restrict: "EA",
+      replace: true,
+      scope: {
+         data: "=arcModelData",
+         options: "=arcOptions",
+         dialog: "=arcDialog"
+      },
+      templateUrl: "__/plugins/bedrock-cube-data-export/template.html",
+      controller: ["$scope", "$subsetDialogs", function ($scope, $subsetDialogs) {
+
+         //Open Subset Editor
+         $scope.editSubset = function (dimension) {
+
+            var hierarchy = dimension.hierarchy;
+
+            var handler = function (subset, elements) {
+               // subset.selected has what element was clicked
+               // dimension.filter will append every selected element
+               // if to workaround undefined value being by default
+               if (dimension.filter === undefined) {
+                  dimension.filter = subset.selected.alias;
+               } else {
+                  dimension.filter += $scope.data.elementDelim + subset.selected.alias;
+               }
+            };
+
+            // Probably don't need the expression or expressions (not tested)
+            var subset = {
+               name: hierarchy.subset,
+               expression: hierarchy.expression,
+               expressions: hierarchy.expressions,
+               alias: hierarchy.alias,
+               isSelector: true
+            };
+
+            $subsetDialogs.open($scope.data.instance, hierarchy.dimension, hierarchy.name, subset, handler);
+
+         };
+
+      }]
+   };
+});
+
+arc.service('cubewiseBedrockCubeDataExport', ['$rootScope', '$tm1', '$dialogs', '$http', function ($rootScope, $tm1, $dialogs, $http) {
    // The interface you must implement
    this.execute = function (instance, name) {
 
       // Create a callback function for the dialog
       var action = function (options) {
-         dialog.close();
          //Overwritte pFilter if filter defined per dimension
          var nbDimensionFiltered = 1;
          _.each(options.dimensions, function (item) {
@@ -77,7 +136,6 @@ arc.service('cubewiseBedrockCubeDataExport', ['$rootScope', '$tm1', 'ngDialog', 
          });
       };
 
-      var dialog = undefined;
       
       // Get TM1 instance directory for default file path in dialog window
       var directory;
@@ -101,66 +159,26 @@ arc.service('cubewiseBedrockCubeDataExport', ['$rootScope', '$tm1', 'ngDialog', 
                alias:dim.Name
             }
          });
-         // console.log(dimensions);
-         // Use ngDialog (https://github.com/likeastore/ngDialog) for custom dialog boxes
-         // Pass a template URL to use an external file, path should start with __/plugins/{{your-plugin-name}}
-         // Use the data option to pass through data (or functions to the template), the data is then used in
-         //  the template with ngDialogData
-         // vincent:
-         //initialize the dialog box inside the REST API request to make sure the dimensions are initialized
+         // Open the dialog inside the REST API request to make sure the dimensions are initialized
 
-         dialog = ngDialog.open({
-            className: "ngdialog-theme-default",
-            template: "__/plugins/bedrock-cube-data-export/template.html",
-            controller: ['$rootScope', '$scope', '$subsetDialogs', function ($rootScope, $scope, $subsetDialogs) {
-               //Open Subset Editor
-               $scope.editSubset = function (dimension) {
+         var data = {
+            instance: instance,
+            cubeName: name,
+            fileName: name + ".csv",
+            filePath: directory,
+            filter: "",
+            dimensionDelim: "&&",
+            elementStartDelim: "::",
+            elementDelim: "++",
+            skipRules: true,
+            skipCons: true,
+            dimensions: dimensions,
+            manualFilter: true,
+            exportSeparatorCSV: true
+         };
 
-                  var hierarchy = dimension.hierarchy;
-
-                  var handler = function(subset, elements){
-                
-                     // subset.selected has what element was clicked
-                     // dimension.filter will append every selected element
-                     // if to workaround undefined value being by default
-                     if( dimension.filter === undefined){
-                        dimension.filter = subset.selected.alias;
-                     }else{
-                        dimension.filter +=  document.querySelector("#elementDelim").value + subset.selected.alias;
-                     }                    
-                  };
-
-                  // Probably don't need the expression or expressions (not tested)
-                  var subset = {
-                     name: hierarchy.subset,
-                     expression: hierarchy.expression,
-                     expressions: hierarchy.expressions,
-                     alias: hierarchy.alias,
-                     isSelector: true
-                  };
-
-                  $subsetDialogs.open(instance, hierarchy.dimension, hierarchy.name, subset, handler);
-                  
-                };
-
-            }],
-            data: {
-               cubeName: name,
-               fileName: name + ".csv",
-               filePath: directory,
-               filter: "",
-               dimensionDelim: "&&",
-               elementStartDelim: "::",
-               elementDelim: "++",
-               skipRules: true,
-               skipCons: true,
-               dimensions: dimensions,
-               manualFilter: true,
-               exportSeparatorCSV: true,
-               action: action // pass through the function declared above
-            }
-            
-			
+         $dialogs.showDialog("cubewiseBedrockCubeDataExportDialog", data, { title: "Export " + name + " data to file" }, function (result) {
+            action(result.data);
          });
 
       });
