@@ -3,10 +3,23 @@ arc.run(['$rootScope', function ($rootScope) {
    $rootScope.plugin("arcSanityCheck", "TM1 REST API Sanity Check", "page", {
       menu: "tools",
       icon: "fa-check-circle",
-      description: "This plugin can be used as a starting point for building new page plugins",
+      description: "Runs a set of TM1 REST API requests against the instance and checks each one returns the expected status",
       author: "Cubewise",
-      url: "https://github.com/cubewise-code/arc-plugins",
-      version: "1.0.0"
+      url: "https://github.com/cubewise-code/arc-plugins-samples/tree/master/rest-api-sanity-check",
+      version: "1.1.0"
+   });
+
+}]);
+
+arc.run(["$dialogs", function ($dialogs) {
+
+   $dialogs.registerDialog("arcSanityCheckDetailsDialog", {
+      title: "Request details",
+      directive: "arcSanityCheckDetails",
+      icon: "fa-check-circle",
+      size: "large",
+      okButtonClass: "d-none",
+      cancelButtonLabel: "CLOSE"
    });
 
 }]);
@@ -17,6 +30,67 @@ arc.filter("humanizeDuration", [function () {
    }
 }]);
 
+
+arc.directive("arcSanityCheckDetails", function () {
+   return {
+      restrict: "EA",
+      replace: true,
+      scope: {
+         data: "=arcModelData",
+         options: "=arcOptions",
+         dialog: "=arcDialog"
+      },
+      templateUrl: "__/plugins/rest-api-sanity-check/m-request-body.html",
+      controller: ["$scope", "$rootScope", function ($scope, $rootScope) {
+
+         var item = $scope.data.item;
+         var itemBody = item.body;
+         $scope.queryStatus = item.queryStatus;
+         if (item.method == "POST") {
+            if (JSON.stringify(itemBody).includes("MDX")) {
+               var stringifiedMDX = JSON.stringify(itemBody.MDX).replace(",", ", \n").replace("ROWS", "ROWS \n").replace("WHERE", "\n WHERE").slice(1, -1);
+               $scope.resultBody = stringifiedMDX;
+               $scope.showBodyTabAsMDX = true;
+               $scope.bodyTitle = "MDX";
+            } else {
+               $scope.resultBody = itemBody;
+               $scope.showBodyTabAsMDX = false;
+               $scope.bodyTitle = "Body";
+            };
+         } else if (item.method == "GET" || item.method == "PATCH") {
+            if (item.method == "PATCH") {
+               $scope.resultBody = itemBody;
+               $scope.bodyTitle = "Body";
+            };
+            if (item.resultQuery.value) {
+               for (let index = 0; index < item.resultQuery.value.length; index++) {
+                  const element = item.resultQuery.value[index];
+                  if (element.Rules != null) {
+                     element.Rules = element.Rules.substring(0, 100) + "...";
+                  };
+               };
+            } else if (item.resultQuery.Rules != null) {
+               item.resultQuery.Rules = item.resultQuery.Rules.substring(0, 100) + "...";
+            };
+         };
+
+         $scope.queryData = item.resultQuery;
+         $scope.itemMethod = item.method;
+
+         $scope.editorLoaded = function (_editor) {
+            // Initialise the editor settings
+            _editor.setTheme($rootScope.uiPrefs.editorTheme);
+            _editor.getSession().setMode("ace/mode/mdx");
+            _editor.getSession().setOptions({ tabSize: $rootScope.uiPrefs.editorTabSpaces, useSoftTabs: true });
+            _editor.$blockScrolling = Infinity;
+            _editor.setFontSize($rootScope.uiPrefs.fontSize);
+            _editor.setShowPrintMargin(false);
+            _editor.getSession().setUseWrapMode($rootScope.uiPrefs.editorWrapLongLines);
+         };
+
+      }]
+   };
+});
 
 arc.directive("arcSanityCheck", function () {
    return {
@@ -29,7 +103,9 @@ arc.directive("arcSanityCheck", function () {
       link: function ($scope, element, attrs) {
 
       },
-      controller: ["$scope", "$rootScope", "$http", "$tm1", "$translate", "$timeout", "ngDialog", function ($scope, $rootScope, $http, $tm1, $translate, $timeout, ngDialog) {
+      controller: ["$scope", "$rootScope", "$http", "$tm1", "$translate", "$timeout", "$dialogs", "log", function ($scope, $rootScope, $http, $tm1, $translate, $timeout, $dialogs, log) {
+
+         var _logger = log.getLogger("SanityCheck");
 
          //Variables area
          $scope.defaults = {};
@@ -148,7 +224,6 @@ arc.directive("arcSanityCheck", function () {
                   };
                   setResultsCount(item);
                   updateProgressBar(item.queryStatus);
-                  // console.log(item);
                   tryToEnableButton();
                   if(item.isDependent && nextItem.isDependent && nextItem != undefined) {
                      tryItem(nextItem);
@@ -276,65 +351,7 @@ arc.directive("arcSanityCheck", function () {
 
          //See Details PopUp
          $scope.seeDetails = function (item) {
-            var dialog = ngDialog.open({
-               className: "ngdialog-theme-default large",
-               template: "__/plugins/rest-api-sanity-check/m-request-body.html",
-               name: "Instances",
-               scope: $scope,
-               controller: ['$rootScope', '$scope', function ($rootScope, $scope) {
-                  var itemBody = item.body;
-                  $scope.queryStatus = item.queryStatus;
-                  console.log($scope.queryStatus);
-                  if (item.method == "POST") {
-                     if (JSON.stringify(itemBody).includes("MDX")) {
-                        stringifiedMDX = JSON.stringify(itemBody.MDX).replace(",", ", \n").replace("ROWS", "ROWS \n").replace("WHERE", "\n WHERE").slice(1,-1);
-                        $scope.resultBody = stringifiedMDX;
-                        $scope.showBodyTabAsMDX = true;
-                        $scope.bodyTitle = "MDX";
-                     } else {
-                        $scope.resultBody = itemBody;
-                        console.debug($scope.resultBody);
-                        $scope.showBodyTabAsMDX = false;
-                        $scope.bodyTitle = "Body";
-                     };
-                  } else if (item.method == "GET" || item.method == "PATCH") {
-                     if (item.method == "PATCH") {
-                        $scope.resultBody = itemBody;
-                        $scope.bodyTitle = "Body";
-                     };
-                     if(item.resultQuery.value) {
-                        for (let index = 0; index < item.resultQuery.value.length; index++) {
-                           const element = item.resultQuery.value[index];
-                           if (element.Rules != null) {
-                              var shortenedRule = element.Rules.substring(0, 100) + "...";
-                              element.Rules = shortenedRule;
-                           };
-                        };
-                     } else if (item.resultQuery.Rules != null) {
-                           const element = item.resultQuery;
-                           if (element.Rules != null) {
-                              var shortenedRule = element.Rules.substring(0, 100) + "...";
-                              element.Rules = shortenedRule;
-                           };
-                     }; 
-                  };
-
-                  $scope.queryData = item.resultQuery;  
-                  console.debug(item);
-                  $scope.itemMethod = item.method;
-               }],
-            });
-         };
-
-         $scope.editorLoaded = function (_editor) {
-            // Initialise the editor settings
-            _editor.setTheme($rootScope.uiPrefs.editorTheme);
-            _editor.getSession().setMode("ace/mode/mdx");
-            _editor.getSession().setOptions({ tabSize: $rootScope.uiPrefs.editorTabSpaces, useSoftTabs: true });
-            _editor.$blockScrolling = Infinity;
-            _editor.setFontSize($rootScope.uiPrefs.fontSize);
-            _editor.setShowPrintMargin(false);
-            _editor.getSession().setUseWrapMode($rootScope.uiPrefs.editorWrapLongLines);
+            $dialogs.showDialog("arcSanityCheckDetailsDialog", { item: item });
          };
 
          var methodBadgeType = function(item) {
@@ -383,13 +400,6 @@ arc.directive("arcSanityCheck", function () {
          });
 
          
-         //Reloads the page, not using it at the moment
-         $scope.reload = function() {
-               console.log("loading...");
-               location.reload(true);
-           };
-
-
          //Close the tab
          $scope.$on("close-tab", function (event, args) {
             // Event to capture when a user has clicked close on the tab
