@@ -6,8 +6,8 @@ arc.run(['$rootScope', function ($rootScope) {
       icon: "fa-arrows-h",
       description: "This plugin gives you the list of all available Arc services",
       author: "Cubewise",
-      url: "https://github.com/cubewise-code/arc-plugins-samples",
-      version: "1.0.0"
+      url: "https://github.com/cubewise-code/arc-plugins-samples/tree/master/services",
+      version: "1.1.0"
    });
 
 }]);
@@ -23,7 +23,7 @@ arc.directive("arcServices", function () {
       link: function ($scope, element, attrs) {
 
       },
-      controller: ["$scope", "$rootScope", "$http", "$tm1", "$translate", "$timeout", "ngDialog", "$q", "$helper", function ($scope, $rootScope, $http, $tm1, $translate, $timeout, ngDialog, $q, $helper) {
+      controller: ["$scope", "$rootScope", "$http", "$tm1", "$translate", "$timeout", "$dialogs", "$q", "$helper", function ($scope, $rootScope, $http, $tm1, $translate, $timeout, $dialogs, $q, $helper) {
 
          $scope.defaults = {
             systemCube: 'System info',
@@ -89,7 +89,6 @@ arc.directive("arcServices", function () {
             var mdxQuery = "SELECT NON EMPTY {[System Info Parameter].[" + $scope.defaults.element1 + "]} ON COLUMNS,NON EMPTY {[System Info Measures].[" + $scope.defaults.element2 + "]} ON ROWS FROM [" + $scope.defaults.systemCube + "]";
             var mdxJSON = { MDX: mdxQuery };
             $http.post(encodeURIComponent($scope.instance) + "/ExecuteMDX?$expand=Cells", mdxJSON).then(function (values) {
-               //console.log(values.data.Cells[0].Value);
                // $scope.values.CurrentDate = values.data.Cells[0].Value;
             });
          };
@@ -148,27 +147,13 @@ arc.directive("arcServices", function () {
 
          $scope.sendValueToCell = function (value) {
             $tm1.cellUpdate(value, $scope.instance, $scope.defaults.systemCube, null, $scope.defaults.element1, $scope.defaults.element2).then(function (data) {
-               //console.log(data.status);
                $scope.getValueFromCell();
             });
          };
 
          $scope.openModalInstances = function (title, message) {
-            var dialog = ngDialog.open({
-               className: "ngdialog-theme-default large",
-               template: "__/plugins/services/modal.html",
-               name: "Instances",
-               controller: ['$rootScope', '$scope', function ($rootScope, $scope) {
-
-                  $scope.title = $scope.ngDialogData.title;
-                  $scope.message = $scope.ngDialogData.message;
-
-               }],
-               data: {
-                  title: title,
-                  message: message
-               }
-            });
+            // jsonViewerDialog is built into Arc
+            $dialogs.showDialog("jsonViewerDialog", { json: message }, { title: title });
          };
 
 
