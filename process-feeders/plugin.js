@@ -1,18 +1,60 @@
 
-// Uncomment the code arc.run.. below to enable this plugin
-
 arc.run(['$rootScope', function ($rootScope) {
 
    $rootScope.plugin("arcCubeProcessFeeders", "Process Feeders", "page", {
       menu: "tools",
       icon: "fa-rocket",
-      description: "This plugin can be to process feeders",
+      description: "Runs CubeProcessFeeders on the selected cubes and shows how long each one takes",
       author: "Cubewise",
-      url: "https://github.com/cubewise-code/arc-plugins",
-      version: "1.0.0"
+      url: "https://github.com/cubewise-code/arc-plugins-samples/tree/master/process-feeders",
+      version: "1.1.0"
    });
 
 }]);
+
+arc.run(["$dialogs", function ($dialogs) {
+
+   $dialogs.registerDialog("arcCubeProcessFeedersDialog", {
+      title: "Execute CubeProcessFeeders per cube",
+      directive: "arcCubeProcessFeedersForm",
+      icon: "fa-rocket",
+      size: "small",
+      okButtonLabel: "Process feeders",
+      okButtonClass: "btn-warning",
+      cancelButtonLabel: "CLOSE"
+   });
+
+}]);
+
+arc.directive("arcCubeProcessFeedersForm", function () {
+   return {
+      restrict: "EA",
+      replace: true,
+      scope: {
+         data: "=arcModelData",
+         options: "=arcOptions",
+         dialog: "=arcDialog"
+      },
+      templateUrl: "__/plugins/process-feeders/m-processFeeders.html",
+      controller: ["$scope", function ($scope) {
+
+         // Colour the badge from the response time
+         $scope.generateHSLColour = function (string) {
+            var hash = 0;
+            string = String(string);
+            for (var i = 0; i < string.length; i++) {
+               hash = string.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            var h = hash % 360;
+            return {
+               "background-color": "hsl(" + h + ", 50%, 50%)",
+               "color": "white"
+            };
+         };
+
+      }]
+   };
+});
 
 arc.directive("arcCubeProcessFeeders", function () {
    return {
@@ -25,7 +67,7 @@ arc.directive("arcCubeProcessFeeders", function () {
       link: function ($scope, element, attrs) {
 
       },
-      controller: ["$scope", "$rootScope", "$http", "$tm1", "$translate", "$timeout", "ngDialog", function ($scope, $rootScope, $http, $tm1, $translate, $timeout, ngDialog) {
+      controller: ["$scope", "$rootScope", "$http", "$tm1", "$translate", "$timeout", "$dialogs", function ($scope, $rootScope, $http, $tm1, $translate, $timeout, $dialogs) {
 
          //Define variables
          $scope.defaults = {
@@ -110,35 +152,30 @@ arc.directive("arcCubeProcessFeeders", function () {
             });
          };
 
-         //OPEN MODAL WITH SAVEDATALL
+         // OPEN DIALOG WITH THE CUBES TO PROCESS
          $scope.openModalprocessFeeders = function () {
-            $scope.selections.responseTimeMs = 0;
-            var dialog = ngDialog.open({
-               className: "ngdialog-theme-default small",
-               template: "__/plugins/process-feeders/m-processFeeders.html",
-               name: "Instances",
-               scope: $scope,
-               controller: ['$rootScope', '$scope', function ($rootScope, $scope) {
-                  $scope.cubesToSave = $scope.ngDialogData.cubesToSave;
-               }],
-               data: {
-                  cubesToSave: $scope.cubesToSave
-               }
+            var data = {
+               cubes: _.map($scope.cubesToSave, function (cube) { return { Name: cube.Name }; }),
+               responseTimeMs: 0
+            };
+            $dialogs.showDialog("arcCubeProcessFeedersDialog", data, null, function (result) {
+               $scope.processFeedersPerCubes(result.data);
+               // Returning true keeps the dialog open so the response times can be read
+               return true;
             });
          };
 
-         $scope.processFeedersPerCubes = function () {
-            $scope.selections.responseTimeMs = 0;
-            for (var c in $scope.cubesToSave) {
-               $scope.processFeedersForOneCube($scope.cubesToSave[c]);
-            }
-         }
+         $scope.processFeedersPerCubes = function (data) {
+            data.responseTimeMs = 0;
+            _.forEach(data.cubes, function (cube) {
+               $scope.processFeedersForOneCube(cube, data);
+            });
+         };
 
-         $scope.processFeedersForOneCube = function (cube) {
-            cube.showBadgeTime = true;
+         $scope.processFeedersForOneCube = function (cube, data) {
             cube.sendDate = (new Date()).getTime();
             var prolog = "CubeProcessFeeders('" + cube.Name + "');";
-            body = {
+            var body = {
                Process: {
                   PrologProcedure: prolog
                }
@@ -150,16 +187,14 @@ arc.directive("arcCubeProcessFeeders", function () {
             };
             $http(config).then(function (result) {
                if (result.status < 400) {
-                  $scope.processFeedersStatus = true;
                   cube.receiveDate = (new Date()).getTime();
                   cube.responseTimeMs = cube.receiveDate - cube.sendDate;
-                  $scope.selections.responseTimeMs = $scope.selections.responseTimeMs + cube.responseTimeMs;
-                  $timeout(function () { $scope.showBadgeTimeCube(cube); }, 20000);
+                  data.responseTimeMs = data.responseTimeMs + cube.responseTimeMs;
                } else {
-                  //error
+                  cube.failed = true;
                }
             });
-         }
+         };
 
          $scope.showBadgeTimeCube = function (cube) {
             cube.showBadgeTime = false;
