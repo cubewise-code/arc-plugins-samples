@@ -1,6 +1,4 @@
 
-// Uncomment the code arc.run.. below to enable this plugin
-
 arc.run(['$rootScope', function ($rootScope) {
 
    $rootScope.plugin("arcRandomiseData", "Randomise Data", "page", {
@@ -8,11 +6,42 @@ arc.run(['$rootScope', function ($rootScope) {
       icon: "fa-user-secret",
       description: "This plugin can be used to randomize data for any cubes",
       author: "Cubewise",
-      url: "https://github.com/cubewise-code/arc-plugins",
-      version: "1.0.0"
+      url: "https://github.com/cubewise-code/arc-plugins-samples/tree/master/randomise-data",
+      version: "1.1.0"
    });
 
 }]);
+
+arc.run(["$dialogs", function ($dialogs) {
+
+   $dialogs.registerDialog("arcRandomiseDataDialog", {
+      title: "Randomise data for following cubes",
+      directive: "arcRandomiseDataForm",
+      icon: "fa-user-secret",
+      size: "medium",
+      okButtonLabel: "Randomise",
+      okButtonClass: "btn-danger",
+      cancelButtonLabel: "CLOSE",
+      // Once the cubes are randomised the results are shown, so Randomise is disabled
+      okButtonDisabled: function (data, options) {
+         return data.cubesRandomized.length > 0;
+      }
+   });
+
+}]);
+
+arc.directive("arcRandomiseDataForm", function () {
+   return {
+      restrict: "EA",
+      replace: true,
+      scope: {
+         data: "=arcModelData",
+         options: "=arcOptions",
+         dialog: "=arcDialog"
+      },
+      templateUrl: "__/plugins/randomise-data/m-randomise.html"
+   };
+});
 
 arc.directive("arcRandomiseData", function () {
    return {
@@ -25,7 +54,9 @@ arc.directive("arcRandomiseData", function () {
       link: function ($scope, element, attrs) {
 
       },
-      controller: ["$scope", "$rootScope", "$http", "$tm1", "$translate", "$timeout", "ngDialog", function ($scope, $rootScope, $http, $tm1, $translate, $timeout, ngDialog) {
+      controller: ["$scope", "$rootScope", "$http", "$tm1", "$translate", "$timeout", "$dialogs", "log", function ($scope, $rootScope, $http, $tm1, $translate, $timeout, $dialogs, log) {
+
+         var _logger = log.getLogger("RandomiseData");
 
          //Define variables
          $scope.defaults = {};
@@ -91,7 +122,7 @@ arc.directive("arcRandomiseData", function () {
          }
 
          $scope.addMultipleCubes = function(string){
-            console.log(string);
+            _logger.debug("Adding cubes that contain " + string);
             var query = "/Cubes?$select=Name&$filter=indexof(Name,'"+string+"') ne -1 &$filter=indexof(Name,'}') eq -1";
             $http.get(encodeURIComponent($scope.instance) + query).then(function (result) {
                var cubes = result.data.value;
@@ -101,63 +132,57 @@ arc.directive("arcRandomiseData", function () {
             });
          }
 
-         //OPEN MODAL WITH VIEWS TO BE DELETED
+         // OPEN DIALOG WITH THE CUBES TO RANDOMISE
          $scope.openModalRandomise = function () {
-            var dialog = ngDialog.open({
-               className: "ngdialog-theme-default medium",
-               template: "__/plugins/randomise-data/m-randomise.html",
-               name: "Instances",
-               scope: $scope,
-               controller: ['$rootScope', '$scope', function ($rootScope, $scope) {
-                  $scope.cubesTarget = $scope.ngDialogData.cubesTarget;
-                  $scope.cubesRandomized = $scope.ngDialogData.cubesRandomized;
-                  $scope.selections.targetFolder = $scope.ngDialogData.targetFolder;
+            var data = {
+               cubesTarget: _.clone($scope.lists.cubesTarget),
+               cubesRandomized: [],
+               targetFolder: $scope.selections.targetFolder
+            };
+            $dialogs.showDialog("arcRandomiseDataDialog", data, null, function (result) {
+               $scope.randomiseAll(result.data);
+               // Returning true keeps the dialog open so the result can be read
+               return true;
+            });
+         };
 
-                  //Randomise data
-                  $scope.randomiseAll = function () {
-                     for (var c in $scope.lists.cubesTarget) {
-                        cube = $scope.lists.cubesTarget[c];
-                        $scope.randomiseOneCube(cube);
-                     }
-                  };
-                  $scope.randomiseOneCube = function (cube) {
+         // RANDOMISE DATA
+         $scope.randomiseAll = function (data) {
+            _.forEach(data.cubesTarget, function (cube) {
+               $scope.randomiseOneCube(cube, data);
+            });
+         };
 
-                     var folderPath = $scope.selections.targetFolder.replace(/\//g, "\\");
+         $scope.randomiseOneCube = function (cube, data) {
 
-                     var createFolderProcess = {
-                        Process: {
-                           PrologProcedure: "ExecuteCommand('cmd /c if not exist \"" + folderPath + "\" mkdir \"" + folderPath + "\"', 1);"
-                        }
-                     };
+            var folderPath = data.targetFolder.replace(/\//g, "\\");
 
-                     var createFolderUrl = encodeURIComponent($scope.instance) + "/ExecuteProcess";
-                     $http.post(createFolderUrl, createFolderProcess).then(function () {
-
-                           var prolog = "DebugUtility( 114, 0, 0, '" + cube + "', '" + $scope.selections.targetFolder + "', '') ;";
-
-                           body = {
-                              Process: {
-                                 PrologProcedure: prolog
-                              }
-                           };
-                           var config = {
-                              method: "POST",
-                              url: encodeURIComponent($scope.instance) + "/ExecuteProcess",
-                              data: body
-                           };
-                           $http(config).then(function (result) {
-                              if (result.status == 200 || result.status == 201 || result.status == 204) {
-                                 $scope.lists.cubesRandomized.push(cube);
-                              }
-                           });
-                     });
-                  };
-               }],
-               data: {
-                  cubesTarget: $scope.lists.cubesTarget,
-                  cubesRandomized: $scope.lists.cubesRandomized,
-                  targetFolder: $scope.selections.targetFolder
+            var createFolderProcess = {
+               Process: {
+                  PrologProcedure: "ExecuteCommand('cmd /c if not exist \"" + folderPath + "\" mkdir \"" + folderPath + "\"', 1);"
                }
+            };
+
+            var createFolderUrl = encodeURIComponent($scope.instance) + "/ExecuteProcess";
+            $http.post(createFolderUrl, createFolderProcess).then(function () {
+
+               var prolog = "DebugUtility( 114, 0, 0, '" + cube + "', '" + data.targetFolder + "', '') ;";
+
+               var body = {
+                  Process: {
+                     PrologProcedure: prolog
+                  }
+               };
+               var config = {
+                  method: "POST",
+                  url: encodeURIComponent($scope.instance) + "/ExecuteProcess",
+                  data: body
+               };
+               $http(config).then(function (result) {
+                  if (result.status == 200 || result.status == 201 || result.status == 204) {
+                     data.cubesRandomized.push(cube);
+                  }
+               });
             });
          };
 
