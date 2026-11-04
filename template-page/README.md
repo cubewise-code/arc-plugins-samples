@@ -4,9 +4,12 @@ This plugin can be used as a starting point to build your own plugins
 <img src="https://downloads.cubewise.com/web_assets/arc-pulgins/Template+screenshot.png" />
 
 ## Add this plugin to your application
-1. Download the **template** folder
-2. Paste the folder insite your plugins folder (Arc\plugins)
-3. After clearing the cache you should now see the new **template** plugin under **Tools**
+1. In Arc, open **Tools > Plugins Manager** and install **Template Page**, then reload Arc.
+2. It appears as **Template Page** under **Tools**.
+
+To install it by hand instead, copy the **template-page** folder into the `plugins` folder of your Arc installation and reload Arc.
+
+Do not keep the installed copy active next to your own copy. Two plugins registered with the same name stop Arc from loading, so rename the plugin ID in your copy as described below.
 
 ## To create a new plugin
 1. Duplicate the **template-page** folder and rename it, we are going to call **my-new-plugin**

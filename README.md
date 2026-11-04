@@ -14,8 +14,8 @@ In Arc, open **Tools > Plugins Manager**, pick this repository as the source, an
 | [randomise-data](randomise-data) | Randomises the data of selected cubes | Tools |
 | [rest-api-sanity-check](rest-api-sanity-check) | Runs TM1 REST API requests and checks the status codes | Tools |
 | [services](services) | Lists the services available to plugins | Tools |
+| [template-page](template-page) | A starting point for writing your own page plugin | Tools |
 
-[template-page](template-page) is a starting point for writing your own page plugin. It is not published to the Plugins Manager.
 
 ## Write a plugin
 Start from [template-page](template-page) and read the [cheatsheet](cheatsheet) plugin. Before you publish a change, review the plugin against the current Arc with the `review-arc-plugin` skill in `.claude/skills`.

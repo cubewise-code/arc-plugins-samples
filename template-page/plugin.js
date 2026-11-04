@@ -1,22 +1,15 @@
-
-// Uncomment the code arc.run.. below to enable this plugin
-
-/*
-
 arc.run(['$rootScope', function ($rootScope) {
 
-    $rootScope.plugin("arcTemplate", "Template Title", "page", {
+    $rootScope.plugin("arcTemplate", "Template Page", "page", {
         menu: "tools",
         icon: "fa-paw",
-        description: "This plugin can be used as a starting point for building new page plugins",
+        description: "A starting point for writing your own page plugin. Copy the folder, rename it and change the plugin name.",
         author: "Cubewise",
-        url: "https://github.com/cubewise-code/arc-plugins",
+        url: "https://github.com/cubewise-code/arc-plugins-samples/tree/master/template-page",
         version: "1.0.0"
     });
 
 }]);
-
-*/
 
 arc.directive("arcTemplate", function () {
     return {
