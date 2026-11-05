@@ -1,12 +1,12 @@
 arc.run(['$rootScope', function ($rootScope) {
 
-   $rootScope.plugin("arcCheatSheet", "Cheatsheet", "page", {
+   $rootScope.plugin("arcCheatSheet", "Cheatsheet (Sample)", "page", {
       menu: "tools",
       icon: "fa-archive",
       description: "This plugin gathers everything you should now about how to build plugins",
       author: "Cubewise",
       url: "https://github.com/cubewise-code/arc-plugins-samples/tree/master/cheatsheet",
-      version: "1.1.0"
+      version: "2.0.0"
    });
 
 }]);
@@ -60,13 +60,13 @@ arc.directive("arcCheatSheet", function () {
          };
 
          $scope.selections = {
-            chore: 'Save Data - Morning',
-            process: 'Bedrock.Server.Wait',
-            cube: 'General Ledger',
-            instance: 'Canvas Sample',
+            chore: '',
+            process: '',
+            cube: '',
+            instance: $scope.instance,
             valueToBeSent: '15',
-            dimension: 'Account',
-            hierarchy: 'Account',
+            dimension: '',
+            hierarchy: '',
             subset: 'Default',
             view: 'Default'
          };
@@ -93,31 +93,43 @@ arc.directive("arcCheatSheet", function () {
          //=======================
          // TM1 Rest Api
 
+         // A failed request resolves into .then, so check the status before using the data
+
          //get number of cubes
          $http.get(encodeURIComponent($scope.instance) + "/Cubes/$count").then(function (value) {
-            $scope.nbCubes = value.data;
+            if (value.status == 200) {
+               $scope.nbCubes = value.data;
+            }
          });
 
          //get list of model cubes
          $http.get(encodeURIComponent($scope.instance) + "/ModelCubes()?$select=Name").then(function (value) {
-            $scope.modelCubes = value.data.value;
+            if (value.status == 200) {
+               $scope.modelCubes = value.data.value;
+            }
          });
 
          //get HTTPPortNumber
          $http.get(encodeURIComponent($scope.instance) + "/Configuration/HTTPPortNumber/$value").then(function (value) {
-            $scope.httpPortNumber = value.data;
+            if (value.status == 200) {
+               $scope.httpPortNumber = value.data;
+            }
          });
 
          //get Product Version
          $http.get(encodeURIComponent($scope.instance) + "/Configuration/ProductVersion/$value").then(function (value) {
-            $scope.productVersion = value.data;
+            if (value.status == 200) {
+               $scope.productVersion = value.data;
+            }
          });
 
          //get AdminHost
          $http.get(encodeURIComponent($scope.instance) + "/Configuration/AdminHost/$value").then(function (value) {
-            $scope.adminHost = value.data;
-            if($scope.adminHost==''){
-               $scope.adminHost = 'localhost';
+            if (value.status == 200) {
+               $scope.adminHost = value.data;
+               if ($scope.adminHost == '') {
+                  $scope.adminHost = 'localhost';
+               }
             }
          });
 
@@ -155,19 +167,32 @@ arc.directive("arcCheatSheet", function () {
             });
          };
 
-         $scope.getValueFromCell = function () {
-            var mdxQuery = "SELECT NON EMPTY {[System Info Parameter].[" + $scope.defaults.element1 + "]} ON COLUMNS,NON EMPTY {[System Info Measures].[" + $scope.defaults.element2 + "]} ON ROWS FROM [" + $scope.defaults.systemCube + "]";
-            var mdxJSON = { MDX: mdxQuery };
-            $http.post(encodeURIComponent($scope.instance) + "/ExecuteMDX?$expand=Cells", mdxJSON).then(function (values) {
-               // $scope.values.CurrentDate = values.data.Cells[0].Value;
-            });
-         };
-
-         $scope.getValueFromCell();
+         // Fill the examples with objects this instance has, so the samples work on any model
+         $http.get(encodeURIComponent($scope.instance) + "/Cubes?$select=Name&$top=1&$filter=indexof(Name,'}') eq -1").then(function (result) {
+            if (result.status == 200 && result.data.value.length > 0) {
+               $scope.selections.cube = result.data.value[0].Name;
+               // The first dimension of that cube feeds the subset and link examples
+               $http.get(encodeURIComponent($scope.instance) + "/Cubes('" + $scope.selections.cube.replace(/'/g, "''") + "')/Dimensions?$select=Name&$top=1").then(function (dims) {
+                  if (dims.status == 200 && dims.data.value.length > 0) {
+                     $scope.selections.dimension = dims.data.value[0].Name;
+                     $scope.selections.hierarchy = dims.data.value[0].Name;
+                     $scope.hierarchy.name = dims.data.value[0].Name;
+                     $scope.hierarchy.dimension = dims.data.value[0].Name;
+                     $scope.hierarchy.alias = dims.data.value[0].Name;
+                  }
+               });
+            }
+         });
 
          $scope.sendValueToCell = function (value) {
-            $tm1.cellUpdate(value, $scope.instance, $scope.defaults.systemCube, null, $scope.defaults.element1, $scope.defaults.element2).then(function (data) {
-               $scope.getValueFromCell();
+            // This example writes to a cube of the Canvas Sample model, so check the cube is there first
+            $http.get(encodeURIComponent($scope.instance) + "/Cubes('" + $scope.defaults.systemCube + "')?$select=Name").then(function (result) {
+               if (result.status != 200) {
+                  $dialogs.error("Cube not found", "This example writes to the cube '" + $scope.defaults.systemCube + "', which is only in the Canvas Sample model. Change $scope.defaults in plugin.js to a cube and elements of your own model to try it.");
+                  return;
+               }
+               // The 4th argument is the sandbox, null writes to the base data
+               $tm1.cellUpdate(value, $scope.instance, $scope.defaults.systemCube, null, $scope.defaults.element1, $scope.defaults.element2);
             });
          };
 
@@ -218,9 +243,6 @@ arc.directive("arcCheatSheet", function () {
             return defer.promise;
          };
 
-         $scope.cellGet($scope.instance, "General Ledger", "Budget", "2017", "Year", "Local", "Total Europe", "Corporate", "Net Income", "Amount").then(function (data) {
-            $scope.returnedValue = data;
-         });
 
          $scope.openModalInstances = function (title, message) {
             // jsonViewerDialog is built into Arc
@@ -233,12 +255,12 @@ arc.directive("arcCheatSheet", function () {
 
          //Function require to open subset editor
          $scope.hierarchy = {
-            name: "Account",
-            dimension: "Account",
-            subset: "Expense",
+            name: "",
+            dimension: "",
+            subset: "Default",
             expression: "",
             expressions: "",
-            alias: "Account"
+            alias: ""
          }
          $scope.editSubset = function (hierarchy) {
             var handler = function (subset, elements) {
@@ -263,9 +285,9 @@ arc.directive("arcCheatSheet", function () {
          //Close the tab
          $scope.$on("close-tab", function (event, args) {
             // Event to capture when a user has clicked close on the tab
-            if (args.page == "arcCheatSheet" && args.instance == $scope.instance && args.name == null) {
+            if (args.page == "arcCheatSheet" && args.instance == $scope.instance) {
                // The page matches this one so close it
-               $rootScope.close(args.page, { instance: $scope.instance });
+               $rootScope.close(args.page, args);
             }
          });
 
