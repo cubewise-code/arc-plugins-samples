@@ -1,13 +1,13 @@
 
 arc.run(['$rootScope', function ($rootScope) {
 
-   $rootScope.plugin("arcServices", "Arc Services", "page", {
+   $rootScope.plugin("arcServices", "Arc Services (Sample)", "page", {
       menu: "tools",
       icon: "fa-arrows-h",
       description: "This plugin gives you the list of all available Arc services",
       author: "Cubewise",
       url: "https://github.com/cubewise-code/arc-plugins-samples/tree/master/services",
-      version: "1.1.0"
+      version: "2.0.0"
    });
 
 }]);
@@ -32,10 +32,10 @@ arc.directive("arcServices", function () {
          };
 
          $scope.selections = {
-            chore: 'Save Data - Morning',
-            process: 'Bedrock.Server.Wait',
-            cube: 'General Ledger',
-            instance: 'Canvas Sample',
+            chore: '',
+            process: '',
+            cube: '',
+            instance: $scope.instance,
             valueToBeSent: '15'
          };
 
@@ -85,69 +85,22 @@ arc.directive("arcServices", function () {
             });
          };
 
-         $scope.getValueFromCell = function () {
-            var mdxQuery = "SELECT NON EMPTY {[System Info Parameter].[" + $scope.defaults.element1 + "]} ON COLUMNS,NON EMPTY {[System Info Measures].[" + $scope.defaults.element2 + "]} ON ROWS FROM [" + $scope.defaults.systemCube + "]";
-            var mdxJSON = { MDX: mdxQuery };
-            $http.post(encodeURIComponent($scope.instance) + "/ExecuteMDX?$expand=Cells", mdxJSON).then(function (values) {
-               // $scope.values.CurrentDate = values.data.Cells[0].Value;
-            });
-         };
-
-         $scope.getValueFromCell();
-
-         $scope.cellGet = function (instance, cube) {
-            var defer = $q.defer();
-            //Get all elements
-            var tuple = [];
-            for (var i = 2; i < arguments.length; i++) {
-               tuple.push(arguments[i]);
+         // Fill the examples with objects this instance has, so the samples work on any model
+         $http.get(encodeURIComponent($scope.instance) + "/Cubes?$select=Name&$top=1&$filter=indexof(Name,'}') eq -1").then(function (result) {
+            if (result.status == 200 && result.data.value.length > 0) {
+               $scope.selections.cube = result.data.value[0].Name;
             }
-            $tm1.cubeDimensions(instance, cube).then(function (dims) {
-               //Loop through dimensions
-               var elements = [];
-               for (var i = 0; i < tuple.length; i++) {
-                  var item = tuple[i];
-                  var dimension = dims[i];
-                  var hierarchy = dims[i];
-                  var element = $helper.escapeName(item);
-                  var parts = item.split("::");
-                  if (parts.length == 2) {
-                     hierarchy = parts[0];
-                     element = parts[1];
-                  }
-                  //Attach dimension hierarchy and elements together
-                  var mdxElement = "[" + dimension + "].[" + hierarchy + "].[" + element + "]";
-                  elements.push(mdxElement);
-               }
-               //Create MDX
-               var mdxQuery = "SELECT NON EMPTY {" + elements[0] + "} ON COLUMNS,NON EMPTY {" + elements[1] + "} ON ROWS FROM [" + cube + "]";
-               if (elements.length > 2) {
-                  mdxQuery = mdxQuery + " WHERE(";
-                  for (var i = 2; i < elements.length; i++) {
-                     element = elements[i];
-                     if (i < elements.length - 1) {
-                        mdxQuery = mdxQuery + " " + element + ",";
-                     } else {
-                        mdxQuery = mdxQuery + " " + element;
-                     }
-                  }
-                  mdxQuery = mdxQuery + " )";
-               }
-               var mdxJSON = { MDX: mdxQuery };
-               $http.post(encodeURIComponent($scope.instance) + "/ExecuteMDX?$expand=Cells", mdxJSON).then(function (values) {
-                  defer.resolve(values.data.Cells[0]);
-               });
-            });
-            return defer.promise;
-         };
-
-         $scope.cellGet($scope.instance, "General Ledger", "Budget", "2017", "Year", "Local", "Total Europe", "Corporate", "Net Income", "Amount").then(function (data) {
-            $scope.returnedValue = data;
          });
 
          $scope.sendValueToCell = function (value) {
-            $tm1.cellUpdate(value, $scope.instance, $scope.defaults.systemCube, null, $scope.defaults.element1, $scope.defaults.element2).then(function (data) {
-               $scope.getValueFromCell();
+            // This example writes to a cube of the Canvas Sample model, so check the cube is there first
+            $http.get(encodeURIComponent($scope.instance) + "/Cubes('" + $scope.defaults.systemCube + "')?$select=Name").then(function (result) {
+               if (result.status != 200) {
+                  $dialogs.error("Cube not found", "This example writes to the cube '" + $scope.defaults.systemCube + "', which is only in the Canvas Sample model. Change $scope.defaults in plugin.js to a cube and elements of your own model to try it.");
+                  return;
+               }
+               // The 4th argument is the sandbox, null writes to the base data
+               $tm1.cellUpdate(value, $scope.instance, $scope.defaults.systemCube, null, $scope.defaults.element1, $scope.defaults.element2);
             });
          };
 
@@ -163,9 +116,9 @@ arc.directive("arcServices", function () {
 
          $scope.$on("close-tab", function (event, args) {
             // Event to capture when a user has clicked close on the tab
-            if (args.page == "arcServices" && args.instance == $scope.instance && args.name == null) {
+            if (args.page == "arcServices" && args.instance == $scope.instance) {
                // The page matches this one so close it
-               $rootScope.close(args.page, { instance: $scope.instance });
+               $rootScope.close(args.page, args);
             }
          });
 
