@@ -7,7 +7,7 @@ arc.run(['$rootScope', function ($rootScope) {
         description: "A home page for an instance with shortcuts to cubes, dimensions, processes, chores and the server pages",
         author: "Cubewise",
         url: "https://github.com/cubewise-code/arc-plugins-samples/tree/master/homepage",
-        version: "1.0.0"
+        version: "2.0.0"
     });
 
 }]);
@@ -46,14 +46,15 @@ arc.directive("overviewButton", function () {
                 ]
 
             $scope.configurations = [
-                { key: 'Users', description: 'All TM1 User',value: '', icon: 'fa-user', class: 'admin',link:'' },
-                { key: 'Configuration', description: 'tm1s.cfg settings',value: '', icon: 'configuration', class: 'admin',link:'#/configuration/' },
-                { key: 'Server Logs', description: 'TM1 Server Logs',value: '', icon: 'fa-list-alt', class: 'admin',link:'#/server-logs/' },
-                { key: 'Threads', description: 'All Threads',value: '', icon: 'fa-users', class: 'admin',link:'#/threads/' }
+                { key: 'Users', description: 'All TM1 users and their security',value: '', icon: 'fa-user', class: 'admin',link:'#/cubewise-security/' },
+                { key: 'Configuration', description: 'tm1s.cfg settings',value: '', icon: 'configuration', class: 'admin',link:'#/cubewise-configuration/' },
+                { key: 'Server Logs', description: 'TM1 Server Logs',value: '', icon: 'fa-list-alt', class: 'admin',link:'#/cubewise-server-logs/' },
+                { key: 'Sessions', description: 'Sessions and threads',value: '', icon: 'fa-users', class: 'admin',link:'#/cubewise-sessions/' }
              ]
 
-            // Shortcuts to other plugins go here
-            $scope.plugins = []
+            $scope.plugins = [
+                { key: 'MDX Lab', description: 'Write and test MDX queries',value: '', icon: 'fa-table', class: 'plugins',link:'#/cubewise-mdx-lab/' }
+            ]
 
             $scope.$on("login-reload", function (event, args) {
 
@@ -62,7 +63,9 @@ arc.directive("overviewButton", function () {
             // GET USERS COUNT
             $scope.getUsersCount = function () {
                 $http.get(encodeURIComponent($scope.instance) + "/Users/$count").then(function (value) {
-                    $scope.configurations[0].value = value.data;
+                    if (value.status == 200) {
+                        $scope.configurations[0].value = value.data;
+                    }
                 });
             };
             $scope.getUsersCount();
@@ -77,7 +80,9 @@ arc.directive("overviewButton", function () {
                   query = queryWithoutControlObjects;
                }
                 $http.get(encodeURIComponent($scope.instance) + query).then(function (cubesList) {
-                    $scope.tm1Objects[0].value = cubesList.data;
+                    if (cubesList.status == 200) {
+                        $scope.tm1Objects[0].value = cubesList.data;
+                    }
                 });
             };
             $scope.getCubesCount();
@@ -93,7 +98,9 @@ arc.directive("overviewButton", function () {
                   query = queryWithoutControlObjects;
                }
                 $http.get(encodeURIComponent($scope.instance) + query).then(function (dimensionsList) {
-                    $scope.tm1Objects[1].value = dimensionsList.data;
+                    if (dimensionsList.status == 200) {
+                        $scope.tm1Objects[1].value = dimensionsList.data;
+                    }
                 });
             };
             $scope.getDimensionsCount();
@@ -109,7 +116,9 @@ arc.directive("overviewButton", function () {
                   query = queryWithoutControlObjects;
                }
                 $http.get(encodeURIComponent($scope.instance) + query).then(function (value) {
-                    $scope.tm1Objects[2].value = value.data;
+                    if (value.status == 200) {
+                        $scope.tm1Objects[2].value = value.data;
+                    }
                 });
             };
             $scope.getProcessesCount();
@@ -117,16 +126,18 @@ arc.directive("overviewButton", function () {
             // GET CHORES COUNT
             $scope.getChoresCount = function () {
                 $http.get(encodeURIComponent($scope.instance) + "/Chores/$count").then(function (value) {
-                    $scope.tm1Objects[3].value = value.data;
+                    if (value.status == 200) {
+                        $scope.tm1Objects[3].value = value.data;
+                    }
                 });
             };
             $scope.getChoresCount();
 
             $scope.$on("close-tab", function (event, args) {
                 // Event to capture when a user has clicked close on the tab
-                if (args.page == "overviewButton" && args.instance == $scope.instance && args.name == null) {
+                if (args.page == "overviewButton" && args.instance == $scope.instance) {
                     // The page matches this one so close it
-                    $rootScope.close(args.page, { instance: $scope.instance });
+                    $rootScope.close(args.page, args);
                 }
             });
 
