@@ -8,7 +8,7 @@ arc.run(['$rootScope', function ($rootScope) {
       description: "Exports cube data to a file with the Bedrock.Cube.Data.Export process. Choose the file name and folder, and filter by dimension.",
       author: "Cubewise",
       url: "https://github.com/cubewise-code/arc-plugins-samples/tree/master/bedrock-cube-data-export",
-      version: "1.1.0"
+      version: "2.0.0"
       
    });
 
