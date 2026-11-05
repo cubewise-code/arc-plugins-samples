@@ -1,12 +1,12 @@
 arc.run(['$rootScope', function ($rootScope) {
 
-    $rootScope.plugin("arcTemplate", "Template Page", "page", {
+    $rootScope.plugin("arcTemplate", "Template Page (Sample)", "page", {
         menu: "tools",
         icon: "fa-paw",
         description: "A starting point for writing your own page plugin. Copy the folder, rename it and change the plugin name.",
         author: "Cubewise",
         url: "https://github.com/cubewise-code/arc-plugins-samples/tree/master/template-page",
-        version: "1.0.0"
+        version: "2.0.0"
     });
 
 }]);
@@ -45,9 +45,9 @@ arc.directive("arcTemplate", function () {
             //Close the tab
             $scope.$on("close-tab", function (event, args) {
                 // Event to capture when a user has clicked close on the tab
-                if (args.page == "arcTemplate" && args.instance == $scope.instance && args.name == null) {
+                if (args.page == "arcTemplate" && args.instance == $scope.instance) {
                     // The page matches this one so close it
-                    $rootScope.close(args.page, { instance: $scope.instance });
+                    $rootScope.close(args.page, args);
                 }
             });
 
