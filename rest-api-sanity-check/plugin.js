@@ -1,12 +1,12 @@
 arc.run(['$rootScope', function ($rootScope) {
 
-   $rootScope.plugin("arcSanityCheck", "TM1 REST API Sanity Check", "page", {
+   $rootScope.plugin("arcSanityCheck", "TM1 REST API Sanity Check (Sample)", "page", {
       menu: "tools",
       icon: "fa-check-circle",
       description: "Runs a set of TM1 REST API requests against the instance and checks each one returns the expected status",
       author: "Cubewise",
       url: "https://github.com/cubewise-code/arc-plugins-samples/tree/master/rest-api-sanity-check",
-      version: "1.1.0"
+      version: "2.0.0"
    });
 
 }]);
@@ -103,9 +103,10 @@ arc.directive("arcSanityCheck", function () {
       link: function ($scope, element, attrs) {
 
       },
-      controller: ["$scope", "$rootScope", "$http", "$tm1", "$translate", "$timeout", "$dialogs", "log", function ($scope, $rootScope, $http, $tm1, $translate, $timeout, $dialogs, log) {
+      controller: ["$scope", "$rootScope", "$http", "$tm1", "$translate", "$timeout", "$dialogs", function ($scope, $rootScope, $http, $tm1, $translate, $timeout, $dialogs) {
 
-         var _logger = log.getLogger("SanityCheck");
+         // The sample creates and deletes this dimension, so it must not be one that is already on the instance
+         var TEST_NAME = "zzArcSanityCheck";
 
          //Variables area
          $scope.defaults = {};
@@ -152,6 +153,24 @@ arc.directive("arcSanityCheck", function () {
          // querys execution
          // dependent queries must be placed sequencially before not-dependent ones in request.json
          $scope.executeQueries = function() {
+               var createsTestObjects = _.some($scope.checkedRequests, function (item) {
+                  return item.isDependent;
+               });
+               if (!createsTestObjects) {
+                  startQueries();
+                  return;
+               }
+               // Never touch an object that is already there
+               $http.get(encodeURIComponent($scope.instance) + "/Dimensions('" + TEST_NAME + "')?$select=Name").then(function (result) {
+                  if (result.status == 200) {
+                     $dialogs.error("Sanity check not started", "A dimension called '" + TEST_NAME + "' already exists on this instance. The sample creates and deletes a dimension with that name, so it was not run. Rename or delete that dimension first.", "medium");
+                     return;
+                  }
+                  $dialogs.confirm("The sanity check creates a dimension called '" + TEST_NAME + "' on " + $scope.instance + ", reads it and deletes it again. Run it?", startQueries);
+               });
+         };
+
+         var startQueries = function () {
                $scope.requestPending = 1;
                $scope.resetStatusAll();
                executeQueries();           
@@ -208,8 +227,8 @@ arc.directive("arcSanityCheck", function () {
                      var statusResult = "error"
                      item.icon = "fa-thin fa-times-circle";
                      item.queryStatus = 'failed';
-                     item.resultQuery = result.data.error;
-                     item.message = result.data.error.message;         
+                     item.resultQuery = result.data ? result.data.error : null;
+                     item.message = (result.data && result.data.error) ? result.data.error.message : null;
                   };
                   
                   var receiveDate = (new Date()).getTime();
@@ -225,7 +244,11 @@ arc.directive("arcSanityCheck", function () {
                   setResultsCount(item);
                   updateProgressBar(item.queryStatus);
                   tryToEnableButton();
-                  if(item.isDependent && nextItem.isDependent && nextItem != undefined) {
+                  if (item.isDependent && item.queryStatus == "failed") {
+                     // Do not carry on with steps that depend on this one
+                     $scope.requestPending = 0;
+                     $dialogs.error("Sanity check stopped", "'" + item.name + "' failed, so the steps that depend on it were not run. The dimension '" + TEST_NAME + "' may still be on the instance, delete it before running again.", "medium");
+                  } else if (item.isDependent && nextItem != undefined && nextItem.isDependent) {
                      tryItem(nextItem);
                   };
                });
@@ -361,6 +384,33 @@ arc.directive("arcSanityCheck", function () {
          };
 
 
+         // The first cube of the instance and its first dimension, used by the read-only requests
+         var getSampleObjects = function () {
+            return $http.get(encodeURIComponent($scope.instance) + "/Cubes?$select=Name&$top=1&$filter=indexof(Name,'}') eq -1").then(function (cubes) {
+               if (cubes.status != 200 || cubes.data.value.length == 0) {
+                  return null;
+               }
+               var cube = cubes.data.value[0].Name;
+               return $http.get(encodeURIComponent($scope.instance) + "/Cubes('" + cube.replace(/'/g, "''") + "')/Dimensions?$select=Name&$top=1").then(function (dims) {
+                  if (dims.status != 200 || dims.data.value.length == 0) {
+                     return null;
+                  }
+                  return { cube: cube, dimension: dims.data.value[0].Name };
+               });
+            });
+         };
+
+         var fillPlaceholders = function (value, sample) {
+            if (_.isString(value)) {
+               return value.replace(/\{cube\}/g, sample.cube.replace(/'/g, "''")).replace(/\{dimension\}/g, sample.dimension.replace(/'/g, "''"));
+            } else if (_.isArray(value)) {
+               return _.map(value, function (v) { return fillPlaceholders(v, sample); });
+            } else if (_.isObject(value)) {
+               return _.mapValues(value, function (v) { return fillPlaceholders(v, sample); });
+            }
+            return value;
+         };
+
          //loads the requests
          var loadSettingsFile = function () {
             $scope.requests = [];
@@ -368,14 +418,25 @@ arc.directive("arcSanityCheck", function () {
             $http.get("__/plugins/rest-api-sanity-check/requests.json").then(function (result) {
                if (result.status === 200) {
                   $scope.values.settingFilesFound = true;
-                  $scope.requests = result.data;            
-                  checkAllItems();
-                  for (let index = 0; index < $scope.requests.length; index++) {
-                     const item = $scope.requests[index];
-                     methodBadgeType(item);
-                     item.index = index;
-                     $scope.totalResult ++;
-                  };
+                  getSampleObjects().then(function (sample) {
+                     var requests = result.data;
+                     if (sample) {
+                        requests = fillPlaceholders(requests, sample);
+                     } else {
+                        // An instance with no cubes: skip the requests that need one
+                        requests = _.reject(requests, function (item) {
+                           return JSON.stringify(item).indexOf("{cube}") >= 0;
+                        });
+                     }
+                     $scope.requests = requests;
+                     checkAllItems();
+                     for (let index = 0; index < $scope.requests.length; index++) {
+                        const item = $scope.requests[index];
+                        methodBadgeType(item);
+                        item.index = index;
+                        $scope.totalResult ++;
+                     };
+                  });
                } else {
                   $scope.values.settingFilesFound = false;
                   $scope.values.settingsFileErrorMessage = result.data;
@@ -403,9 +464,9 @@ arc.directive("arcSanityCheck", function () {
          //Close the tab
          $scope.$on("close-tab", function (event, args) {
             // Event to capture when a user has clicked close on the tab
-            if (args.page == "arcSanityCheck" && args.instance == $scope.instance && args.name == null) {
+            if (args.page == "arcSanityCheck" && args.instance == $scope.instance) {
                // The page matches this one so close it
-               $rootScope.close(args.page, { instance: $scope.instance });
+               $rootScope.close(args.page, args);
             }
          });
 

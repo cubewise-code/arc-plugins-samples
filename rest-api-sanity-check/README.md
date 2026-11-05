@@ -7,7 +7,11 @@ This plugin runs a set of TM1 REST API requests against an instance and checks t
 
 The requests are defined in `requests.json`. Add your own by copying an existing entry and changing the method, the query, the body and the expected status.
 
-The requests create, change and delete objects named **Test**, so run it on a development instance.
+**What it changes on the instance**
+- It creates a dimension called `zzArcSanityCheck` (with a hierarchy and an element), reads it, and deletes it again. It asks you to confirm first.
+- If a dimension with that name already exists it does not run, so it never deletes an existing object.
+- If a step fails it stops, and tells you the dimension may need deleting by hand.
+- Every other request only reads. `{cube}` and `{dimension}` in `requests.json` are replaced with the first cube of the instance and its first dimension, so it works on any model.
 
 ## Add this plugin to your application
 1. In Arc, open **Tools > Plugins Manager**.
