@@ -7,14 +7,14 @@ In Arc, open **Tools > Plugins Manager**, pick this repository as the source, an
 | Plugin | What it does | Where it appears |
 |---|---|---|
 | [bedrock-cube-data-export](bedrock-cube-data-export) | Exports cube data to a file with Bedrock.Cube.Data.Export | Cube menu |
-| [cheatsheet](cheatsheet) | Everything you should know about how to build plugins | Tools |
+| [cheatsheet](cheatsheet) | Sample: everything you should know about how to build plugins | Tools |
 | [ghost-ti](ghost-ti) | Runs Turbo Integrator code without creating a process | Tools |
 | [homepage](homepage) | A home page for an instance | Tools |
 | [process-feeders](process-feeders) | Runs CubeProcessFeeders on selected cubes | Tools |
 | [randomise-data](randomise-data) | Randomises the data of selected cubes | Tools |
-| [rest-api-sanity-check](rest-api-sanity-check) | Runs TM1 REST API requests and checks the status codes | Tools |
-| [services](services) | Lists the services available to plugins | Tools |
-| [template-page](template-page) | A starting point for writing your own page plugin | Tools |
+| [rest-api-sanity-check](rest-api-sanity-check) | Sample: runs TM1 REST API requests and checks the status codes | Tools |
+| [services](services) | Sample: lists the services available to plugins | Tools |
+| [template-page](template-page) | Sample: a starting point for writing your own page plugin | Tools |
 
 
 ## Write a plugin
