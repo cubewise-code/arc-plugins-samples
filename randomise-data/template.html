@@ -18,7 +18,7 @@
    <div class="row">
       <div class="col-md-12 ml-2 t-2 text-white">
          <h2>
-            <i class="fa fa-user-secret" style="padding-right:5px" aria-hidden="true"></i> Randomisator</h2>
+            <i class="fa fa-user-secret" style="padding-right:5px" aria-hidden="true"></i> Randomise Data</h2>
          <h5> Create new .cub files with random data in the target folder</h5>
       </div>
    </div>
@@ -35,7 +35,7 @@
                <div class="col-md-12" style="margin-top:10px" ng-if="showCubeSelection">
                   <input class="form-control ng-pristine ng-untouched ng-valid ng-empty" style="border-radius:0;display:inline" type="text"
                      ng-model="selection.cube" placeholder="Search for cubes" ng-keydown="key($event,selection.cube)" uib-typeahead="cube.Name for cube in lists.cubes | filter:$viewValue | limitTo:20"
-                     typeahead-append-to-body="true">
+                     typeahead-append-to-body="true" typeahead-on-select="addCube($item.Name)">
                </div>
                <div class="card-text" style="margin-top:10px">
                      Cubes selected:

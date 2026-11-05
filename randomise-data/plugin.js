@@ -7,7 +7,7 @@ arc.run(['$rootScope', function ($rootScope) {
       description: "This plugin can be used to randomize data for any cubes",
       author: "Cubewise",
       url: "https://github.com/cubewise-code/arc-plugins-samples/tree/master/randomise-data",
-      version: "1.1.0"
+      version: "2.0.0"
    });
 
 }]);
@@ -54,7 +54,7 @@ arc.directive("arcRandomiseData", function () {
       link: function ($scope, element, attrs) {
 
       },
-      controller: ["$scope", "$rootScope", "$http", "$tm1", "$translate", "$timeout", "$dialogs", "log", function ($scope, $rootScope, $http, $tm1, $translate, $timeout, $dialogs, log) {
+      controller: ["$scope", "$rootScope", "$http", "$tm1", "$translate", "$timeout", "$dialogs", function ($scope, $rootScope, $http, $tm1, $translate, $timeout, $dialogs) {
 
          var _logger = log.getLogger("RandomiseData");
 
@@ -69,6 +69,7 @@ arc.directive("arcRandomiseData", function () {
             cubesRandomized: []
          };
          $scope.values = {};
+         $scope.selection = { cube: "" };
 
          $scope.showCubeSelection = true;
 
@@ -87,7 +88,9 @@ arc.directive("arcRandomiseData", function () {
                query = queryWithoutControlObjects;
             }
             $http.get(encodeURIComponent($scope.instance) + query).then(function (result) {
-               $scope.lists.cubes = result.data.value;
+               if (result.status == 200) {
+                  $scope.lists.cubes = result.data.value;
+               }
             });
          };
          $scope.getCubes();
@@ -97,6 +100,9 @@ arc.directive("arcRandomiseData", function () {
             $scope.lists.cubesTarget = [];
             var query = "/Cubes?$select=Name&$filter=indexof(Name,'}') eq -1";
             $http.get(encodeURIComponent($scope.instance) + query).then(function (result) {
+               if (result.status != 200) {
+                  return;
+               }
                var cubes = result.data.value;
                for(var c in cubes){
                   $scope.lists.cubesTarget.push(cubes[c].Name);
@@ -109,14 +115,23 @@ arc.directive("arcRandomiseData", function () {
             $scope.lists.cubesTarget = [];
          }
 
+         // Add one cube to the list, once
+         $scope.addCube = function (cube) {
+            if (cube && $scope.lists.cubesTarget.indexOf(cube) == -1) {
+               $scope.lists.cubesTarget.push(cube);
+            }
+            $scope.selection.cube = "";
+         }
+
          $scope.key = function ($event, cube) {
             //Enter
-            if ($event.keyCode == 13) {
+            if ($event.keyCode == 13 && cube) {
                if(cube.indexOf("*")==-1){
-                  $scope.lists.cubesTarget.push(cube);
+                  $scope.addCube(cube);
                } else{
                   var search = cube.substring(0, cube.length-1);
                   $scope.addMultipleCubes(search);
+                  $scope.selection.cube = "";
                }
             }
          }
@@ -125,6 +140,9 @@ arc.directive("arcRandomiseData", function () {
             _logger.debug("Adding cubes that contain " + string);
             var query = "/Cubes?$select=Name&$filter=indexof(Name,'"+string+"') ne -1 &$filter=indexof(Name,'}') eq -1";
             $http.get(encodeURIComponent($scope.instance) + query).then(function (result) {
+               if (result.status != 200) {
+                  return;
+               }
                var cubes = result.data.value;
                for(var c in cubes){
                   $scope.lists.cubesTarget.push(cubes[c].Name);
@@ -212,9 +230,9 @@ arc.directive("arcRandomiseData", function () {
          //Close the tab
          $scope.$on("close-tab", function (event, args) {
             // Event to capture when a user has clicked close on the tab
-            if (args.page == "arcRandomiseData" && args.instance == $scope.instance && args.name == null) {
+            if (args.page == "arcRandomiseData" && args.instance == $scope.instance) {
                // The page matches this one so close it
-               $rootScope.close(args.page, { instance: $scope.instance });
+               $rootScope.close(args.page, args);
             }
          });
 
