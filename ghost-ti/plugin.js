@@ -6,7 +6,7 @@ arc.run(['$rootScope', function ($rootScope) {
         description: "Run Turbo Integrator code on an instance without creating a process",
         author: "Cubewise",
         url: "https://github.com/cubewise-code/arc-plugins-samples/tree/master/ghost-ti",
-        version: "1.0.0",
+        version: "2.0.0",
 
     });
 }]);
@@ -31,6 +31,20 @@ arc.directive("ghostti", function () {
             };
             
             $scope.tabActivated = "Prolog";
+
+            // Same editor settings as the other TI editors in Arc, so it follows the user's editor theme
+            $scope.editorLoaded = function (_editor) {
+               _editor.setTheme($rootScope.uiPrefs.editorTheme);
+               _editor.getSession().setMode("ace/mode/tm1ti");
+               _editor.getSession().setOptions({
+                  tabSize: $rootScope.uiPrefs.editorTabSpaces,
+                  useSoftTabs: $rootScope.uiPrefs.editorSoftTabs
+               });
+               _editor.$blockScrolling = Infinity;
+               _editor.setFontSize($rootScope.uiPrefs.fontSize);
+               _editor.setShowPrintMargin(false);
+               _editor.getSession().setUseWrapMode($rootScope.uiPrefs.editorWrapLongLines);
+            };
 
 
 
@@ -80,9 +94,9 @@ arc.directive("ghostti", function () {
         //Close the tab
              $scope.$on("close-tab", function (event, args) {
             // Event to capture when a user has clicked close on the tab
-                if (args.page == "ghostti" && args.instance == $scope.instance && args.name == null) {
+                if (args.page == "ghostti" && args.instance == $scope.instance) {
                     // The page matches this one so close it
-                    $rootScope.close(args.page, { instance: $scope.instance });
+                    $rootScope.close(args.page, args);
                 }
             });
 
