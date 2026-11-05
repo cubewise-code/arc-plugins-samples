@@ -7,7 +7,7 @@ arc.run(['$rootScope', function ($rootScope) {
       description: "Runs CubeProcessFeeders on the selected cubes and shows how long each one takes",
       author: "Cubewise",
       url: "https://github.com/cubewise-code/arc-plugins-samples/tree/master/process-feeders",
-      version: "1.1.0"
+      version: "2.0.0"
    });
 
 }]);
@@ -105,8 +105,8 @@ arc.directive("arcCubeProcessFeeders", function () {
          //Functions
          $scope.getCubes = function () {
             var query = "";
-            var queryAll = "/Cubes?$select=Name,Rules";
-            var queryWithoutControlObjects = "/Cubes?$select=Name,LastDataUpdate,LastSchemaUpdate&$filter=indexof(Name,'}') eq -1";
+            var queryAll = "/Cubes?$select=Name,Rules,LastDataUpdate,LastSchemaUpdate";
+            var queryWithoutControlObjects = "/Cubes?$select=Name,Rules,LastDataUpdate,LastSchemaUpdate&$filter=indexof(Name,'}') eq -1";
             if ($rootScope.uiPrefs.controlObjects) {
                query = queryAll;
             } else {
@@ -114,6 +114,9 @@ arc.directive("arcCubeProcessFeeders", function () {
             }
             $scope.lists.cubesWithRules = [];
             $http.get(encodeURIComponent($scope.instance) + query).then(function (result) {
+               if (result.status != 200) {
+                  return;
+               }
                $scope.lists.cubes = result.data.value;
                _.each($scope.lists.cubes, function (cube) {
                   if (cube.Rules){
@@ -235,9 +238,9 @@ arc.directive("arcCubeProcessFeeders", function () {
          //Close the tab
          $scope.$on("close-tab", function (event, args) {
             // Event to capture when a user has clicked close on the tab
-            if (args.page == "arcCubeProcessFeeders" && args.instance == $scope.instance && args.name == null) {
+            if (args.page == "arcCubeProcessFeeders" && args.instance == $scope.instance) {
                // The page matches this one so close it
-               $rootScope.close(args.page, { instance: $scope.instance });
+               $rootScope.close(args.page, args);
             }
          });
 
