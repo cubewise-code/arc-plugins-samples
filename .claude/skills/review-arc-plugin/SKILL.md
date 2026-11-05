@@ -48,6 +48,8 @@ For every `$tm1.<method>(` call, open `<arc>/server/assets/app/services/$tm1.js`
 
 No `console.log`, `console.warn` or `console.error`. Use `var _logger = log.getLogger('<PluginName>');` and `_logger.info`, `.warn`, `.error` or `.debug`. Leftover commented-out `console.log` lines are dead code; delete them.
 
+`log` is a global in Arc, not an Angular service. Do not add `"log"` to a controller's injection list: Angular fails with an unknown provider and the plugin does not load.
+
 ### 5. Page plugins need a `close-tab` handler (blocker for a page)
 
 A plugin of type `page` must handle `close-tab`, or its tab cannot be closed:
