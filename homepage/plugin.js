@@ -46,14 +46,14 @@ arc.directive("overviewButton", function () {
                 ]
 
             $scope.configurations = [
-                { key: 'Users', description: 'All TM1 users and their security',value: '', icon: 'fa-user', class: 'admin',link:'#/cubewise-security/' },
-                { key: 'Configuration', description: 'tm1s.cfg settings',value: '', icon: 'configuration', class: 'admin',link:'#/cubewise-configuration/' },
-                { key: 'Server Logs', description: 'TM1 Server Logs',value: '', icon: 'fa-list-alt', class: 'admin',link:'#/cubewise-server-logs/' },
-                { key: 'Sessions', description: 'Sessions and threads',value: '', icon: 'fa-users', class: 'admin',link:'#/cubewise-sessions/' }
+                { key: 'Users', description: 'All TM1 users and their security',value: '', icon: 'fa-user', class: 'admin',link:'#/security/' },
+                { key: 'Configuration', description: 'tm1s.cfg settings',value: '', icon: 'configuration', class: 'admin',link:'#/configuration/' },
+                { key: 'Server Logs', description: 'TM1 Server Logs',value: '', icon: 'fa-list-alt', class: 'admin',link:'#/server-logs/' },
+                { key: 'Sessions', description: 'Sessions and threads',value: '', icon: 'fa-users', class: 'admin',link:'#/sessions/' }
              ]
 
             $scope.plugins = [
-                { key: 'MDX Lab', description: 'Write and test MDX queries',value: '', icon: 'fa-table', class: 'plugins',link:'#/cubewise-mdx-lab/' }
+                { key: 'MDX Lab', description: 'Write and test MDX queries',value: '', icon: 'fa-table', class: 'plugins',link:'#/mdx-lab/' }
             ]
 
             $scope.$on("login-reload", function (event, args) {
