@@ -23,7 +23,16 @@ arc.directive("overviewButton", function () {
         link: function ($scope, element, attrs) {
 
         },
-        controller: ["$scope", "$rootScope", "$http", "$tm1", "$translate", "$timeout", function ($scope, $rootScope, $http, $tm1, $translate, $timeout) {
+        controller: ["$scope", "$rootScope", "$http", "$tm1", "$translate", "$timeout", "$tabs", function ($scope, $rootScope, $http, $tm1, $translate, $timeout, $tabs) {
+
+            // Open a page the same way the Arc menu does
+            $scope.open = function (item) {
+                var params = { instance: $scope.instance };
+                if (item.cube !== undefined) {
+                    params.cube = item.cube;
+                }
+                $tabs.open(item.page, params);
+            };
 
             // Store the active tab index
             $scope.selections = {
@@ -39,21 +48,21 @@ arc.directive("overviewButton", function () {
             }
 
             $scope.tm1Objects = [
-                { key: 'Cubes', description: 'See all cubes',value: '', icon: 'cubes', class: 'object', link:'#/cube/' },
-                { key: 'Dimensions', description: 'See all dimensions',value: '', icon: 'dimensions', class: 'object', link:'#/dimensions/' },
-                { key: 'Processes', description: 'See all Processes',value: '', icon: 'processes', class: 'object', link:'#/processes/' },
-                { key: 'Chores', description: 'See all chores',value: '', icon: 'chores', class: 'object',link:'#/chores/' }
+                { key: 'Cubes', description: 'See all cubes',value: '', icon: 'cubes', class: 'object', page: 'cubes' },
+                { key: 'Dimensions', description: 'See all dimensions',value: '', icon: 'dimensions', class: 'object', page: 'dimensions', cube: '' },
+                { key: 'Processes', description: 'See all Processes',value: '', icon: 'processes', class: 'object', page: 'processes' },
+                { key: 'Chores', description: 'See all chores',value: '', icon: 'chores', class: 'object',page: 'chores' }
                 ]
 
             $scope.configurations = [
-                { key: 'Users', description: 'All TM1 users and their security',value: '', icon: 'fa-user', class: 'admin',link:'#/security/' },
-                { key: 'Configuration', description: 'tm1s.cfg settings',value: '', icon: 'configuration', class: 'admin',link:'#/configuration/' },
-                { key: 'Server Logs', description: 'TM1 Server Logs',value: '', icon: 'fa-list-alt', class: 'admin',link:'#/server-logs/' },
-                { key: 'Sessions', description: 'Sessions and threads',value: '', icon: 'fa-users', class: 'admin',link:'#/sessions/' }
+                { key: 'Users', description: 'All TM1 users and their security',value: '', icon: 'fa-user', class: 'admin',page: 'cubewiseSecurity' },
+                { key: 'Configuration', description: 'tm1s.cfg settings',value: '', icon: 'configuration', class: 'admin',page: 'cubewiseConfiguration' },
+                { key: 'Server Logs', description: 'TM1 Server Logs',value: '', icon: 'fa-list-alt', class: 'admin',page: 'cubewiseServerLogs' },
+                { key: 'Sessions', description: 'Sessions and threads',value: '', icon: 'fa-users', class: 'admin',page: 'cubewiseSessions' }
              ]
 
             $scope.plugins = [
-                { key: 'MDX Lab', description: 'Write and test MDX queries',value: '', icon: 'fa-table', class: 'plugins',link:'#/mdx-lab/' }
+                { key: 'MDX Lab', description: 'Write and test MDX queries',value: '', icon: 'fa-table', class: 'plugins',page: 'cubewiseMdxLab' }
             ]
 
             $scope.$on("login-reload", function (event, args) {

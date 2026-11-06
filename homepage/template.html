@@ -4,7 +4,7 @@
             <!-- TM1 OBJECTS -->
         <div class="row">
             <div class="col-lg-3 col-md-6 mb-3" ng-repeat="item in tm1Objects">
-                <a class="card h-100 text-center text-decoration-none" ng-href="{{item.link}}{{instance}}">
+                <a class="card h-100 text-center text-decoration-none" href="" ng-click="open(item)">
                     <div class="card-body">
                         <i class="fa fa-3x mb-2 {{item.icon}}" aria-hidden="true"></i>
                         <h5 class="card-title">{{item.key}} <span ng-if="item.value !== ''">({{item.value}})</span></h5>
@@ -16,7 +16,7 @@
             <!-- ADMINISTRATION -->
         <div class="row">
             <div class="col-lg-3 col-md-6 mb-3" ng-repeat="item in configurations">
-                <a class="card h-100 text-center text-decoration-none" ng-href="{{item.link}}{{instance}}">
+                <a class="card h-100 text-center text-decoration-none" href="" ng-click="open(item)">
                     <div class="card-body">
                         <i class="fa fa-3x mb-2 {{item.icon}}" aria-hidden="true"></i>
                         <h5 class="card-title">{{item.key}} <span ng-if="item.value !== ''">({{item.value}})</span></h5>
@@ -28,7 +28,7 @@
             <!-- PLUGINS -->
         <div class="row">
             <div class="col-lg-3 col-md-6 mb-3" ng-repeat="item in plugins">
-                <a class="card h-100 text-center text-decoration-none" ng-href="{{item.link}}{{instance}}">
+                <a class="card h-100 text-center text-decoration-none" href="" ng-click="open(item)">
                     <div class="card-body">
                         <i class="fa fa-3x mb-2 {{item.icon}}" aria-hidden="true"></i>
                         <h5 class="card-title">{{item.key}} <span ng-if="item.value !== ''">({{item.value}})</span></h5>
