@@ -7,6 +7,7 @@ In Arc, open **Tools > Plugins Manager**, pick this repository as the source, an
 | Plugin | What it does | Where it appears |
 |---|---|---|
 | [bedrock-cube-data-export](bedrock-cube-data-export) | Exports cube data to a file with Bedrock.Cube.Data.Export | Cube menu |
+| [calculation-explorer](calculation-explorer) | Follows a cell's value through every rule, consolidation and cross-cube hop, with rule-file line numbers and an HTML export | Tools, Cube menu, View menu |
 | [cheatsheet](cheatsheet) | Sample: everything you should know about how to build plugins | Tools |
 | [ghost-ti](ghost-ti) | Runs Turbo Integrator code without creating a process | Tools |
 | [homepage](homepage) | A home page for an instance | Tools |
@@ -14,6 +15,7 @@ In Arc, open **Tools > Plugins Manager**, pick this repository as the source, an
 | [randomise-data](randomise-data) | Randomises the data of selected cubes | Tools |
 | [rest-api-sanity-check](rest-api-sanity-check) | Sample: runs TM1 REST API requests and checks the status codes | Tools |
 | [template-page](template-page) | Sample: a starting point for writing your own page plugin | Tools |
+| [tm1-12-readiness](tm1-12-readiness) | Finds, suggests and applies what a TM1 v11 model needs before IBM's migration to TM1 12, and checks the TM1 12 database afterwards | Tools, Process / Cube / Dimension menu |
 
 
 ## Write a plugin

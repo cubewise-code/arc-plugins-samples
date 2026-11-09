@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calculation Explorer User Guide</title>
+<style>
+  :root {
+    --ink: #14181d;
+    --ink-2: #3d454f;
+    --ink-3: #5d6673;
+    --line: #d7dce3;
+    --line-2: #e8ecf1;
+    --bg: #ffffff;
+    --bg-soft: #f5f7fa;
+    --accent: #0b4fa8;
+    --accent-soft: #eaf1fb;
+    --new: #0a5f45;
+    --new-soft: #e2f4ee;
+    --warn: #7a4300;
+    --warn-soft: #fdf1e0;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+  }
+
+  /* Smooth scrolling is an animation, so it is offered only where the reader
+     has not asked for less motion. */
+  @media (prefers-reduced-motion: no-preference) {
+    html { scroll-behavior: smooth; }
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  * { box-sizing: border-box; }
+
+  a { color: var(--accent); }
+  a:focus-visible, .toc a:focus-visible, main:focus-visible {
+    outline: 3px solid #0b4fa8;
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  .skip {
+    position: absolute; left: -9999px; top: 0;
+    background: var(--accent); color: #fff; padding: 10px 16px; z-index: 20;
+  }
+  .skip:focus { left: 8px; top: 8px; }
+
+  /* ---------- masthead ---------- */
+  .masthead {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    padding: 12px 24px;
+  }
+  .masthead-in {
+    max-width: 1180px; margin: 0 auto;
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px;
+  }
+  .masthead strong { font-size: 17px; letter-spacing: -0.01em; }
+  .masthead .meta { color: var(--ink-3); font-size: 13.5px; }
+
+  .chip {
+    display: inline-block;
+    font-size: 12.5px; font-weight: 600; letter-spacing: 0.02em;
+    padding: 2px 9px; border-radius: 100px;
+    background: var(--accent-soft); color: var(--accent);
+    border: 1px solid #c5d9f4;
+  }
+  .chip-new { background: var(--new-soft); color: var(--new); border-color: #b6e0d1; }
+
+  /* ---------- layout ---------- */
+  .wrap {
+    max-width: 1180px; margin: 0 auto; padding: 0 24px 96px;
+    display: grid; grid-template-columns: 244px minmax(0, 1fr); gap: 48px;
+  }
+  main { min-width: 0; padding-top: 28px; counter-reset: sec; }
+
+  .toc { padding-top: 28px; }
+  .toc-inner {
+    position: sticky; top: 78px;
+    max-height: calc(100vh - 110px); overflow-y: auto;
+    padding-right: 6px;
+  }
+  .toc-title {
+    font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em;
+    color: var(--ink-3); margin: 0 0 10px;
+  }
+  .toc ol { list-style: none; margin: 0; padding: 0; counter-reset: toc; }
+  .toc li { counter-increment: toc; margin: 0 0 1px; }
+  .toc a {
+    display: block; padding: 5px 8px 5px 30px; text-indent: -22px;
+    font-size: 14px; line-height: 1.35; text-decoration: none;
+    color: var(--ink-2); border-radius: 4px;
+  }
+  .toc a::before {
+    content: counter(toc) ". "; color: var(--ink-3); font-variant-numeric: tabular-nums;
+  }
+  .toc a:hover { background: var(--bg-soft); color: var(--accent); }
+
+  /* ---------- typography ---------- */
+  h1 { font-size: 30px; line-height: 1.2; letter-spacing: -0.02em; margin: 0 0 10px; }
+  .lede { font-size: 18px; color: var(--ink-2); margin: 0 0 8px; max-width: 62ch; }
+
+  /* Section numbers are generated, here and in the contents list, and are
+     written nowhere in the markup: one mechanism, so inserting a section
+     cannot leave the two lists disagreeing. */
+  h2 {
+    font-size: 22px; line-height: 1.25; letter-spacing: -0.01em;
+    margin: 52px 0 14px; padding-bottom: 8px; border-bottom: 2px solid var(--line-2);
+    scroll-margin-top: 110px;
+  }
+  h2::before {
+    counter-increment: sec;
+    content: counter(sec) ". ";
+    color: var(--ink-3); font-variant-numeric: tabular-nums;
+  }
+  h3 {
+    font-size: 16.5px; margin: 28px 0 8px; scroll-margin-top: 110px;
+  }
+  p, li { max-width: 74ch; }
+  p { margin: 0 0 12px; }
+  ul, ol { margin: 0 0 14px; padding-left: 22px; }
+  li { margin-bottom: 6px; }
+  code, kbd, .mono {
+    font-family: var(--mono); font-size: 0.9em;
+    background: var(--bg-soft); border: 1px solid var(--line-2);
+    border-radius: 4px; padding: 1px 5px;
+  }
+  kbd { font-weight: 600; }
+  .ui { font-weight: 600; color: var(--ink); }
+
+  /* ---------- figures ---------- */
+  figure {
+    margin: 22px 0 30px; max-width: 100%;
+  }
+  figure img {
+    display: block; max-width: 100%; height: auto;
+    border: 1px solid var(--line); border-radius: 6px; background: #fff;
+  }
+  figcaption {
+    font-size: 14px; line-height: 1.5; color: var(--ink-2);
+    margin-top: 10px; max-width: 74ch;
+  }
+  figcaption b { color: var(--ink); }
+
+  /* ---------- tables ---------- */
+  .t-scroll { overflow-x: auto; margin: 0 0 18px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14.5px; }
+  th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--line-2); }
+  thead th { border-bottom: 2px solid var(--line); font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-3); }
+  tbody th { font-weight: 600; }
+  td p:last-child, td ul:last-child { margin-bottom: 0; }
+
+  /* ---------- callouts ---------- */
+  .note, .new, .warn {
+    border-left: 4px solid var(--accent); background: var(--accent-soft);
+    padding: 12px 16px; margin: 18px 0; border-radius: 0 5px 5px 0;
+    max-width: 76ch;
+  }
+  .note p:last-child, .new p:last-child, .warn p:last-child { margin-bottom: 0; }
+  .new { border-left-color: var(--new); background: var(--new-soft); }
+  .warn { border-left-color: var(--warn); background: var(--warn-soft); }
+  .label {
+    display: inline-block; font-size: 11.5px; font-weight: 700;
+    letter-spacing: 0.07em; text-transform: uppercase; margin-right: 6px;
+  }
+  .new .label { color: var(--new); }
+  .warn .label { color: var(--warn); }
+  .note .label { color: var(--accent); }
+
+  .badge-new {
+    display: inline-block; vertical-align: 2px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+    background: var(--new-soft); color: var(--new); border: 1px solid #b6e0d1;
+    border-radius: 100px; padding: 1px 8px; margin-left: 8px; white-space: nowrap;
+  }
+
+  pre {
+    font-family: var(--mono); font-size: 13px; line-height: 1.5;
+    background: var(--bg-soft); border: 1px solid var(--line-2);
+    border-radius: 5px; padding: 12px 14px; overflow-x: auto; margin: 0 0 16px;
+  }
+  pre b { color: var(--accent); }
+
+  footer {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--line); margin-top: 56px; padding-top: 16px;
+    font-size: 13.5px; color: var(--ink-3);
+  }
+
+  /* ---------- narrow ---------- */
+  @media (max-width: 900px) {
+    .wrap { grid-template-columns: minmax(0, 1fr); gap: 0; padding: 0 18px 64px; }
+    .toc { padding-top: 24px; }
+    /* The contents list is seventeen entries long, and stacked above the title
+       it would fill the whole first screen on a phone. Capping it keeps the
+       h1 in the first screenful and costs the reader a short scroll inside
+       the box instead. */
+    .toc-inner {
+      position: static; max-height: 45vh; overflow-y: auto;
+      background: var(--bg-soft); border: 1px solid var(--line-2);
+      border-radius: 6px; padding: 14px 16px;
+    }
+    main { padding-top: 8px; }
+    h1 { font-size: 26px; }
+  }
+
+  /* ---------- print ---------- */
+  @media print {
+    .masthead { position: static; border-bottom: 1px solid #999; }
+    .wrap { display: block; max-width: none; padding: 0; }
+    .toc { display: none; }
+    a { color: inherit; text-decoration: none; }
+    h2 { break-after: avoid; page-break-after: avoid; }
+    h3 { break-after: avoid; page-break-after: avoid; }
+    figure, table, .note, .new, .warn, pre { break-inside: avoid; page-break-inside: avoid; }
+    .note, .new, .warn, .badge-new, .chip {
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
+    body { font-size: 11.5pt; }
+    /* A full-tab shot is taller than it is wide and would otherwise take a page
+       of its own, pushing the text that explains it onto the next one. */
+    figure img { border-color: #bbb; max-height: 11cm; width: auto; }
+    /* A scrollbar cannot be printed, so a rule example wider than the page
+       would simply lose its right-hand end. The widest one here needs about
+       744 px against A4's ~718 px of printable width, so it wraps instead. */
+    pre {
+      overflow: visible; white-space: pre-wrap; word-break: break-word;
+      font-size: 9pt;
+    }
+  }
+</style>
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to the guide</a>
+
+<div class="masthead">
+  <div class="masthead-in">
+    <strong>Calculation Explorer &mdash; user guide</strong>
+    <span class="chip">v1.19.2</span>
+    <span class="meta">A plugin for Arc for TM1, verified against Arc 6.0.0 &middot; Created by Muhammad Eissa, Cubewise &middot; <a href="mailto:meissa@cubewise.com">meissa@cubewise.com</a></span>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <nav class="toc" aria-labelledby="toc-h">
+    <div class="toc-inner">
+      <p id="toc-h" class="toc-title">On this page</p>
+      <ol>
+        <li><a href="#what">What it answers</a></li>
+        <li><a href="#open">Install it and open it</a></li>
+        <li><a href="#tabs">The four tabs</a></li>
+        <li><a href="#pick">Picking a cell</a></li>
+        <li><a href="#two-steps">Two steps: the cell, then the tree</a></li>
+        <li><a href="#cost">What a trace costs</a></li>
+        <li><a href="#waiting">While a trace is running</a></li>
+        <li><a href="#cancel">Cancelling a running trace</a></li>
+        <li><a href="#reading">Reading a trace</a></li>
+        <li><a href="#panel">The detail panel</a></li>
+        <li><a href="#operands">Clickable operands</a></li>
+        <li><a href="#deeper">Going deeper</a></li>
+        <li><a href="#share">Sharing what you found</a></li>
+        <li><a href="#feeders">Checking feeders</a></li>
+        <li><a href="#history">History</a></li>
+        <li><a href="#large">When a trace is very large</a></li>
+        <li><a href="#wrong">If something looks wrong</a></li>
+        <li><a href="#limits">What it does not do</a></li>
+      </ol>
+    </div>
+  </nav>
+
+  <main id="main" tabindex="-1">
+
+    <h1>Where did this number come from?</h1>
+    <p class="lede">Calculation Explorer follows a TM1 cell down through every rule, consolidation and
+      cross-cube hop, names each step with its cube and full coordinates, finds each rule statement
+      back in the rule file with its line number, and hands the whole thing to a colleague as one
+      self-contained HTML file.</p>
+
+    <p><strong>It only ever reads.</strong> Nothing in this plugin writes to a cube, a rule or a view.</p>
+
+    <div class="new">
+      <p><span class="label">New in v1.15.0</span> <strong>Every operand in a formula now leads
+        somewhere.</strong> Click one and it either opens its own row in the tree or traces its own
+        cell &mdash; see <a href="#operands">Clickable operands</a>.</p>
+    </div>
+
+    <h2 id="what">What it answers</h2>
+
+    <p>You are looking at a number in a cube view and it is wrong, or surprising, and you need to
+      know which rule produced it and from what.</p>
+
+    <p>Arc's own trace shows you the rule statement and the cell's immediate components. Calculation
+      Explorer follows the whole chain, and answers four questions Arc's page leaves open:</p>
+
+    <ul>
+      <li><strong>Which rule fired, and where is it?</strong> Statements come back from the API with
+        their newlines stripped; the plugin finds each one in the cube's rule file and shows it in
+        the author's own formatting, with its line number.</li>
+      <li><strong>What were the operands actually worth?</strong> The rule is rewritten as arithmetic
+        with each operand's own value substituted in.</li>
+      <li><strong>Where did it read from?</strong> A cross-cube lookup shows the coordinates TM1
+        actually read, not the <code>!dimension</code> references the rule was written with.</li>
+      <li><strong>How do I show someone else?</strong> One interactive HTML file, no server and no
+        internet needed to open it.</li>
+    </ul>
+
+    <h2 id="open">Install it and open it</h2>
+
+    <ol>
+      <li>Copy the <code>calculation-explorer</code> folder into Arc's <code>plugins</code> folder
+        &mdash; the one next to <code>arc.exe</code>, usually <code>C:\arc\plugins</code>.</li>
+      <li><strong>Hard-reload the Arc window</strong>: <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>
+        (or <kbd>Ctrl</kbd>+<kbd>F5</kbd>).</li>
+      <li>Open <span class="ui">Tools &rarr; Calculation Explorer</span>.</li>
+    </ol>
+
+    <div class="warn">
+      <p><span class="label">Step 2 is not optional</span> and it is not the same as restarting Arc.
+        Arc serves every plugin in one bundle that browsers are told to cache for a year, and that
+        address does not change when a plugin changes &mdash; so without a hard reload you keep
+        running the old copy. The same applies to every update you install later.</p>
+    </div>
+
+    <h3>Letting it take over Arc's cell menu</h3>
+
+    <p>Arc's cube viewer has its own <span class="ui">Trace Calculation</span> and
+      <span class="ui">Trace Feeders</span> entries on the cell right-click menu. Two checkboxes on
+      the first tab, under <span class="ui">Open Arc's cell menu here</span>, decide whether those
+      entries open <em>this</em> plugin instead of Arc's built-in pages.</p>
+
+    <p>They are independent settings, so you can keep Arc's feeder page while calculation traces open
+      here, or the reverse. Either can be turned back off at any time and Arc's own page comes
+      straight back, with no reload.</p>
+
+    <h2 id="tabs">The four tabs</h2>
+
+    <figure>
+      <img src="img/guide/01-pick-a-cell.png" width="1037" height="876"
+        alt="The Pick a cell tab: Instance GO_New_Stores, Start from A cube view, Trace depth 3, Rows per page 50, with Hide control cubes ticked and both boxes under Open Arc's cell menu here ticked. Below, the Gross Margin Calculation cube is selected beside its view list, and a context bar reads Corporate Store | All Subsidiaries | ALL RETAILERS | Budget version 1 over a grid of six measure rows from Existing Stores Revenue down to Economic Growth across Total Year and the first eight months. The four numeric rows carry their values in bold, and the rule-derived Population Growth and Economic Growth rows are shaded, their 0.00% greyed and not bold.">
+      <figcaption><b>Figure 1. The first tab is the whole setup.</b> Everything a trace needs is in
+        the top row: the instance, where to start from, the trace depth and the page size. The two
+        ticked boxes under <span class="ui">Open Arc's cell menu here</span> are what makes Arc's own
+        cell menu open this plugin. In the <code>Gross Margin Calculation</code> grid at the bottom,
+        rule-derived cells are shaded and consolidated cells are bold &mdash; but read the two
+        markers separately, because on any one grid they need not both be telling you something. The
+        context bar over this one reads <span class="ui">Corporate Store | All Subsidiaries |
+        ALL RETAILERS | Budget version 1</span>, and <code>ALL RETAILERS</code> and
+        <code>All Subsidiaries</code> are consolidations, so every value cell here sits at a
+        consolidated coordinate and the bold singles nothing out: all four numeric rows carry it,
+        and the two rows that do not are the ones TM1 reports as rule-derived instead. It is the
+        <em>shading</em> that is doing the work in this shot, marking
+        <code>Population Growth</code> and <code>Economic Growth</code> as the rule-derived
+        rows.</figcaption>
+    </figure>
+
+    <p>Two of the controls in that top row are easy to skip past.
+      <span class="ui">Rows per page</span> is how much of the view the grid below fetches at a time,
+      and has no effect on what a trace costs. <span class="ui">Hide control cubes</span> keeps
+      TM1's <code>}</code>-prefixed control cubes out of the cube list on the left; it hides them
+      from the <em>picker</em> only, and a trace still follows the chain into one where a rule reads
+      it &mdash; which is how an attribute read shows up in a tree.</p>
+
+    <div class="t-scroll">
+      <table>
+        <thead>
+          <tr><th scope="col">Tab</th><th scope="col">What it holds</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Pick a cell</th>
+            <td>Instance, where to start from, trace depth, rows per page, and the cell itself. The
+              <span class="ui">About</span> line at the bottom carries the version numbers.</td>
+          </tr>
+          <tr>
+            <th scope="row">Trace</th>
+            <td>The result. Cards across the top, the cell reference under them, then the toolbar and
+              the tree. The tab's badge counts the nodes in the trace on screen.</td>
+          </tr>
+          <tr>
+            <th scope="row">Feeders</th>
+            <td>Feeder statements and fed cells for the cell on screen.</td>
+          </tr>
+          <tr>
+            <th scope="row">History</th>
+            <td>Every trace you have run, with <span class="ui">Re-trace</span>. It survives
+              restarts, because it lives in your Arc preferences.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="pick">Picking a cell</h2>
+
+    <div class="t-scroll">
+      <table>
+        <thead>
+          <tr><th scope="col">Way in</th><th scope="col">How</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">From a view</th>
+            <td>On <span class="ui">Pick a cell</span>, choose the instance, then a cube and a view
+              (public or private), and click any cell in the grid.</td>
+          </tr>
+          <tr>
+            <th scope="row">From Arc's object tree</th>
+            <td>Right-click a <strong>cube</strong> &rarr; <span class="ui">Calculation Explorer</span>
+              opens on that cube. Right-click a <strong>view</strong> and it opens with that view
+              loaded, ready for a click.</td>
+          </tr>
+          <tr>
+            <th scope="row">From the cell itself</th>
+            <td>Right-click a cell in the cube viewer &rarr; <span class="ui">Trace Calculation</span>.
+              Arc's own menu item opens this plugin on that cell and traces it.</td>
+          </tr>
+          <tr>
+            <th scope="row">Feeders from the cell</th>
+            <td>Right-click a cell &rarr; <span class="ui">Trace Feeders</span> opens the
+              <span class="ui">Feeders</span> tab with that cell's feeders already checked.</td>
+          </tr>
+          <tr>
+            <th scope="row">By typing or pasting</th>
+            <td>Set <span class="ui">Start from</span> to <span class="ui">Coordinates I type</span>
+              and fill the rows in, or paste a cell reference (below).</td>
+          </tr>
+          <tr>
+            <th scope="row">By MDX</th>
+            <td>An MDX statement works too, for a cell that is in no saved view.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Pasting a cell reference</h3>
+
+    <p>Right-click a cell in Arc's cube viewer &rarr; <span class="ui">Cell Reference</span>, select
+      the whole table it shows, and paste it into the <span class="ui">Paste a cell reference</span>
+      box, then press <span class="ui">Use this reference</span>. What the dialog puts on the
+      clipboard is three tab-separated columns, which is exactly what the box expects:</p>
+
+<pre>Dimension            Hierarchy            Element
+&hellip;                    &hellip;                    &hellip;</pre>
+
+    <p>Rows are matched <strong>by dimension name</strong>, so their order does not matter, and the
+      hierarchy column is used for the trace &mdash; which is what makes a cell on an alternate
+      hierarchy traceable at all. Arc's dialog does not name the cube, so pick the cube on the left
+      first.</p>
+
+    <p>A two-column table, a plain comma-separated list in cube dimension order, and a
+      <code>DB('Cube',&hellip;)</code> formula all work as well. A paste that covers only some
+      dimensions is not rejected: the matched rows are filled in, you are told how many, and you
+      complete the rest by hand.</p>
+
+    <h2 id="two-steps">Two steps: the cell, then the tree</h2>
+
+    <p>A trace happens in two steps, and the second one is the expensive one.</p>
+
+    <ol>
+      <li><strong>The preview</strong> asks the server one small question &mdash; the value, the
+        rule that produced it with its rule-file line number, the cell type, and the full coordinate.
+        It cannot grow with how wide the cell is, because it asks for no components at all.</li>
+      <li><strong>The component tree</strong> is a separate, priced click:
+        <span class="ui">Build the component tree</span>.</li>
+    </ol>
+
+    <figure>
+      <img src="img/guide/02-preview.png" width="1037" height="876"
+        alt="The Trace tab after one grid click in Gross Margin Calculation: cards read Value 0.89375, Cell type Rule and Round trip 1030 ms, above a coordinate bar naming Effect of Single Retailer Promotions on instance GO_New_Stores. A RULE section headed rules line 179 carries TM1's autogenerated comment banner and then the statement itself, and below it sit the Build the component tree button and its cost note, with the rest of the tab empty.">
+      <figcaption><b>Figure 2. One grid click buys the cell, and stops.</b> This cell is
+        <em>rule-derived</em>, so the preview alone answers the question most often asked of it: the
+        value, the cell type, the round trip that fetched them, and under <span class="ui">Rule</span>
+        the statement together with <strong>rules line 179</strong> &mdash; the line in the
+        <code>Gross Margin Calculation</code> rule file, which is the thing to quote to whoever
+        maintains the rule. TM1's autogenerated rules carry a machine-written comment on that line,
+        which is what the long provenance text after the line number is. Nothing below the button has
+        been fetched yet, and the note under the button says what pressing it costs.</figcaption>
+    </figure>
+
+    <p>For a great many questions &mdash; <em>which rule is this?</em>, <em>is this a rule, a
+      consolidation, or a number somebody typed in?</em> &mdash; the preview is the entire answer and
+      you are finished. The <span class="ui">Feeders</span> tab works off a previewed cell too, so a
+      cell's feeders can be checked without building a tree at all.</p>
+
+    <h3>Which gestures go straight into the tree</h3>
+
+    <p><strong>When you name the trace, the plugin traces.</strong> These four gestures ask for a
+      tree, so the cell and then its tree arrive on their own with nothing to press in between:</p>
+
+    <ul>
+      <li>Arc's cell menu &rarr; <span class="ui">Trace Calculation</span></li>
+      <li>opening a link somebody sent you</li>
+      <li><span class="ui">Re-trace</span> on the <span class="ui">History</span> tab</li>
+      <li><span class="ui">Trace this cell</span> after typing or pasting coordinates</li>
+    </ul>
+
+    <p><strong>Clicking a cell in the grid is the one gesture that stops at the preview</strong>, and
+      deliberately: clicking around a grid is not the same as asking for a tree.</p>
+
+    <p>Two cases where the preview alone tells you all it can, in opposite ways. A
+      <strong>stored input</strong> says so, and there the preview really is the end of it: its value
+      is its own, there is nothing underneath it to walk, and the button has nothing to fetch. A
+      <strong>consolidation</strong> has no rule of its own, so the preview shows no rule and cannot
+      &mdash; its value is the sum of its children, so there the button is not a shortcut you can
+      skip but the only way forward: the tree is what shows you which children the value came
+      from.</p>
+
+    <h2 id="cost">What a trace costs</h2>
+
+    <p><strong>Two things decide it, and only one of them is the depth.</strong> The other is how
+      wide the cell is. <span class="ui">Trace depth</span> on the first tab sets how many levels the
+      request asks the server to build, so lowering it really does make a big cell cheaper.</p>
+
+    <div class="t-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Measured on the demo model</th>
+            <th scope="col">Response size</th>
+            <th scope="col">Read it as</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Four cells, same cube, same default depth of 3</th>
+            <td>24 KB, 81 KB, 512 KB and 591 KB &mdash; each in about two seconds</td>
+            <td>A 25&times; spread between cells that sit one click apart. How wide the cell is
+              matters as much as the depth.</td>
+          </tr>
+          <tr>
+            <th scope="row">One further cell &mdash; not one of the four above &mdash; with the depth
+              raised a level at a time</th>
+            <td>83 KB at depth 3, 1.1 MB at 4, 11.8 MB at 5, 37 MB at 6</td>
+            <td>Depth multiplies whatever your cell costs, and the growth is steep.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="warn">
+      <p><span class="label">These are demo-model numbers, not a budget for your model</span>
+        The demo model's largest non-control dimension has <strong>39 elements</strong>. A production
+        dimension has thousands, and a consolidation over one returns thousands of components at the
+        first level alone. No cell here can say what a wide cell costs on a real model.</p>
+    </div>
+
+    <p>So: <strong>start low and raise the depth a little at a time</strong>, and use the caret on a
+      single row to go deeper from just there rather than deepening the whole tree. If a trace feels
+      slow, a lower depth is the first thing to try.</p>
+
+    <h2 id="waiting">While a trace is running</h2>
+
+    <p>A trace is one piece of work done by the TM1 server, and on a large cell it takes 15 to 22
+      seconds. While it runs, the row of tabs carries a spinner, what is happening, which
+      cube, and how long it has been going.</p>
+
+    <ul>
+      <li><strong>The seconds come from TM1 itself</strong>, not from a stopwatch in the page. That
+        matters when a connection drops: a page timer would keep counting and tell you a comforting
+        lie, and this one stops telling you anything it cannot read from the server.</li>
+      <li><strong>It changes to <em>Receiving the answer</em></strong> for the last stretch. The
+        server has finished walking by then and the answer is still arriving. The seconds hold still
+        at that point, because they are how long the walk took.</li>
+      <li><strong>It appears however you started the trace</strong>, including the ways where you
+        clicked nothing on this page at all: Arc's cell menu, a link somebody sent you, or replaying
+        an entry from <span class="ui">History</span>.</li>
+    </ul>
+
+    <p><strong>Clicking again does not make it faster, and the page will not let you.</strong> One
+      trace runs at a time, the cell being traced is outlined in the grid, and a second click is
+      refused rather than queued. The two fan-out actions &mdash;
+      <span class="ui">Auto-drill</span> and <span class="ui">Resolve labels</span> &mdash; ask once,
+      up front, and tell you how many traces they are about to request.</p>
+
+    <h3>Two questions it may ask before starting</h3>
+
+    <p>The server keeps working on a trace even if you close the page or reload it &mdash; an
+      administrator can stop one, which is <a href="#cancel">Cancelling a running trace</a> below
+      &mdash; so before
+      starting a new one the plugin checks with TM1 and asks you first if something is already
+      running.</p>
+
+    <div class="t-scroll">
+      <table>
+        <thead>
+          <tr><th scope="col">What you see</th><th scope="col">What is going on</th><th scope="col">What to do</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Your last trace is still running on the server</th>
+            <td>You reloaded, or opened a second tab, while your own earlier trace was still going.
+              This is the usual one.</td>
+            <td>Waiting is normally right &mdash; the answer is coming. Continue anyway if you no
+              longer want that trace's answer.</td>
+          </tr>
+          <tr>
+            <th scope="row">Another user is running a cell trace</th>
+            <td>Somebody else is tracing on the same TM1 instance. Running two at once increases the
+              server's memory use and slows both.</td>
+            <td>On a shared server, waiting a few seconds &mdash; or asking them &mdash; is often
+              quicker than competing. Continue anyway if you would rather not.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Both end in a choice: nothing here refuses you a trace. Two limits, so the check is not read
+      as more than it is. <strong>Nothing is claimed when nothing is found</strong> &mdash; TM1 shows
+      an administrator every running trace and shows everyone else only their own, so "no question
+      asked" means nothing was <em>seen</em>, not that the server is idle. And if the check itself
+      cannot be made, tracing goes ahead exactly as before rather than blocking you.</p>
+
+    <h2 id="cancel">Cancelling a running trace <span class="badge-new">New in v1.18.0</span></h2>
+
+    <p>A trace that is taking too long can be stopped. While one is running, the strip at the
+      bottom of the page carries a <span class="ui">Cancel</span> button beside the server's own
+      clock; pressing it asks TM1 to stop that walk. <strong>This is an administrator
+      action</strong> &mdash; if you are not an administrator on this TM1 server, the button is not
+      there.</p>
+
+    <figure>
+      <img src="img/guide/13-cancel.png" width="515" height="74"
+        alt="The strip that appears at the foot of the page while a trace runs: a spinner, the
+        words Tracing on the server, the cube name Gross Margin Calculation, an orange pill
+        reading 1s, and a Cancel button marked with a no-entry symbol.">
+      <figcaption><b>Figure 3. Stopping a trace that is already running.</b> The strip reports
+        what the <em>server</em> is doing &mdash; the seconds are TM1's own elapsed time, not a
+        timer in this page &mdash; and <span class="ui">Cancel</span> stops that walk on the
+        server. The trace then ends with a notice saying it was cancelled, <em>not</em> with the
+        red failure box: nothing failed.</figcaption>
+    </figure>
+
+    <p>Three things worth knowing before you press it:</p>
+
+    <ul>
+      <li><strong>It does not give memory back.</strong> TM1 keeps the memory it has already
+        taken for this session, so cancelling frees the page and the server's worker, not the
+        server's memory. What keeps a trace small is the depth you ask for &mdash; see
+        <a href="#cost">What a trace costs</a>.</li>
+      <li><strong>A cancelled re-trace gives you back the tree you had.</strong> Re-tracing at a
+        greater depth replaces the tree on screen; if you stop that walk, the previous tree comes
+        back rather than leaving you with nothing.</li>
+      <li><strong>An administrator can stop someone else's trace.</strong> Any running trace the
+        server reports appears on its own line, naming the user, the cube and how long it has been
+        going, with a <span class="ui">Cancel</span> of its own. That one asks you to confirm
+        first, repeating all three. The other person's page stops with a notice saying the trace
+        was cancelled on the server. A long user name &mdash; a CAM identity, say &mdash; is
+        shortened to fit; hover it to read the whole one.</li>
+    </ul>
+
+    <p>If the trace finished while you were reaching for the button, the page says so &mdash;
+      <em>that trace had already finished</em> &mdash; and nothing else happens.</p>
+
+    <h2 id="reading">Reading a trace</h2>
+
+    <p>The cell reference sits under the cards and stays on one line to leave room for the tree. The
+      chevron at its left unwraps it in full, and the small buttons at its right copy it &mdash; as
+      readable text, or as the <code>Dimension / Hierarchy / Element</code> table Arc's own
+      <span class="ui">Cell Reference</span> dialog produces, which pastes straight back into this
+      plugin. The link icon beside them is covered under
+      <a href="#share">Sharing what you found</a>.</p>
+
+    <p>A trace opens in the <strong>business view</strong>, and for most questions that is the one you
+      want. The toolbar toggles to the <strong>technical view</strong> when you need cubes, full
+      coordinates and rule statements on every row.</p>
+
+    <h3>The business view</h3>
+
+    <figure>
+      <img src="img/guide/03-trace-business.png" width="1037" height="876"
+        alt="The business view of a Gross Margin Calculation trace: seven cards read Value 39.66, Nodes 115, Frontier 96, Max depth 3, Rule nodes 1, Cubes touched 1 and Round trip 1028 ms, with the History badge on 1. A blue line under them reads that 96 of the 115 nodes in this trace stop at the depth you asked for, and the toolbar below it carries Fetch depth 3 and a Re-trace button. The traced cell's panel is open, its Calculation reading GROSS MARGIN BEFORE COSTS 610,156,746 times 100 zero-safe divided by ADJUSTED GROSS REVENUE 1,538,374,998, and those two components are the collapsed rows below it, biggest first.">
+      <figcaption><b>Figure 4. A trace in the business view.</b> Read the seven cards left to right for
+        the shape of what came back: the value, how many nodes, how many of those stop at the depth
+        you asked for, the depth reached, how many are rule-derived, how many cubes the chain touched,
+        and the round trip. <b>Frontier</b> and the blue line under the cards appear only when the tree
+        was cut, and both count the rows you can still fetch deeper from. The traced
+        cell's own panel is open, because it is the cell you came for, and its arithmetic is right
+        there: <code>GROSS MARGIN BEFORE COSTS</code> at 610,156,746 over
+        <code>ADJUSTED GROSS REVENUE</code> at 1,538,374,998. Those same two components are the rows
+        underneath, biggest first, each with a <span class="ui">Why?</span> pill of its
+        own.</figcaption>
+    </figure>
+
+    <h3>The technical view</h3>
+
+    <figure>
+      <img src="img/guide/06-trace-technical.png" width="1037" height="876"
+        alt="The same cell in the technical view, on a second run of it: the seven cards read the same Value 39.66, Nodes 115, Frontier 96, Max depth 3, Rule nodes 1 and Cubes touched 1 at a Round trip of 1052 ms, and the History badge has moved on to 4. The first row carries a RULE badge and reads Gross Margin Calculation :: followed by its full coordinate as dimension = element pairs, with that value at the right. The second row carries a CONSOLIDATION badge at 610,156,746 and its Calculation section reads Sum of 8 components, with Department Store, Direct Marketing, Equipment Rental Store and Eyewear Store listed under Values used.">
+      <figcaption><b>Figure 5. The same cell, in the technical view.</b> Every row now carries its type
+        badge, its cube and its full coordinate &mdash;
+        <code>Gross Margin Calculation ::</code> then <code>dimension = element</code> pairs &mdash;
+        and rules are visible without opening anything. Note the second row: a consolidation has no
+        statement, so its <span class="ui">Calculation</span> section states the count of components
+        it summed instead.</figcaption>
+    </figure>
+
+    <div class="t-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col"></th>
+            <th scope="col">Business view</th>
+            <th scope="col">Technical view</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Row label</th>
+            <td>only the part of the coordinate that <strong>changed</strong></td>
+            <td><code>cube :: dim = el, dim = el, &hellip;</code></td></tr>
+          <tr><th scope="row">Breadth</th>
+            <td>one branch open at a time, with a breadcrumb of the path</td>
+            <td>the whole tree, expandable at once</td></tr>
+          <tr><th scope="row">Order</th>
+            <td>biggest contributor first (toggleable)</td>
+            <td>the model's own order</td></tr>
+          <tr><th scope="row">Zeros</th>
+            <td>folded into a <em>+ N with no value</em> line</td>
+            <td>shown</td></tr>
+          <tr><th scope="row">Cube hops</th>
+            <td>named only when the cube changes</td>
+            <td>on every row</td></tr>
+          <tr><th scope="row">Rules</th>
+            <td>behind the <span class="ui">Why?</span> pill</td>
+            <td>always visible</td></tr>
+          <tr><th scope="row">Going deeper</th>
+            <td>just keep clicking: a row with nothing under it fetches its next level</td>
+            <td>a caret per row, <span class="ui">Trace deeper from this cell</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Filters</h3>
+
+    <figure>
+      <img src="img/guide/12-filters.png" width="1015" height="184"
+        alt="The technical view's toolbar with the Filters menu open and carrying no number: inside it a Cube dropdown set to All cubes and two unticked checkboxes, hide zero / empty and rule nodes only. Behind the menu the toolbar shows the view toggle set to Technical view, the Filter cells, rules, cubes box, Fetch depth 3, a Re-trace button, expand-all and collapse-all icons, Auto-drill and Share.">
+      <figcaption><b>Figure 6. Three controls, one menu.</b> <span class="ui">Filters</span> holds a
+        <span class="ui">Cube</span> dropdown &mdash; here on <em>All cubes</em>, its other entries
+        being the cubes this trace actually touched &mdash; and the
+        <span class="ui">hide zero / empty</span> and <span class="ui">rule nodes only</span>
+        checkboxes. All three are off here, which is why the button carries no number: the badge
+        counts those three, so an unbadged <span class="ui">Filters</span> means none of
+        <em>them</em> is hiding anything. The free-text box beside the button hides rows too and
+        never badges, so if the tree looks short, check that box as well.</figcaption>
+    </figure>
+
+    <p>The free-text box beside the button filters on cells, rules and cube names. The business view
+      does not have the menu at all: it keeps <span class="ui">hide zero / empty</span> and
+      <span class="ui">biggest first</span> directly on its toolbar.</p>
+
+    <h3>What the row markers mean</h3>
+
+    <ul>
+      <li>A green <span class="ui">input</span> chip means the trace has reached a stored cell: the
+        value was typed in or loaded, not calculated, and there is nothing beneath it. That is very
+        often the answer. Those rows are marked with a plain circle (<code>&#9675;</code>), never
+        the boxed plus (<code>&#8862;</code>).</li>
+      <li><code>&#8862;</code> on a row means the opposite: this cell has coordinates, so a level
+        below it can still be fetched and nobody has asked yet. Click it.</li>
+      <li><strong>A plain triangle</strong> is the cheap one. It means the level below this row was
+        already fetched, so opening it costs no request at all; <code>&#8862;</code> means one is
+        needed. <a href="#deeper">Figure 9</a> has both markers side by side.</li>
+      <li><strong>A share and a bar</strong> appear only where the children genuinely add up to the
+        parent &mdash; always for a consolidation, and for a rule only when the arithmetic checks
+        out. A percentage you cannot trust is left out rather than shown.</li>
+      <li><strong>An italic label</strong> means that level came back without coordinates, so it is
+        named from the rule it writes to. <span class="ui">Resolve</span> on the row, or
+        <span class="ui">Resolve labels</span> in the toolbar, fetches the real ones.</li>
+      <li><strong>A cube name</strong> appears wherever the chain jumps cubes, including control
+        cubes &mdash; which is how an attribute read shows up.</li>
+    </ul>
+
+    <h2 id="panel">The detail panel</h2>
+
+    <p><span class="ui">Why?</span> on any row opens the same four sections, in the order you need
+      them. The traced cell's own panel is already open when a trace arrives; every other row starts
+      closed. An exported page opens the same way.</p>
+
+    <figure>
+      <img src="img/guide/04-why-panel.png" width="1015" height="513"
+        alt="One component row's panel open on the six elements Outdoors Shop &middot; GO Accessories &middot; Corporate Store &middot; Sep &middot; Budget version 1 &middot; ADJUSTED GROSS REVENUE at 18,449,185, with six Cell chips and the rule rewritten as GROSS REVENUE 14,301,694 times one plus a bracket of four growth and promotion operands. Values used lists five components ending with Effect of All Store Promotions at 0, and under the panel a plus 3 with no value line is followed by two rows marked with a boxed plus.">
+      <figcaption><b>Figure 7. One row's panel, open.</b> Read it top to bottom: which cell
+        (<span class="ui">Cell</span>), what the rule did with what values
+        (<span class="ui">Calculation</span>), every component the server reported
+        (<span class="ui">Values used</span>), and the statement itself
+        (<span class="ui">Rule</span>). This row is <code>ADJUSTED GROSS REVENUE</code> for one
+        store and month, and its 18,449,185 is <code>GROSS REVENUE</code> at 14,301,694 uplifted by
+        the one promotion operand that is not zero. Nothing was cut here &mdash; five components,
+        well inside the 12-row cap &mdash; so <span class="ui">Values used</span> is in the order the
+        formula reads them, not sorted. Under the panel, the <em>+ 3 with no value</em> line is where
+        the business view folded away the zero rows, and the boxed plus on each component row means
+        a level below it can still be fetched.</figcaption>
+    </figure>
+
+    <ol>
+      <li><strong>Cell</strong> &mdash; the coordinate, one chip per dimension. An alternate hierarchy
+        reads <code>dimension:hierarchy</code>.</li>
+      <li><strong>Calculation</strong> &mdash; the rule rewritten as arithmetic with each operand's
+        own value filled in. Dimension qualifiers and set braces are dropped. A consolidation has no
+        statement, so it reads <em>Sum of N components</em>. <code>\</code> in a formula is TM1's
+        zero-safe divide, not a typo.</li>
+      <li><strong>Values used</strong> &mdash; the components with their values, whether or not each
+        matched an operand. The list is <strong>capped at 12 rows</strong> and says how many it left
+        out; when a consolidation's list is too long to show in full it is sorted biggest first
+        <em>before</em> the cut, so the largest contributor is never the one dropped. A list that
+        fits is not reordered at all, and a rule's operands are never reordered: they stay in the
+        order the formula reads them. The <em>Sum of N components</em> line above always
+        counts them all.</li>
+      <li><strong>Rule</strong> &mdash; the original statement with its rule-file line number,
+        collapsed.</li>
+    </ol>
+
+    <h3>A cross-cube lookup shows what was actually read</h3>
+
+    <p>Where a rule reaches into another cube it usually writes <code>!dimension</code> references or
+      an attribute call, which tells you <em>where</em> it looked but not <em>what</em> it found. The
+      panel fills those coordinates in from the answer TM1 gave and highlights them. On the demo
+      model, a <code>Gross Margin Calculation</code> rule reading
+      <code>Base Sales Forecast</code> is written like this:</p>
+
+<pre>['Gross Sales Margin':{'Volume Discount', 'Existing Stores Revenue', &hellip;}] = N:DB('Base Sales Forecast',
+   !Country and Region, !Retailers, ATTRS('Gross Sales Margin', !Gross Sales Margin,
+   '}Map_}Link_Gross Mrgin Calc_3CBase Sales Forecast'), !Store Type, !Budget version, !Month);</pre>
+
+    <p>and the panel renders it like this, with the substituted parts highlighted and the value the
+      lookup returned at the end:</p>
+
+<pre>DB('Base Sales Forecast', <b>Americas</b>, <b>Department Store</b>, <b>Volume Discount</b>,
+   <b>Franchise Store</b>, <b>Budget version 1</b>, <b>Mar</b>)   95,577.52</pre>
+
+    <p>Note what the attribute call became: <code>Volume Discount</code>. That result is very often
+      the thing you were trying to find out, and the rule text never shows it.</p>
+
+    <p>Hover a highlighted part to see the text it replaced. <strong>That text is in a tooltip, so a
+      mouse is the only way to read it today</strong> &mdash; there is no keyboard or touch
+      equivalent. Anything the rule wrote out in full stays as written: only what you could not
+      otherwise see is filled in. Every substituted coordinate is read off the component TM1 returned
+      for that lookup; this cell's own coordinates are never substituted into the rule text. And if a
+      lookup cannot be tied to exactly one of the components TM1 returned, it is left exactly as the
+      rule wrote it rather than guessed at.</p>
+
+    <h2 id="operands">Clickable operands <span class="badge-new">New in v1.15.0</span></h2>
+
+    <figure>
+      <img src="img/guide/05-operand-chips.png" width="965" height="105"
+        alt="A close crop of the CALCULATION section: ADJUSTED GROSS REVENUE equals GROSS REVENUE 14,301,694 times one plus a bracketed sum of Population Growth 0, Economic Growth 0, Effect of Single Retailer Promotions 29 and Effect of All Store Promotions 0, the bracket zero-safe divided by 100. Each operand is a pale chip carrying its element name with its value in a darker filled box, and a grey legend below the formula reads that backslash is TM1's zero-safe divide.">
+      <figcaption><b>Figure 8. Every operand is a chip, and every chip leads somewhere.</b> The pale
+        half is the operand as the rule names it; the filled half is what it was actually worth on
+        this cell. Five operands make up <code>ADJUSTED GROSS REVENUE</code> here, and the legend
+        under the formula is the reminder that <code>\</code> is TM1's zero-safe divide rather than a
+        typo.</figcaption>
+    </figure>
+
+    <p>Click an operand to follow it. Which of two things happens is a property of the operand, and
+      hovering it tells you which &mdash; that is a tooltip too, so like the substituted text above
+      it needs a mouse.</p>
+
+    <div class="t-scroll">
+      <table>
+        <thead>
+          <tr><th scope="col">The operand</th><th scope="col">A click</th><th scope="col">Cost</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Matched &mdash; it shows a value</th>
+            <td>opens its own row where it already sits in this tree</td>
+            <td><strong>No request.</strong> The node is already here.</td>
+          </tr>
+          <tr>
+            <th scope="row">Unmatched &mdash; it shows <code>?</code></th>
+            <td>traces the cell the reference names</td>
+            <td>One trace, through the same gated path Arc's cell menu and a link use.</td>
+          </tr>
+          <tr>
+            <th scope="row">Not pinned to a single cell</th>
+            <td>nothing &mdash; the chip is not clickable</td>
+            <td>A reference that would need a guess stays inert, because a guessed coordinate would
+              spend a request on a cell nobody asked about.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>A chip is inert when the reference names no dimension, names a set rather than one cell, or
+      names a dimension this cube does not have. Chips also stop advertising themselves while a walk
+      or a preview is in flight.</p>
+
+    <div class="note">
+      <p><span class="label">What <code>?</code> means</span> It means no component TM1 reported
+        carried a value for that operand, and the app names two reasons. The common one is that
+        <strong>this node is as deep as the request went</strong>, so nothing below it was asked for;
+        the other is that the component was <strong>left out at the size limit</strong>. Neither
+        means the operand is missing from TM1, and clicking it fetches it. Note that an
+        unmatched cross-cube <em>lookup</em> shows no <code>?</code>: nothing was asked about it, so
+        claiming absence would be a claim there is no evidence for.</p>
+    </div>
+
+    <p>v1.15.0 also fixed an operand that could read <code>?</code> even though the server had
+      reported its value: an element name holding two consecutive spaces could not be matched to its
+      component.</p>
+
+    <h2 id="deeper">Going deeper</h2>
+
+    <p>A trace stops at the depth you asked for. The rows at that edge are where you carry on:</p>
+
+    <ul>
+      <li>In the <strong>business view</strong>, just keep clicking &mdash; a row with nothing under
+        it fetches its next level.</li>
+      <li>In the <strong>technical view</strong>, use the caret,
+        <span class="ui">Trace deeper from this cell</span>, on any row. The result is spliced into
+        the tree in place.</li>
+      <li><span class="ui">Auto-drill</span> follows the biggest contributor down for you and reports
+        how many hops it took.</li>
+    </ul>
+
+    <figure>
+      <img src="img/guide/07-frontier.png" width="1015" height="558"
+        alt="The business tree with the root panel open on GROSS MARGIN % at 39.66. ADJUSTED GROSS REVENUE 1,538,374,998 is still collapsed, while GROSS MARGIN BEFORE COSTS 610,156,746 is drilled to Outdoors Shop 35 percent, Sports Store 29 percent and Department Store 15 percent on plain triangles, and the two rows under the opened Department Store, GO Accessories 31 percent and Americas 22 percent, carry a boxed plus instead.">
+      <figcaption><b>Figure 9. The edge of what was fetched, and how to tell.</b>
+        <code>GROSS MARGIN BEFORE COSTS</code> is open two levels down to
+        <span class="ui">Department Store</span>, and the two rows beneath it &mdash;
+        <span class="ui">GO Accessories</span> and <span class="ui">Americas</span> &mdash; carry
+        <code>&#8862;</code> rather than a plain triangle. That is the depth-3 frontier:
+        <code>&#8862;</code> is the control that fetches the next level <em>from that node</em>, which
+        is far cheaper than raising the depth for the whole tree. The rows above it have plain
+        triangles, so they are already in hand and open for free &mdash; including
+        <code>ADJUSTED GROSS REVENUE</code>, still collapsed at the top. Every row <em>under</em>
+        <code>GROSS MARGIN BEFORE COSTS</code> carries the share and bar described under
+        <a href="#reading">Reading a trace</a>, because a consolidation's children really do sum to
+        it. The two rows directly under the root carry neither: the root is a rule dividing one
+        number by another, so its two components do not add up to it and a share of it would mean
+        nothing.</figcaption>
+    </figure>
+
+    <p>A node marked <em>components under here were left out at the size limit</em> has more beneath
+      it than was fetched &mdash; trace deeper from that node rather than raising the depth.</p>
+
+    <h2 id="share">Sharing what you found</h2>
+
+    <figure>
+      <img src="img/guide/08-share.png" width="1015" height="182"
+        alt="A crop of the trace toolbar with the Share menu open at its right-hand end, listing Open HTML, Save HTML, Copy and Save text. To the left of it sit the Business view / Technical view toggle, a ticked biggest first checkbox, Fetch depth 3, a Re-trace button, a ticked hide zero / empty checkbox and an Auto-drill button, above the Gross Margin Calculation 39.66 breadcrumb.">
+      <figcaption><b>Figure 10. Everything that leaves the page is behind one button.</b>
+        <span class="ui">Share</span> sits at the right-hand end of the trace toolbar and its menu
+        drops below it with four items: <span class="ui">Open HTML</span> and
+        <span class="ui">Save HTML</span> for the interactive page,
+        <span class="ui">Copy</span> and <span class="ui">Save text</span> for the plain-text
+        version.</figcaption>
+    </figure>
+
+    <div class="t-scroll">
+      <table>
+        <thead>
+          <tr><th scope="col">Control</th><th scope="col">What you get</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Link icon on the cell reference</th>
+            <td>a link that reopens Calculation Explorer on this cell and traces it</td></tr>
+          <tr><th scope="row">Share &rarr; Open HTML</th>
+            <td>the interactive trace in a new browser tab, straight away</td></tr>
+          <tr><th scope="row">Share &rarr; Save HTML</th>
+            <td>the same page saved as one file</td></tr>
+          <tr><th scope="row">Share &rarr; Copy</th>
+            <td>a plain-text version of the trace on the clipboard</td></tr>
+          <tr><th scope="row">Share &rarr; Save text</th>
+            <td>the plain-text version saved as a <code>.txt</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>The exported page</h3>
+
+    <p>It is <strong>completely self-contained</strong>: no server, no internet, no add-ins. It
+      carries the full collapsible tree, contribution bars, syntax-highlighted rules with their line
+      numbers, a filter box, hide-zero and rules-only toggles, a cube filter, and both views. It
+      follows the reader's light or dark preference and prints cleanly. It is the thing to attach to
+      a ticket or send to a model owner who does not have Arc.</p>
+
+    <h3>Sending someone a link</h3>
+
+    <p>The link icon beside the cell reference copies an address that reopens this exact cell, at the
+      trace depth you used. Paste it into a ticket, a chat, or a bookmark. It works for people who
+      can reach your Arc and the same instance &mdash; the link carries the cell, not the data.</p>
+
+    <div class="note">
+      <p><span class="label">Copy the link from the button</span> A link works opened in a new tab,
+        from a bookmark, or pasted into the address bar of an Arc you already have open. But Arc
+        tidies the address bar back to a bare instance address once the trace opens, so the address
+        bar is not where the link is.</p>
+    </div>
+
+    <h2 id="feeders">Checking feeders</h2>
+
+    <p>If a rule-derived cell reads zero when it should not, a missing feeder is the usual cause. The
+      <span class="ui">Feeders</span> tab answers <strong>two</strong> questions about the cell on
+      screen, in three sections &mdash; and they point in opposite directions:</p>
+
+    <ul>
+      <li><strong>Feeder statements</strong> &mdash; the feeder statements whose <em>source</em> area
+        covers this cell.</li>
+      <li><strong>Cells fed from here</strong> &mdash; the cells those statements reach from it, with
+        cube and coordinates, each carrying TM1's own answer to <em>is that cell actually fed?</em>
+        Click a row to read the cell one dimension per line. With the first section, this answers
+        <em>what does this cell feed?</em></li>
+      <li><strong>Feeder check</strong> &mdash; the other direction, and the only section that can
+        report a fault: rule-derived cells under this one that hold a value <strong>no feeder
+        reaches</strong>. A row here means numbers are wrong somewhere below it. An empty list is
+        the answer you want.</li>
+    </ul>
+
+    <p><b>What the mark in front of a fed cell means.</b> A <b>green tick</b> is TM1 reporting that
+      a feeder reaches that cell. A <b>red cross</b> is the one to act on: a statement above names
+      the cell, but nothing reaches it, so a rule value there reads as zero and every consolidation
+      over it reads low. A <b>grey question mark</b> is neither &mdash; it means this server did not
+      answer the question for that row, which is not the same as answering <em>no</em>, and the tab
+      says so rather than showing a cross it cannot justify.</p>
+
+    <p>You can get here two ways: right-click a cell &rarr; <span class="ui">Trace Feeders</span>,
+      which runs the check immediately, or trace a cell and press
+      <span class="ui">Check feeders for this cell</span>. When you arrive from the cell menu without
+      a calculation trace, <span class="ui">Trace this cell's calculation</span> runs one for the
+      same cell &mdash; the coordinates are already filled in.</p>
+
+    <figure>
+      <img src="img/guide/11-feeders.png" width="1037" height="876"
+        alt="The Feeders tab for the Gross Margin Calculation cell Outdoors Shop / GO Accessories / Corporate Store / Sep / Budget version 1 / Existing Stores Revenue. Feeder statements (1) carries one statement, whose source is the set of Existing Stores Revenue and New Stores revenue and whose target is GROSS REVENUE. Cells fed from here (1) names the GROSS REVENUE cell at that same coordinate in full, with a green tick in front of it, and the row is open: six indented lines underneath read Retailers = Outdoors Shop, Country and Region = GO Accessories, Store Type = Corporate Store, Month = Sep, Budget version = Budget version 1 and Gross Sales Margin = GROSS REVENUE. Feeder check (0) reads No unfed cells found, with a line explaining that the check looks for rule-derived cells holding a value no feeder reaches, so an empty list is the good answer.">
+      <figcaption><b>Figure 11. What a populated feeder report looks like.</b> This is
+        <code>Existing Stores Revenue</code> for one store and month. TM1 calculates this one from a
+        link rule &mdash; it is one of the elements on the left of the <code>Base Sales Forecast</code>
+        statement quoted under <a href="#panel">The detail panel</a> &mdash; and it is <em>also</em>
+        the source of a feeder statement, which is why this report is populated. That statement is
+        shown in full, source and target both &mdash;
+        <code>['Gross Sales Margin':{'Existing Stores Revenue', 'New Stores
+        revenue'}] =&gt; ['Gross Sales Margin':'GROSS REVENUE'];</code> &mdash;
+        <span class="ui">Cells fed from here</span> names the one cell it reaches, the
+        <code>GROSS REVENUE</code> cell at this same coordinate, and
+        <span class="ui">Feeder check</span> reads <em>(0)</em> &mdash; nothing under this cell holds
+        a rule value that no feeder reaches, which is the result you want from it. Two populated
+        sections and a clean check is the healthy shape of this tab.
+        The <b>green tick</b> in front of the fed cell is TM1's own answer that a feeder really
+        does reach it, and the row is shown <b>open</b>: clicking a fed cell lays it out one
+        dimension per line, which is how a six-member coordinate becomes readable.</figcaption>
+    </figure>
+
+    <div class="warn">
+      <p><span class="label">Two empty results that are normal, not faults</span>
+        <strong>An empty Feeder check is a pass, not a silence.</strong> It lists only cells that hold
+        a rule value no feeder reaches, so nothing listed means it found nothing wrong &mdash; Figure
+        10 is exactly that case. Four things have to hold before it can list anything at all:
+        <code>SKIPCHECK</code> in the cube's rules (without it feeders are ignored entirely and there
+        is nothing to check); rule-derived cells in scope (a stored input or a pure consolidation has
+        nothing to be fed); one of them non-zero and unfed &mdash; a link rule fed from its
+        <em>source</em> cube counts as fed, and a feeder whose own source cell is zero never fired;
+        and a scan small enough for the server's own limit,
+        <code>CheckFeedersMaximumCells</code>, 3,000,000 cells by default. On a very wide
+        consolidation that limit is reached before the scan finishes, and the plugin says so rather
+        than reporting a pass it cannot support. Arc's own feeder page does not run this check at
+        all, which is why this tab does.<br>
+        <strong>A cell that no feeder statement feeds <em>from</em> reports nothing.</strong> This
+        tab looks up the statements whose source area covers the cell you asked about, so an empty
+        report means <em>this cell feeds nothing</em> &mdash; not that nothing feeds it, and not that
+        anything is broken. Whether the cell is stored or rule-derived has nothing to do with it:
+        <code>Existing Stores Revenue</code> in Figure 11 is calculated by a link rule and still
+        feeds, whereas <code>ADJUSTED GROSS REVENUE</code> is a feeder <em>target</em> in this cube
+        and the source of no statement at all, so asking this tab about it reports nothing, here and
+        on Arc's own page. When that is what you get, the cell to ask about instead is the one on the
+        left of the feeder you are chasing.</p>
+    </div>
+
+    <h2 id="history">History</h2>
+
+    <figure>
+      <img src="img/guide/09-history.png" width="1037" height="876"
+        alt="The History tab, its badge reading 8, with a Clear history button above a table of Instance, Cube, Cell, Value and Traced at columns and a Re-trace button on all eight rows. Every row names GO_New_Stores and the Gross Margin Calculation cube, the Cell column carries the whole coordinate as monospaced dimension = element pairs, and three distinct cells recur down the list at 14,301,694, 18,449,185 and 39.66, newest first.">
+      <figcaption><b>Figure 12. Every trace you have run, newest first &mdash; and it is still there
+        after a restart.</b> The <span class="ui">Cell</span> column carries the whole coordinate, so
+        you can tell two similar traces apart, and <span class="ui">Re-trace</span> runs one again
+        &mdash; a named gesture, so it goes straight into the tree. The badge on the tab counts the
+        entries, and <span class="ui">Clear history</span> empties the list.</figcaption>
+    </figure>
+
+    <h2 id="large">When a trace is very large</h2>
+
+    <p>Big consolidations are genuinely enormous: one cell of the demo model returns over 240,000
+      components in 15 to 22 seconds. Four caps keep the page usable, and each one tells you what it
+      did instead of quietly dropping things.</p>
+
+    <div class="t-scroll">
+      <table>
+        <thead>
+          <tr><th scope="col">You see</th><th scope="col">What it means</th><th scope="col">What to do</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">N components were left out after the first 20,000</th>
+            <td>the trace hit the node budget</td>
+            <td>lower the depth, trace a child cell directly, or use the caret on one node to go
+              deeper from just there</td>
+          </tr>
+          <tr>
+            <th scope="row">N more rows are not shown at once</th>
+            <td>800 rows are on screen already</td>
+            <td>collapse a branch, or narrow the filter</td>
+          </tr>
+          <tr>
+            <th scope="row">N components were not shown because a node had more than the render cap</th>
+            <td>one node has over 250 children</td>
+            <td>trace that child directly</td>
+          </tr>
+          <tr>
+            <th scope="row">A question before saving, naming the size</th>
+            <td>the export would be very large &mdash; a 20,000-node trace becomes an 81 MB page</td>
+            <td>trace a narrower cell for something you can email</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>The budget is filled level by level rather than branch by branch, which is why a rule always
+      shows all of its operands: what runs out is detail at the edge, not a whole operand.</p>
+
+    <h2 id="wrong">If something looks wrong</h2>
+
+    <p><strong>First, note which build you are on.</strong> The bottom of the
+      <span class="ui">Pick a cell</span> tab carries an <span class="ui">About</span> line.</p>
+
+    <figure>
+      <img src="img/guide/10-about.png" width="1015" height="57"
+        alt="The About block at the foot of the first tab, two lines: Calculation Explorer v1.19.2, then verified against Arc 6.0.0, then a User guide link marked with an external-link icon and a Contact link marked with an envelope. The orange line below reads Tracing only &mdash; this plugin never writes to your model, and then, after a warning triangle, that a trace builds only the levels you ask for, that depth and how wide the cell is decide what it costs, and that the guide has the measurements.">
+      <figcaption><b>Figure 13. Two version numbers and the cost story, in the app.</b> The plugin
+        version and the Arc build it was verified against are the first two things worth quoting when
+        behaviour and documentation disagree. As of v1.15.0 the
+        <span class="ui">User guide</span> link opens <em>this page</em> &mdash; the copy Arc serves
+        out of the plugin's own folder, so it always matches the build you are running, in a new
+        tab. The cost line beside it names the two drivers and sends you here for the numbers, which
+        are in <a href="#cost">What a trace costs</a>.</figcaption>
+    </figure>
+
+    <div class="t-scroll">
+      <table>
+        <thead>
+          <tr><th scope="col">Symptom</th><th scope="col">Cause and fix</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">Arc's Trace Calculation or Trace Feeders still opens Arc's own page</th>
+            <td>That page's checkbox is unticked under <span class="ui">Open Arc's cell menu here</span>
+              on the first tab. They are separate settings, so tick the right one. If Arc's own page
+              still opens with the box ticked, hard-reload Arc
+              (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>) and report it.</td>
+          </tr>
+          <tr>
+            <th scope="row">A plugin update seems not to have installed</th>
+            <td>The browser is still running the cached bundle. Hard-reload. Restarting Arc does not
+              do it.</td>
+          </tr>
+          <tr>
+            <th scope="row">The view grid is empty</th>
+            <td>The view has not calculated. Recalculate it in the cube viewer, then reopen it here.
+              An empty grid is almost never "no data".</td>
+          </tr>
+          <tr>
+            <th scope="row">Arc handed over a cell this plugin could not read against the cube's dimensions</th>
+            <td>The plugin refused to guess and left the raw cell in the paste box &mdash; tracing the
+              wrong cell would be worse. Fill the coordinates in by hand, and report it.</td>
+          </tr>
+          <tr>
+            <th scope="row">No TM1 instance is selected</th>
+            <td>The instance was still connecting when the page opened. Reopen the page once it is
+              up.</td>
+          </tr>
+          <tr>
+            <th scope="row">A rule shows no line number</th>
+            <td>The statement could not be found in the rule file &mdash; usually a generated or
+              macro-expanded rule. The trace itself is unaffected; only the line number is
+              missing.</td>
+          </tr>
+          <tr>
+            <th scope="row">N candidate rule statements cover this cell</th>
+            <td>More than one statement matches the cell and <strong>TM1 does not report which one
+              fired</strong>, so the first is shown. Judge it from the rule file.</td>
+          </tr>
+          <tr>
+            <th scope="row">A percentage you expected is missing</th>
+            <td>Shares are only shown where the children really do sum to the parent, and are withheld
+              where a node's children were truncated by the render cap.</td>
+          </tr>
+          <tr>
+            <th scope="row">An operand reads <code>?</code></th>
+            <td>See <a href="#operands">Clickable operands</a> &mdash; and click the chip to fetch
+              it.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 id="limits">What it does not do</h2>
+
+    <ul>
+      <li>No sandbox or "as of" support &mdash; it reads the base data you are looking at.</li>
+      <li>It cannot tell you which of several candidate rule statements actually fired; TM1 does not
+        expose that. It <em>can</em> set aside the ones that are provably not this cell's &mdash; a
+        statement naming a dimension the cube does not have belongs to a component, not to the cell
+        &mdash; and it says how many it set aside.</li>
+      <li>A cross-cube lookup that cannot be tied to exactly one returned component keeps its
+        <code>!dimension</code> references. The value is still there under
+        <span class="ui">Values used</span>.</li>
+      <li>The text a substitution replaced, and which way an operand chip will go, are both shown in
+        tooltips &mdash; so both need a mouse. There is no keyboard or touch route to either
+        today.</li>
+      <li>Rule-file matching is textual &mdash; whitespace-insensitive, case-insensitive, comments
+        ignored &mdash; so a generated rule may not be located. Element names are compared exactly,
+        including their spaces.</li>
+      <li>Feeder detail depends on the server: the extra feeder check usually returns nothing, and a
+        cell that feeds nothing has nothing to report there.</li>
+      <li>Element names containing a forward slash are not handled. Single quotes are.</li>
+      <li>Row paging depends on the session keeping the cellset alive; where it does not, the grid
+        falls back to one capped request and tells you how much it is showing.</li>
+      <li>Very wide consolidations are capped &mdash; 250 components per node, 20,000 nodes per
+        trace, 800 rows rendered at once. Every cap reports itself.</li>
+    </ul>
+
+  </main>
+
+  <footer>
+    <p><strong>Calculation Explorer v1.19.2</strong>, verified against Arc 6.0.0. Every figure and
+      every measurement in this guide comes from the <code>GO_New_Stores</code> sample model that ships
+      with a local IBM TM1 (Planning Analytics) installation. Tracing only: this plugin never writes to your model.</p>
+    <p>Created by Muhammad Eissa, Cubewise &mdash; <a href="mailto:meissa@cubewise.com">meissa@cubewise.com</a>.</p>
+  </footer>
+
+</div>
+</body>
+</html>

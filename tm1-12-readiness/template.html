@@ -1,0 +1,1819 @@
+<div class="tm1-readiness-plugin">
+   <style>
+      /* The page scrolls inside Arc's tab (user, 2026-10-02): Arc's .tab-content is h-100 and its
+       * .lm_content clips (overflow: hidden), so without this the bottom of a tall tab -- the compare
+       * results above all -- was cut off with no scrollbar. saasMigFill sizes the lists against this. */
+      .tm1-readiness-plugin { padding: 10px 14px; font-size: 13px; height: 100%; overflow-y: auto; box-sizing: border-box; }
+      .tm1-readiness-plugin .sm-bar select, .tm1-readiness-plugin .sm-bar input[type=text] { min-width: 180px; }
+      .tm1-readiness-plugin .sm-clip { max-width: 520px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: Consolas, Menlo, monospace; font-size: 12px; }
+      .tm1-readiness-plugin .sm-split { display: flex; gap: 0; }
+      .tm1-readiness-plugin .sm-split > .sm-left { flex: 1 1 58%; min-width: 0; }
+      .tm1-readiness-plugin .sm-split > .sm-right { flex: 1 1 42%; min-width: 0; }
+      /* the splitter: a 12 px gap that is a handle, with a line that shows on hover, focus and drag */
+      .tm1-readiness-plugin .sm-gutter { flex: 0 0 12px; position: relative; cursor: col-resize; outline: none; }
+      .tm1-readiness-plugin .sm-gutter::after { content: ""; position: absolute; top: 0; bottom: 0; left: 5px; width: 2px; border-radius: 1px; background: transparent; transition: background-color .15s; }
+      .tm1-readiness-plugin .sm-gutter:hover::after, .tm1-readiness-plugin .sm-gutter:focus::after { background: var(--ux-border); }
+      .tm1-readiness-plugin .sm-gutter.sm-dragging::after { background: var(--ux-interactive); }
+      .tm1-readiness-plugin .sm-split.sm-splitset > .sm-left { flex: 0 0 var(--sm-left); }
+      .tm1-readiness-plugin .sm-split.sm-splitset > .sm-left:last-child { flex: 1 1 auto; }
+      body.sm-resizing { cursor: col-resize !important; user-select: none; }
+      .tm1-readiness-plugin .sm-guide h4 { margin-top: 14px; }
+      .tm1-readiness-plugin .sm-guide li { margin-bottom: 3px; }
+      .tm1-readiness-plugin input.sm-cloud { width: 100%; }
+      .tm1-readiness-plugin .sm-hint { cursor: help; }
+      .tm1-readiness-plugin .sm-tablink { display: inline-block; margin-left: 4px; font-size: 11px; white-space: nowrap; }
+      .tm1-readiness-plugin .sm-skipped > td { opacity: .5; }
+      /* column resize (saas-mig-resizable) */
+      .tm1-readiness-plugin .sm-grip { position: absolute; top: 0; right: 0; width: 6px; height: 100%; cursor: col-resize; z-index: 2; }
+      .tm1-readiness-plugin .sm-grip:hover, .tm1-readiness-plugin .sm-grip.sm-grip-on { background: rgba(21, 101, 192, .35); }
+      .tm1-readiness-plugin table.sm-sized { table-layout: fixed; }
+      .tm1-readiness-plugin table.sm-sized td { overflow: hidden; word-wrap: break-word; }
+      .tm1-readiness-plugin table.sm-sized .sm-clip { max-width: none; }
+      .tm1-readiness-plugin .sm-skipbtn { color: #777; white-space: nowrap; }
+      /* Arc greys its links; an object name has to read as one */
+      .tm1-readiness-plugin a.sm-objlink:hover { text-decoration: underline; }
+      .tm1-readiness-plugin .sm-skipbtn:hover { color: #333; text-decoration: none; }
+      .tm1-readiness-plugin .sm-click, .tm1-readiness-plugin .sm-chip { cursor: pointer; }
+      .tm1-readiness-plugin .sm-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 4px 0 8px; }
+      /* The Findings toolbar (user, 2026-10-02): one row of filters on a common baseline, with the
+       * checkboxes in two labelled groups at the height of an input, then one row with the severity
+       * chips on the left and the actions on the right. */
+      .tm1-readiness-plugin .sm-filterbar { gap: 8px 22px; margin-bottom: 4px; }
+      .tm1-readiness-plugin .sm-bar .sm-checks label { display: inline-flex; align-items: center; gap: 5px; font-weight: normal; font-size: 12px; margin: 0; white-space: nowrap; }
+      /* the height of the kit's fields (32px; was Arc's 33.5px before v0.9.0), so the boxes sit on one line with them */
+      .tm1-readiness-plugin .form-control.sm-checks, .tm1-readiness-plugin .form-control.sm-checks:focus { outline: none; }
+      .tm1-readiness-plugin .form-control.sm-checks { display: flex; flex-wrap: nowrap; align-items: center; gap: 16px; width: auto;
+         height: var(--ux-h); padding: 0; border: 0; box-shadow: none; background: transparent; }
+      .tm1-readiness-plugin .sm-checks input[type=checkbox] { margin: 0; }
+      .tm1-readiness-plugin .sm-checks .sm-skipctl { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-size: 12px; }
+      .tm1-readiness-plugin .sm-actionbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; margin: 2px 0 8px; }
+      .tm1-readiness-plugin .sm-actionbar .sm-chips { margin: 0; }
+      .tm1-readiness-plugin .sm-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-left: auto; }
+      /* The What column takes the width that is left and cuts its text, so the table fits its pane and
+       * there is no sideways scroll until a column is widened by hand (then the table is sm-sized). */
+      .tm1-readiness-plugin table.sm-table:not(.sm-sized) td.sm-what { max-width: 0; width: 100%; }
+      .tm1-readiness-plugin td.sm-what .sm-clip { max-width: none; }
+      .tm1-readiness-plugin table.sm-table:not(.sm-sized) td.sm-objcell { max-width: 240px; overflow-wrap: anywhere; }
+      .tm1-readiness-plugin td.sm-what b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .tm1-readiness-plugin td.sm-what .sm-where { font-weight: normal; }
+      /* the hover box lives on <body>, outside the plugin, so it is not scoped */
+      .tm1-readiness-tip { position: fixed; z-index: 10001; display: none; max-width: 380px; padding: 6px 9px; border-radius: 2px;
+         background: #393939; color: #f4f4f4; font-size: 12px; line-height: 1.4; box-shadow: 0 2px 8px rgba(0,0,0,.25); pointer-events: none; }
+      /* Arc's theme does not style Bootstrap 3 tabs (the same fix calculation-explorer carries) */
+      @media (max-width: 1100px) {
+         .tm1-readiness-plugin .sm-split { flex-direction: column; gap: 12px; }
+         .tm1-readiness-plugin .sm-split.sm-splitset > .sm-left { flex: 1 1 auto; }
+         .tm1-readiness-plugin .sm-gutter { display: none; }
+      }
+      /* the tab strip stays on one line: labels shrink and cut, icons and badges stay (user, 2026-10-02) */
+      .tm1-readiness-plugin .sm-tabs > li > a > span[translate] { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+      .tm1-readiness-plugin .sm-tabs > li > a > .fa, .tm1-readiness-plugin .sm-tabs > li > a > .badge { flex: 0 0 auto; }
+      /* The active tab keeps its whole name. When the plugin's own pane is too narrow for every name (Arc's
+       * tree takes part of the window, so this is a container query, not a media query), the other tabs
+       * show their icon and badge only, with the name on hover. */
+      .tm1-readiness-plugin { container: smroot / inline-size; }
+      .tm1-readiness-plugin .sm-tabs > li.active { flex-shrink: 0; }
+      @container smroot (max-width: 800px) {
+         .tm1-readiness-plugin .sm-tabs > li:not(.active) > a > span[translate] { display: none; }
+      }
+
+      /* ================================================================ UX kit
+       * UX-GUIDELINES.md at the repository root: tokens (§4) and components (§6),
+       * Carbon-aligned. Copy this block to another plugin with its own root
+       * class; do not re-derive it. Used by the Data files tab since v0.8.0. */
+      .tm1-readiness-plugin {
+         --ux-text: #161616; --ux-text-2: #525252; --ux-text-3: #6f6f6f;
+         --ux-border: #c6c6c6; --ux-border-subtle: #e0e0e0;
+         --ux-layer: #f4f4f4; --ux-layer-hover: #e8e8e8; --ux-selected: #e0e0e0;
+         --ux-interactive: #0f62fe; --ux-interactive-hover: #0050e6; --ux-focus: #0f62fe;
+         --ux-success: #198038; --ux-success-bg: #defbe6;
+         --ux-warning: #8e6a00; --ux-warning-bg: #fcf4d6; --ux-warning-edge: #f1c21b;
+         --ux-error: #da1e28; --ux-error-bg: #fff1f1;
+         --ux-info: #0043ce; --ux-info-bg: #edf5ff; --ux-info-edge: #a6c8ff; --ux-success-edge: #a7f0ba;
+         --ux-purple: #8a3ffc; --ux-purple-bg: #f6f2ff; --ux-purple-edge: #d4bbff;
+         --ux-1: 2px; --ux-2: 4px; --ux-3: 8px; --ux-4: 12px; --ux-5: 16px; --ux-6: 24px; --ux-7: 32px;
+         --ux-radius: 2px; --ux-h: 32px;
+      }
+      .tm1-readiness-plugin .ux-helper { font-size: 12px; line-height: 16px; color: var(--ux-text-2); }
+      .tm1-readiness-plugin .ux-link { color: var(--ux-interactive); cursor: pointer; font-weight: normal; margin: 0; text-decoration: none; }
+      .tm1-readiness-plugin .ux-link:hover { text-decoration: underline; }
+      .tm1-readiness-plugin .ux-link:focus-within, .tm1-readiness-plugin .ux-link:focus { outline: 2px solid var(--ux-focus); outline-offset: 1px; }
+      .tm1-readiness-plugin .ux-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+      /* buttons (§6.1) */
+      .tm1-readiness-plugin .ux-btn { display: inline-flex; align-items: center; gap: var(--ux-3); height: var(--ux-h); padding: 0 var(--ux-5);
+         border: 1px solid transparent; border-radius: var(--ux-radius); font-size: 14px; line-height: 1; cursor: pointer; white-space: nowrap;
+         transition: background-color 110ms ease, border-color 110ms ease; }
+      .tm1-readiness-plugin .ux-btn:focus { outline: none; box-shadow: inset 0 0 0 2px var(--ux-focus), inset 0 0 0 3px #fff; }
+      .tm1-readiness-plugin .ux-btn[disabled] { cursor: not-allowed; opacity: 1; background: #c6c6c6; border-color: #c6c6c6; color: #8d8d8d; }
+      .tm1-readiness-plugin .ux-btn-primary:not([disabled]) { background: var(--ux-interactive); color: #fff; }
+      .tm1-readiness-plugin .ux-btn-primary:not([disabled]):hover { background: var(--ux-interactive-hover); }
+      .tm1-readiness-plugin .ux-btn-secondary:not([disabled]) { background: #fff; border-color: var(--ux-border); color: var(--ux-text); }
+      .tm1-readiness-plugin .ux-btn-secondary:not([disabled]):hover { background: var(--ux-layer-hover); }
+      .tm1-readiness-plugin .ux-btn-ghost { background: transparent; color: var(--ux-interactive); padding: 0 var(--ux-3); }
+      .tm1-readiness-plugin .ux-btn-ghost:hover { background: var(--ux-layer-hover); }
+      .tm1-readiness-plugin .ux-btn-danger:not([disabled]) { background: var(--ux-error); color: #fff; }
+      /* field (§6.2) */
+      .tm1-readiness-plugin .ux-field { display: flex; flex-direction: column; gap: var(--ux-2); }
+      .tm1-readiness-plugin .ux-label { font-size: 12px; line-height: 16px; color: var(--ux-text-2); font-weight: normal; margin: 0; }
+      .tm1-readiness-plugin .ux-input { height: var(--ux-h); padding: 0 var(--ux-4); border: 1px solid var(--ux-border); border-radius: var(--ux-radius);
+         background: #fff; color: var(--ux-text); font-size: 14px; min-width: 200px; }
+      .tm1-readiness-plugin .ux-input:focus { outline: 2px solid var(--ux-focus); outline-offset: -2px; border-color: var(--ux-focus); }
+      /* action bar (§5) */
+      .tm1-readiness-plugin .ux-actionbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--ux-5); margin: var(--ux-4) 0; }
+      .tm1-readiness-plugin .ux-actionbar .ux-push { margin-left: auto; }
+      /* drop zone (§6.3) */
+      .tm1-readiness-plugin .ux-dropzone { display: flex; align-items: center; gap: var(--ux-4); padding: var(--ux-5); border: 1px dashed var(--ux-border);
+         border-radius: var(--ux-radius); background: var(--ux-layer); color: var(--ux-text); transition: background-color 110ms ease, border-color 110ms ease; }
+      .tm1-readiness-plugin .ux-dropzone-icon { font-size: 24px; color: var(--ux-text-2); width: 28px; text-align: center; }
+      .tm1-readiness-plugin .ux-dropzone-over { border: 1px solid var(--ux-interactive); background: var(--ux-info-bg); }
+      .tm1-readiness-plugin .ux-dropzone-done { padding: var(--ux-3) var(--ux-5); border-style: solid; border-color: var(--ux-border-subtle); background: #fff; }
+      .tm1-readiness-plugin .ux-dropzone-done .ux-dropzone-icon { font-size: 16px; color: var(--ux-success); }
+      /* notification and summary line (§6.4) */
+      .tm1-readiness-plugin .ux-note { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--ux-3); padding: var(--ux-3) var(--ux-4);
+         border-left: 3px solid; margin: 0 0 var(--ux-4); color: var(--ux-text); }
+      .tm1-readiness-plugin .ux-note > .fa { width: 14px; }
+      .tm1-readiness-plugin .ux-note-info { border-color: var(--ux-info); background: var(--ux-info-bg); } .tm1-readiness-plugin .ux-note-info > .fa { color: var(--ux-info); }
+      .tm1-readiness-plugin .ux-note-success { border-color: var(--ux-success); background: var(--ux-success-bg); } .tm1-readiness-plugin .ux-note-success > .fa { color: var(--ux-success); }
+      .tm1-readiness-plugin .ux-note-warning { border-color: var(--ux-warning-edge); background: var(--ux-warning-bg); } .tm1-readiness-plugin .ux-note-warning > .fa { color: var(--ux-warning); }
+      .tm1-readiness-plugin .ux-note-error { border-color: var(--ux-error); background: var(--ux-error-bg); } .tm1-readiness-plugin .ux-note-error > .fa { color: var(--ux-error); }
+      /* filter chips (§6.5) */
+      .tm1-readiness-plugin .ux-chips { display: flex; flex-wrap: wrap; gap: var(--ux-3); margin: 0 0 var(--ux-3); }
+      .tm1-readiness-plugin .ux-chip { display: inline-flex; align-items: center; gap: var(--ux-2); height: 24px; padding: 0 var(--ux-4); border-radius: 12px;
+         background: var(--ux-layer); color: var(--ux-text); font-size: 12px; text-decoration: none; border: 1px solid transparent; }
+      .tm1-readiness-plugin .ux-chip:hover { background: var(--ux-layer-hover); text-decoration: none; color: var(--ux-text); }
+      .tm1-readiness-plugin .ux-chip:focus { outline: 2px solid var(--ux-focus); outline-offset: 1px; }
+      .tm1-readiness-plugin .ux-chip-warning { border-color: var(--ux-warning-edge); }
+      .tm1-readiness-plugin .ux-chip-active, .tm1-readiness-plugin .ux-chip-active:hover { background: var(--ux-text); color: #fff; border-color: var(--ux-text); }
+      /* data table (§6.6) */
+      .tm1-readiness-plugin .ux-table-wrap { overflow: auto; border: 1px solid var(--ux-border-subtle); }
+      .tm1-readiness-plugin table.ux-table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 0; font-size: 13px; color: var(--ux-text); }
+      .tm1-readiness-plugin table.ux-table th { position: sticky; top: 0; z-index: 1; background: var(--ux-layer); font-size: 12px; font-weight: 600;
+         text-align: left; padding: var(--ux-3) var(--ux-4); border-bottom: 1px solid var(--ux-border-subtle); white-space: nowrap; }
+      .tm1-readiness-plugin table.ux-table td { padding: var(--ux-3) var(--ux-4); border-bottom: 1px solid var(--ux-border-subtle); vertical-align: top; }
+      .tm1-readiness-plugin table.ux-table tbody tr:hover td { background: #f9f9f9; }
+      .tm1-readiness-plugin table.ux-table tr.ux-row-selected td { background: #f4f8ff; }
+      .tm1-readiness-plugin table.ux-table tr.ux-row-warning td:first-child { box-shadow: inset 3px 0 0 var(--ux-warning-edge); }
+      .tm1-readiness-plugin table.ux-table .ux-col-check { width: 40px; text-align: center; padding-left: var(--ux-3); padding-right: var(--ux-3); }
+      .tm1-readiness-plugin table.ux-table .ux-col-check input { width: 16px; height: 16px; margin: 2px 0 0; cursor: pointer; vertical-align: middle; }
+      .tm1-readiness-plugin table.ux-table .ux-col-check input[disabled] { cursor: not-allowed; }
+      .tm1-readiness-plugin table.ux-table .ux-code { font-family: Consolas, Menlo, monospace; font-size: 12px; overflow-wrap: break-word; }
+      .tm1-readiness-plugin .ux-path-file { overflow-wrap: anywhere; }
+      .tm1-readiness-plugin table.ux-table-fixed { table-layout: fixed; }
+      .tm1-readiness-plugin table.ux-table .ux-secondary { color: var(--ux-text-2); }
+      .tm1-readiness-plugin table.ux-table td.ux-empty { color: var(--ux-text-2); text-align: center; padding: var(--ux-6); }
+      /* status tag (§6.7) */
+      .tm1-readiness-plugin .ux-tag { display: inline-block; padding: 2px var(--ux-3); border-radius: 12px; font-size: 12px; line-height: 16px;
+         background: var(--ux-layer-hover); color: var(--ux-text); }
+      .tm1-readiness-plugin .ux-tag-success { background: var(--ux-success-bg); color: #0e6027; }
+      .tm1-readiness-plugin .ux-tag-warning { background: var(--ux-warning-bg); color: var(--ux-warning); }
+      .tm1-readiness-plugin .ux-tag-error { background: var(--ux-error-bg); color: #a2191f; }
+      .tm1-readiness-plugin .ux-tag-info { background: var(--ux-info-bg); color: var(--ux-info); }
+      /* dialog (§6.9): moved to <body> by saasMigPortal inside a wrapper that carries the root class, so
+         these rules and the --ux-* variables still apply. In place it sat under Arc's tree pane and
+         splitter whatever its z-index: the plugin lives in a lower stacking context (user, v0.8.2). */
+      .tm1-readiness-plugin.ux-portal { height: 0; padding: 0; overflow: visible; }
+      .tm1-readiness-plugin .ux-modal-backdrop { position: fixed; inset: 0; z-index: 10000; background: rgba(22, 22, 22, 0.5); display: flex; align-items: center; justify-content: center; }
+      .tm1-readiness-plugin .ux-modal { background: #fff; width: min(1000px, 94vw); max-height: 88vh; display: flex; flex-direction: column; border-radius: var(--ux-radius);
+         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); outline: none; }
+      .tm1-readiness-plugin .ux-modal-head { display: flex; align-items: flex-start; gap: var(--ux-4); padding: var(--ux-5) var(--ux-5) var(--ux-3); }
+      .tm1-readiness-plugin .ux-modal-head h3 { margin: 0; font-size: 20px; line-height: 28px; font-weight: 400; flex: 1; overflow-wrap: anywhere; }
+      .tm1-readiness-plugin .ux-modal-body { padding: 0 var(--ux-5) var(--ux-5); overflow: auto; flex: 1; }
+      .tm1-readiness-plugin .ux-modal-foot { display: flex; justify-content: flex-end; gap: var(--ux-3); padding: var(--ux-4) var(--ux-5); border-top: 1px solid var(--ux-border-subtle); flex-wrap: wrap; }
+      .tm1-readiness-plugin table.ux-facts { border-collapse: collapse; margin: 0 0 var(--ux-4); font-size: 13px; }
+      .tm1-readiness-plugin table.ux-facts th, .tm1-readiness-plugin table.ux-facts td { padding: var(--ux-2) var(--ux-5) var(--ux-2) 0; text-align: left; vertical-align: top; }
+      .tm1-readiness-plugin table.ux-facts th { font-weight: 600; font-size: 12px; color: var(--ux-text-2); }
+      .tm1-readiness-plugin .ux-facts .ux-differs { color: var(--ux-warning); font-weight: 600; }
+      .tm1-readiness-plugin table.ux-diff { width: 100%; border-collapse: collapse; font-family: Consolas, Menlo, monospace; font-size: 12px; border: 1px solid var(--ux-border-subtle); }
+      .tm1-readiness-plugin table.ux-diff td { padding: 1px var(--ux-3); white-space: pre-wrap; overflow-wrap: anywhere; vertical-align: top; }
+      .tm1-readiness-plugin table.ux-diff td.ux-ln { width: 1%; white-space: nowrap; text-align: right; color: var(--ux-text-3); user-select: none; }
+      .tm1-readiness-plugin table.ux-diff tr.ux-del td { background: var(--ux-error-bg); }
+      .tm1-readiness-plugin table.ux-diff tr.ux-add td { background: var(--ux-success-bg); }
+      .tm1-readiness-plugin table.ux-diff tr.ux-gap td { background: var(--ux-layer); color: var(--ux-text-2); font-family: inherit; text-align: center; }
+      /* row action (§6.1): a link-style button beside a tag, on the tag's line (user, v0.8.3: a bordered
+         button under a wrapped tag made the row twice as tall and read as a second, unrelated control) */
+      .tm1-readiness-plugin .ux-btn-link { display: inline-flex; align-items: center; gap: var(--ux-2); min-height: 24px; padding: 0 var(--ux-2); border: 0;
+         background: none; color: var(--ux-interactive); font-size: 12px; cursor: pointer; border-radius: var(--ux-radius); white-space: nowrap; }
+      .tm1-readiness-plugin .ux-btn-link:hover { text-decoration: underline; background: var(--ux-layer-hover); }
+      .tm1-readiness-plugin .ux-btn-link:focus { outline: 2px solid var(--ux-focus); outline-offset: 0; }
+      .tm1-readiness-plugin .ux-cell-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ux-1) var(--ux-2); }
+      .tm1-readiness-plugin .ux-tag > .fa { margin-right: var(--ux-2); }
+      /* status tags do not wrap inside: a tag and its action share a line from a ~880px-wide table (28%) */
+      .tm1-readiness-plugin table.ux-table td.ux-col-result .ux-tag { white-space: nowrap; }
+
+      /* ================================================================ the kit on the shared classes
+       * v0.9.0 (user: "apply the UX guidelines to the other tabs"). The tabs keep their sm-* and
+       * Bootstrap classes; these rules put those classes on the kit's tokens (UX-GUIDELINES.md §4,
+       * §6), so every tab takes its look from one place. New markup uses ux-* directly. The rules
+       * they replace were deleted, not overridden. */
+      .tm1-readiness-plugin { font-size: 14px; line-height: 20px; color: var(--ux-text); }
+      .tm1-readiness-plugin h2 { margin: 4px 0 2px; font-size: 20px; line-height: 28px; font-weight: 400; }
+      .tm1-readiness-plugin h2 small { font-size: 14px; color: var(--ux-text-2); }
+      .tm1-readiness-plugin h4 { margin: 24px 0 4px; font-size: 16px; line-height: 24px; font-weight: 600; }
+      .tm1-readiness-plugin h5 { margin: 16px 0 4px; font-size: 14px; line-height: 20px; font-weight: 600; }
+      .tm1-readiness-plugin .sm-muted, .tm1-readiness-plugin .sm-sub { color: var(--ux-text-2); }
+      .tm1-readiness-plugin .sm-sub { margin-bottom: var(--ux-3); }
+      .tm1-readiness-plugin .sm-code { font-family: Consolas, Menlo, monospace; font-size: 12px; white-space: pre-wrap; word-break: break-word; }
+      /* notes (§6.4): the icon comes from the class, so every note has one; a note whose markup
+         starts with its own icon keeps that one instead */
+      .tm1-readiness-plugin .sm-warn, .tm1-readiness-plugin .sm-danger, .tm1-readiness-plugin .sm-ok {
+         position: relative; margin: var(--ux-3) 0 var(--ux-4); padding: var(--ux-3) var(--ux-4) var(--ux-3) 36px; border-left: 3px solid; color: var(--ux-text); }
+      .tm1-readiness-plugin .sm-warn::before, .tm1-readiness-plugin .sm-danger::before, .tm1-readiness-plugin .sm-ok::before {
+         position: absolute; left: var(--ux-4); top: var(--ux-3); font: normal normal normal 14px/20px FontAwesome; }
+      .tm1-readiness-plugin .sm-warn { border-color: var(--ux-warning-edge); background: var(--ux-warning-bg); }
+      .tm1-readiness-plugin .sm-warn::before { content: "\f071"; color: var(--ux-warning); }
+      .tm1-readiness-plugin .sm-danger { border-color: var(--ux-error); background: var(--ux-error-bg); }
+      .tm1-readiness-plugin .sm-danger::before { content: "\f06a"; color: var(--ux-error); }
+      .tm1-readiness-plugin .sm-ok { border-color: var(--ux-success); background: var(--ux-success-bg); }
+      .tm1-readiness-plugin .sm-ok::before { content: "\f00c"; color: var(--ux-success); }
+      .tm1-readiness-plugin :is(.sm-warn, .sm-danger, .sm-ok):has(> .fa:first-child, > a:first-child > .fa:first-child) { padding-left: var(--ux-4); }
+      .tm1-readiness-plugin :is(.sm-warn, .sm-danger, .sm-ok):has(> .fa:first-child, > a:first-child > .fa:first-child)::before { content: none; }
+      /* buttons (§6.1): Bootstrap's, on the kit's sizes and colours */
+      .tm1-readiness-plugin .btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--ux-3); height: var(--ux-h); padding: 0 var(--ux-5);
+         border: 1px solid transparent; border-radius: var(--ux-radius); font-size: 14px; line-height: 1; font-weight: normal; box-shadow: none; white-space: nowrap;
+         transition: background-color 110ms ease, border-color 110ms ease; }
+      .tm1-readiness-plugin .btn.btn-xs { height: 24px; padding: 0 var(--ux-3); gap: var(--ux-2); font-size: 12px; }
+      .tm1-readiness-plugin .btn:focus, .tm1-readiness-plugin .btn.focus { outline: none; box-shadow: inset 0 0 0 2px var(--ux-focus), inset 0 0 0 3px #fff; }
+      .tm1-readiness-plugin .btn-primary { background: var(--ux-interactive); color: #fff; }
+      .tm1-readiness-plugin .btn-primary:hover { background: var(--ux-interactive-hover); color: #fff; }
+      .tm1-readiness-plugin .btn-default { background: #fff; border-color: var(--ux-border); color: var(--ux-text); }
+      .tm1-readiness-plugin .btn-default:hover { background: var(--ux-layer-hover); color: var(--ux-text); }
+      .tm1-readiness-plugin .btn-danger { background: var(--ux-error); color: #fff; }
+      .tm1-readiness-plugin .btn-danger:hover { background: #b81921; color: #fff; }
+      .tm1-readiness-plugin .btn[disabled], .tm1-readiness-plugin .btn.disabled { background: #c6c6c6; border-color: #c6c6c6; color: #8d8d8d; opacity: 1; cursor: not-allowed; }
+      .tm1-readiness-plugin label.btn { margin: 0; font-weight: normal; }
+      /* Arc colours some icons (a green fa-plus); inside a button the icon takes the label's colour */
+      .tm1-readiness-plugin .btn .fa { color: inherit; }
+      /* a content switcher (Carbon): one choice of two views, not two primary buttons */
+      .tm1-readiness-plugin .sm-switch { display: inline-flex; }
+      .tm1-readiness-plugin .sm-switch > .btn { border-color: var(--ux-border); background: #fff; color: var(--ux-text); border-radius: 0; }
+      .tm1-readiness-plugin .sm-switch > .btn:first-child { border-radius: var(--ux-radius) 0 0 var(--ux-radius); }
+      .tm1-readiness-plugin .sm-switch > .btn:last-child { border-radius: 0 var(--ux-radius) var(--ux-radius) 0; margin-left: -1px; }
+      .tm1-readiness-plugin .sm-switch > .btn.active { background: var(--ux-text); border-color: var(--ux-text); color: #fff; }
+      /* fields (§6.2) */
+      .tm1-readiness-plugin .form-control { height: var(--ux-h); padding: 0 var(--ux-4); border: 1px solid var(--ux-border); border-radius: var(--ux-radius);
+         font-size: 14px; color: var(--ux-text); background-color: #fff; box-shadow: none; }
+      .tm1-readiness-plugin .form-control:focus { outline: 2px solid var(--ux-focus); outline-offset: -2px; border-color: var(--ux-focus); box-shadow: none; }
+      .tm1-readiness-plugin .sm-bar label { display: block; margin: 0 0 var(--ux-2); font-size: 12px; line-height: 16px; font-weight: normal; color: var(--ux-text-2); }
+      .tm1-readiness-plugin .sm-bar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--ux-4) var(--ux-5); margin: var(--ux-3) 0 var(--ux-4); }
+      /* tables (§6.6): Carbon's "short" density, 8px a side so a list still reads beside a detail panel */
+      .tm1-readiness-plugin .sm-scroll { overflow: auto; border: 1px solid var(--ux-border-subtle); }
+      .tm1-readiness-plugin table.sm-table { width: 100%; margin: 0; border-collapse: separate; border-spacing: 0; font-size: 13px; color: var(--ux-text); }
+      .tm1-readiness-plugin table.sm-table th { position: sticky; top: 0; z-index: 1; padding: var(--ux-3); background: var(--ux-layer); font-size: 12px; font-weight: 600;
+         border-top: 0; border-bottom: 1px solid var(--ux-border-subtle); vertical-align: bottom; }
+      .tm1-readiness-plugin table.sm-table td { padding: 6px var(--ux-3); border-top: 0; border-bottom: 1px solid var(--ux-border-subtle); vertical-align: top; }
+      .tm1-readiness-plugin tr.sm-row { cursor: pointer; }
+      .tm1-readiness-plugin tr.sm-row:hover > td { background: #f9f9f9; }
+      .tm1-readiness-plugin tr.sm-active > td { background: var(--ux-info-bg) !important; }
+      .tm1-readiness-plugin tr.sm-active > td:first-child { box-shadow: inset 3px 0 0 var(--ux-interactive); }
+      /* tags (§6.7): severities keep one colour each across every tab */
+      .tm1-readiness-plugin .sm-pill { display: inline-block; padding: 2px var(--ux-3); border-radius: 12px; font-size: 12px; line-height: 16px; font-weight: 400; white-space: nowrap; border: 0; }
+      .tm1-readiness-plugin .sm-BLOCKER { background: #ffd7d9; color: #a2191f; font-weight: 600; }
+      .tm1-readiness-plugin .sm-BREAKS { background: #ffd9be; color: #8a3800; font-weight: 600; }
+      .tm1-readiness-plugin .sm-REVIEW { background: #d0e2ff; color: #0043ce; font-weight: 600; }
+      .tm1-readiness-plugin .sm-INFO { background: #e0e0e0; color: #393939; font-weight: 600; }
+      .tm1-readiness-plugin .sm-fix, .tm1-readiness-plugin .sm-ok-pill { background: var(--ux-success-bg); color: #0e6027; }
+      .tm1-readiness-plugin .sm-manual { background: var(--ux-layer-hover); color: var(--ux-text); }
+      /* ON TM1 12: done by the plugin after the migration, so neither fixable here nor hand work */
+      .tm1-readiness-plugin .sm-ontm112 { background: var(--ux-info-bg); color: var(--ux-info); }
+      .tm1-readiness-plugin .sm-v12row { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--ux-3); }
+      .tm1-readiness-plugin .sm-v12pick { width: 260px; display: inline-block; }
+      .tm1-readiness-plugin .sm-dep { background: var(--ux-warning-bg); color: var(--ux-warning); }
+      /* severity chips on Findings: a tag that filters; the chosen one is ringed, the others fade */
+      .tm1-readiness-plugin .sm-chip { padding: 2px var(--ux-4); }
+      .tm1-readiness-plugin .sm-chip:focus { outline: 2px solid var(--ux-focus); outline-offset: 1px; }
+      .tm1-readiness-plugin .sm-chip-on { box-shadow: 0 0 0 2px var(--ux-text); }
+      .tm1-readiness-plugin .sm-chip-off { opacity: .45; }
+      /* tiles: Carbon's clickable tile */
+
+      /* guided Overview: title line with the guides, stepper, two tile rows of one
+         unit each with a bar above and a legend under each tile, and the open step's panel */
+      .tm1-readiness-plugin .sm-titlebar { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--ux-3) var(--ux-6); }
+      .tm1-readiness-plugin .sm-guidelinks { display: flex; gap: var(--ux-5); font-size: 14px; }
+      /* Projects (v0.14.0): the open project on the title line, never wider than this, so a long name
+         cannot wrap the row; the save status beside it in helper type */
+      /* the Project field, first in the context bar (design/project-entry-options.html, option 1): a
+         button that reads as a quiet value, never as an empty input, and shrinks before the bar wraps */
+      /* the basis is the narrow size, so the bar wraps only when 120 px no longer fits (a 220 px basis wrapped the
+         whole field away at a 950 px window, +68 px); it grows back to 220 px wherever there is room */
+      .tm1-readiness-plugin .sm-prjfield { flex: 1 1 120px; min-width: 120px; max-width: 220px; }
+      /* on a narrow bar the running action needs the field's room: at a 950 px window the busy line wrapped the
+         bar (+62 px) where it had 123 px before. The field steps aside while something runs, and comes back. */
+      .tm1-readiness-plugin .sm-topbar { container-type: inline-size; container-name: smtopbar; }
+      @container smtopbar (max-width: 700px) { .tm1-readiness-plugin .sm-topbar.sm-bar-busy .sm-prjfield { display: none; } }
+      /* below the 573 px the field, the picker and Scan need side by side (an 850 px window), it would take a row of
+         its own (+68 px) on a page that does not scroll: it gives way, and the Project tab and the notice remain */
+      @container smtopbar (max-width: 580px) { .tm1-readiness-plugin .sm-topbar .sm-prjfield { display: none; } }
+      .tm1-readiness-plugin .sm-prjbtn { height: 32px; width: 100%; display: flex; align-items: center; gap: var(--ux-3); padding: 0 var(--ux-3);
+         border: 0; border-bottom: 1px solid var(--ux-border); border-radius: 0; background: var(--ux-layer); font: inherit; font-size: 14px; color: var(--ux-text); cursor: pointer; text-align: left; }
+      .tm1-readiness-plugin .sm-prjbtn:hover { background: var(--ux-layer-hover); }
+      .tm1-readiness-plugin .sm-prjbtn:focus { outline: 2px solid var(--ux-focus); outline-offset: -2px; }
+      .tm1-readiness-plugin .sm-prjbtn .sm-prjname { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .tm1-readiness-plugin .sm-prjbtn.sm-prjempty .sm-prjname { color: var(--ux-text-2); }
+      .tm1-readiness-plugin .sm-prjbtn .fa-angle-right { color: var(--ux-text-3); }
+      /* the text gives way, the action never does: a cut "Start one" was measured at 220 px */
+      .tm1-readiness-plugin .sm-prjhelp { display: flex; height: 20px; margin-top: var(--ux-2); font-size: 12px; line-height: 20px; color: var(--ux-text-2);
+         white-space: nowrap; width: 0; min-width: 100%; }
+      .tm1-readiness-plugin .sm-prjhelp .sm-prjhelptext { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+      .tm1-readiness-plugin .sm-prjhelp .sm-prjhelpact { flex: 0 0 auto; }
+      .tm1-readiness-plugin .sm-prj-warn { color: var(--ux-warning); }
+      .tm1-readiness-plugin .sm-prj-error { color: var(--ux-error); }
+      .tm1-readiness-plugin .sm-prjform .ux-field { margin: 0 0 var(--ux-5); }
+      .tm1-readiness-plugin .sm-prjform .ux-input { width: 292px; }
+      .tm1-readiness-plugin .sm-prjdbs { display: flex; flex-wrap: wrap; gap: 0 var(--ux-5); }
+      .tm1-readiness-plugin .sm-prjfoot { display: flex; gap: var(--ux-3); margin-top: var(--ux-4); }
+      .tm1-readiness-plugin .sm-prjfield-error .ux-input, .tm1-readiness-plugin .sm-prjfield-error .ux-btn-secondary { outline: 2px solid var(--ux-error); outline-offset: -2px; }
+      .tm1-readiness-plugin .sm-prjerr { color: var(--ux-error); font-size: 12px; }
+      .tm1-readiness-plugin .sm-prjpath { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ux-3); margin: 0; }
+      /* the migrate.log verdict: one line per thing, tagged by who acts and when */
+      .tm1-readiness-plugin ul.sm-verdict { list-style: none; margin: var(--ux-2) 0 0; padding: 0; }
+      .tm1-readiness-plugin ul.sm-verdict li { margin: var(--ux-1) 0; }
+      .tm1-readiness-plugin ul.sm-verdict .fa { width: 14px; }
+      .tm1-readiness-plugin .sm-verdict-stop .fa { color: var(--ux-error); } .tm1-readiness-plugin .sm-verdict-todo .fa { color: var(--ux-warning); }
+      .tm1-readiness-plugin .sm-verdict-after .fa { color: var(--ux-info); } .tm1-readiness-plugin .sm-verdict-fine .fa { color: var(--ux-success); }
+      .tm1-readiness-plugin .sm-verdicttag { font-size: 12px; font-weight: 600; color: var(--ux-text-2); text-transform: uppercase; letter-spacing: .02em; margin-right: var(--ux-2); }
+      .tm1-readiness-plugin .sm-tab-icon > a { padding-left: var(--ux-3); padding-right: var(--ux-3); }
+      .tm1-readiness-plugin .sm-tabs > li.sm-tab-more { flex-shrink: 0; }
+      .tm1-readiness-plugin .sm-tabs > li.sm-tab-more > a { font-size: 13px; color: var(--ux-interactive); border-bottom-color: transparent; }
+      .tm1-readiness-plugin .sm-stepper { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--ux-3); list-style: none; margin: var(--ux-4) 0 var(--ux-2); padding: 0; }
+      .tm1-readiness-plugin .sm-busy { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: var(--ux-2); padding-bottom: 6px; white-space: nowrap; }
+      .tm1-readiness-plugin .sm-busy > .fa, .tm1-readiness-plugin .sm-busy > a { flex: 0 0 auto; }
+      .tm1-readiness-plugin .sm-busytext { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+      .tm1-readiness-plugin .sm-dbhelp { display: flex; align-items: center; gap: var(--ux-3); height: 20px; margin-top: var(--ux-2); font-size: 12px; color: var(--ux-text-2); white-space: nowrap; }
+      /* as wide as the picker, never wider: a longer line would push Scan sideways (measured) */
+      .tm1-readiness-plugin .sm-dbhelp, .tm1-readiness-plugin .sm-dberror { width: 0; min-width: 100%; }
+      .tm1-readiness-plugin .sm-dbhelptext { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+      .tm1-readiness-plugin .sm-dbhelp .sm-pill { flex: 0 0 auto; }
+      .tm1-readiness-plugin .sm-dbro { color: #8e6a00; }
+      .tm1-readiness-plugin .sm-dberror { min-height: 20px; margin-top: var(--ux-2); font-size: 12px; line-height: 16px; color: var(--ux-error); }
+      .tm1-readiness-plugin select.sm-field-error { border-color: var(--ux-error); }
+      /* the button and the running action line up with the picker, not with its helper line */
+      .tm1-readiness-plugin .sm-besidehelp { padding-bottom: calc(20px + var(--ux-2)); }
+      .tm1-readiness-plugin .sm-busy.sm-besidehelp { padding-bottom: calc(20px + var(--ux-2) + 6px); }
+      .tm1-readiness-plugin .sm-scannote { display: flex; align-items: center; gap: var(--ux-3); margin: var(--ux-3) 0 0; padding: var(--ux-3) var(--ux-4);
+         border-left: 3px solid var(--ux-success); background: var(--ux-success-bg); font-size: 14px; }
+      .tm1-readiness-plugin .sm-scannote > .fa-check-circle { color: var(--ux-success); }
+      .tm1-readiness-plugin .sm-scannotetext { flex: 1 1 auto; min-width: 0; }
+      .tm1-readiness-plugin .sm-notex { color: var(--ux-text-2); padding: 0 var(--ux-2); }
+      .tm1-readiness-plugin .sm-summaryline { margin: 0 0 var(--ux-2); font-size: 14px; color: var(--ux-text-2); }
+      .tm1-readiness-plugin .sm-results { margin-top: var(--ux-6); }
+      .tm1-readiness-plugin .sm-results h5 { margin: 0 0 var(--ux-2); font-size: 14px; font-weight: 600; }
+      .tm1-readiness-plugin .sm-stepper > li > a { display: block; color: var(--ux-text-2); text-decoration: none; padding-bottom: var(--ux-2); }
+      .tm1-readiness-plugin .sm-stepper > li > a:focus { outline: 2px solid var(--ux-focus); outline-offset: 2px; }
+      .tm1-readiness-plugin .sm-stepbar { display: block; height: 4px; margin-bottom: var(--ux-3); background: var(--ux-border-subtle); }
+      .tm1-readiness-plugin .sm-stepname { display: block; font-size: 14px; color: var(--ux-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .tm1-readiness-plugin .sm-stepper .ux-helper { display: block; overflow: hidden; text-overflow: ellipsis; }
+      .tm1-readiness-plugin .sm-step-done .sm-stepbar { background: var(--ux-success); }
+      .tm1-readiness-plugin .sm-step-done .fa { color: var(--ux-success); }
+      .tm1-readiness-plugin .sm-step-current .sm-stepbar { background: var(--ux-interactive); }
+      .tm1-readiness-plugin .sm-step-current .sm-stepname { color: var(--ux-interactive); font-weight: 600; }
+      .tm1-readiness-plugin .sm-step-blocked .sm-stepbar { background: var(--ux-error); }
+      .tm1-readiness-plugin .sm-step-blocked .fa { color: var(--ux-error); }
+      .tm1-readiness-plugin .sm-step-later .sm-stepname, .tm1-readiness-plugin .sm-step-elsewhere .sm-stepname { color: var(--ux-text-2); }
+      .tm1-readiness-plugin .sm-step-open > a { box-shadow: inset 0 -2px 0 var(--ux-text); }
+      .tm1-readiness-plugin .sm-rowlab { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--ux-3); margin: var(--ux-5) 0 var(--ux-2); font-size: 14px; color: var(--ux-text-2); }
+      .tm1-readiness-plugin .sm-rowlab b { color: var(--ux-text); font-weight: 600; }
+      .tm1-readiness-plugin .sm-score b { font-size: 16px; }
+      .tm1-readiness-plugin .sm-meter { display: flex; height: 8px; margin-bottom: var(--ux-3); background: var(--ux-layer); overflow: hidden; }
+      .tm1-readiness-plugin .sm-meter > span { flex: none; min-width: 0; }
+      .tm1-readiness-plugin .sm-seg-ok { background: var(--ux-success); }
+      .tm1-readiness-plugin .sm-seg-error { background: var(--ux-error); }
+      .tm1-readiness-plugin .sm-seg-warning { background: var(--ux-warning); }
+      .tm1-readiness-plugin .sm-seg-info { background: var(--ux-interactive); }
+      .tm1-readiness-plugin .sm-seg-muted { background: var(--ux-text-3); }
+      .tm1-readiness-plugin .sm-grid4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--ux-3); }
+      @media (max-width: 720px) { .tm1-readiness-plugin .sm-grid4, .tm1-readiness-plugin .sm-stepper { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+      .tm1-readiness-plugin .sm-ktile { padding: var(--ux-3) var(--ux-4); background: var(--ux-layer); border-left: 3px solid var(--ux-border); }
+      .tm1-readiness-plugin .sm-ktile b { display: block; font-size: 28px; line-height: 36px; font-weight: 400; color: var(--ux-text); }
+      .tm1-readiness-plugin .sm-ktile span { font-size: 14px; font-weight: 600; color: var(--ux-text); }
+      .tm1-readiness-plugin .sm-ktile.sm-click { cursor: pointer; }
+      .tm1-readiness-plugin .sm-ktile.sm-click:hover { background: var(--ux-layer-hover); }
+      .tm1-readiness-plugin .sm-ktile.sm-click:focus { outline: 2px solid var(--ux-focus); }
+      .tm1-readiness-plugin .sm-k-ok { border-left-color: var(--ux-success); }
+      .tm1-readiness-plugin .sm-k-error { border-left-color: var(--ux-error); }
+      .tm1-readiness-plugin .sm-k-warning { border-left-color: var(--ux-warning); }
+      .tm1-readiness-plugin .sm-k-info { border-left-color: var(--ux-interactive); }
+      .tm1-readiness-plugin .sm-k-muted { border-left-color: var(--ux-text-3); }
+      .tm1-readiness-plugin .sm-klegend { margin-top: var(--ux-2); }
+      .tm1-readiness-plugin .sm-section { margin: var(--ux-4) 0; border: 1px solid var(--ux-border-subtle); }
+      .tm1-readiness-plugin .sm-sectionbody { padding: var(--ux-3) var(--ux-4) var(--ux-4); }
+      .tm1-readiness-plugin .sm-steppanel { margin-top: var(--ux-6); padding-top: var(--ux-4); border-top: 1px solid var(--ux-border-subtle); }
+      .tm1-readiness-plugin .sm-checklist { list-style: none; margin: 0 0 var(--ux-4); padding: 0; }
+      .tm1-readiness-plugin .sm-checklist > li { display: grid; grid-template-columns: 20px minmax(110px, 180px) minmax(0, 1fr) auto; gap: var(--ux-3); align-items: baseline;
+         padding: var(--ux-3) 0; border-bottom: 1px solid var(--ux-border-subtle); font-size: 14px; }
+      .tm1-readiness-plugin .sm-checkname { font-weight: 600; }
+      /* the findings' three groups sit under their total */
+      .tm1-readiness-plugin .sm-checklist > li.sm-check-sub { padding-left: var(--ux-6); }
+      .tm1-readiness-plugin .sm-checklist > li.sm-check-sub .sm-checkname { font-weight: 400; }
+      .tm1-readiness-plugin .sm-bytype { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--ux-2) var(--ux-3); margin-top: var(--ux-4); font-size: 14px; }
+      .tm1-readiness-plugin .sm-bytypelab { font-weight: 600; color: var(--ux-text); }
+      .tm1-readiness-plugin .sm-typechip { padding: 2px var(--ux-3); border: 1px solid var(--ux-border-subtle); color: var(--ux-text); text-decoration: none; }
+      .tm1-readiness-plugin .sm-typechip:hover { background: var(--ux-layer-hover); text-decoration: none; }
+      .tm1-readiness-plugin .sm-checklist > li.sm-check-head { border-bottom: 0; padding-bottom: var(--ux-2); }
+      .tm1-readiness-plugin .sm-checktext { color: var(--ux-text-2); }
+      .tm1-readiness-plugin .sm-check-done .fa { color: var(--ux-success); }
+      .tm1-readiness-plugin .sm-check-todo .fa { color: var(--ux-interactive); }
+      .tm1-readiness-plugin .sm-check-blocked .fa { color: var(--ux-error); }
+      .tm1-readiness-plugin .sm-check-unknown .fa, .tm1-readiness-plugin .sm-check-optional .fa { color: var(--ux-text-3); }
+      /* panels, diffs, fixed statements */
+      .tm1-readiness-plugin .sm-panel { padding: var(--ux-5); border: 1px solid var(--ux-border-subtle); border-radius: var(--ux-radius); overflow-y: auto; }
+      .tm1-readiness-plugin .sm-diff { font-family: Consolas, Menlo, monospace; font-size: 12px; border: 1px solid var(--ux-border-subtle); margin-bottom: var(--ux-3); }
+      .tm1-readiness-plugin .sm-diff div { white-space: pre-wrap; word-break: break-word; padding: 0 var(--ux-3); }
+      .tm1-readiness-plugin .sm-diff .sm-del { background: var(--ux-error-bg); }
+      .tm1-readiness-plugin .sm-diff .sm-add { background: var(--ux-success-bg); }
+      .tm1-readiness-plugin .sm-diff .sm-gap { color: var(--ux-text-2); background: var(--ux-layer); }
+      .tm1-readiness-plugin .sm-diff .sm-ln { display: inline-block; width: 38px; color: var(--ux-text-3); }
+      .tm1-readiness-plugin .sm-fixed { background: var(--ux-success-bg); border-left: 3px solid var(--ux-success); padding: var(--ux-2) var(--ux-3); }
+      /* Arc greys every link; in the plugin a link reads as one (guide §4: interactive), except the tabs,
+         chips and icon controls, which have their own look */
+      .tm1-readiness-plugin a[href]:not(.ux-chip):not(.sm-close):not(.sm-skipbtn):not(.sm-tabs a) { color: var(--ux-interactive); }
+      .tm1-readiness-plugin a[href]:not(.ux-chip):not(.sm-close):not(.sm-skipbtn):not(.sm-tabs a):hover { text-decoration: underline; }
+      .tm1-readiness-plugin .sm-close { float: right; color: var(--ux-text-2); padding: 0 var(--ux-2); }
+      .tm1-readiness-plugin .sm-close:hover { color: var(--ux-text); background: var(--ux-layer-hover); }
+      /* tabs: Carbon's line tabs, the same family as PAW's */
+      .tm1-readiness-plugin .sm-tabs { display: flex; flex-wrap: nowrap; align-items: flex-end; gap: 0; list-style: none; margin: var(--ux-4) 0 0; padding: 0;
+         border-bottom: 1px solid var(--ux-border-subtle); }
+      .tm1-readiness-plugin .sm-tabs > li { display: block; float: none; margin: 0; flex: 0 1 auto; min-width: 0; }
+      .tm1-readiness-plugin .sm-tabs > li > a { display: flex; align-items: center; gap: var(--ux-3); min-width: 0; padding: var(--ux-3) var(--ux-4); margin-bottom: -1px;
+         font-size: 14px; color: var(--ux-text-2); text-decoration: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; }
+      .tm1-readiness-plugin .sm-tabs > li > a:hover { color: var(--ux-text); border-bottom-color: var(--ux-border); background: transparent; }
+      .tm1-readiness-plugin .sm-tabs > li > a:focus { outline: 2px solid var(--ux-focus); outline-offset: -2px; }
+      .tm1-readiness-plugin .sm-tabs > li.active > a { color: var(--ux-text); font-weight: 600; border-bottom-color: var(--ux-interactive); background: transparent; }
+      .tm1-readiness-plugin .badge { padding: 0 var(--ux-3); border-radius: 12px; font-size: 12px; line-height: 18px; font-weight: 400; background: var(--ux-layer-hover); color: var(--ux-text); }
+      .tm1-readiness-plugin .sm-tabs > li.active > a .badge { background: var(--ux-info-bg); color: var(--ux-info); }
+   </style>
+
+   <!-- the guides on the title line: before, both links sat atop the 8th of 9 tabs (user, 2026-10-05) -->
+   <div class="sm-titlebar">
+      <h2><i class="fa fa-cloud-upload" aria-hidden="true"></i> <span translate="SAASMIG_TITLE"></span>
+         <small class="sm-muted">v{{version}}</small></h2>
+      <div class="sm-guidelinks">
+
+         <a class="ux-link" href="__/plugins/tm1-12-readiness/USER-GUIDE.html" target="_blank"><i class="fa fa-picture-o" aria-hidden="true"></i> <span translate="SAASMIG_LINKUSERGUIDE"></span></a>
+         <a class="ux-link" href="__/plugins/tm1-12-readiness/MIGRATION-GUIDE.html" target="_blank"><i class="fa fa-book" aria-hidden="true"></i> <span translate="SAASMIG_LINKMIGRATIONGUIDE"></span></a>
+      </div>
+   </div>
+   <div class="sm-sub" translate="SAASMIG_SUBTITLE"></div>
+
+   <div class="sm-bar sm-topbar" ng-class="{'sm-bar-busy': state.busy}">
+      <!-- the project, a peer of the database it holds (option 1 of design/project-entry-options.html): where the
+           work is saved, never a step to pass. Its helper speaks only when something is true and timely -->
+      <div class="sm-prjfield">
+         <label for="smPrjField" translate="SAASMIG_PRJFIELD"></label>
+         <button id="smPrjField" type="button" class="sm-prjbtn" ng-class="{'sm-prjempty': !prjName()}" ng-click="state.tab='project'"
+            title="{{prjName() ? prjName() + (project.current.folder ? ' (' + project.current.folder + ')' : '') : ('SAASMIG_PRJFIELDTITLE' | translate)}}">
+            <i class="fa" ng-class="prjName() ? 'fa-folder-open-o' : 'fa-folder-o'" aria-hidden="true"></i>
+            <span class="sm-prjname">{{prjName() || ('SAASMIG_PRJNONE' | translate)}}</span>
+            <i class="fa fa-angle-right" aria-hidden="true"></i></button>
+         <span class="sm-prjhelp" ng-class="prjHint().cls" role="status" aria-live="polite" title="{{prjHint().text}}"><span class="sm-prjhelptext" ng-if="prjHint().text">{{prjHint().text}}</span><span class="sm-prjhelpact" ng-if="prjHint().act">&nbsp;·&nbsp;<a href="" class="ux-link" ng-click="prjHintDo()">{{prjHint().act}}</a></span></span>
+      </div>
+      <div>
+         <label translate="SAASMIG_INSTANCE"></label>
+         <select class="form-control input-sm" ng-class="{'sm-field-error': state.instanceProblem}" ng-model="state.instance" ng-options="i for i in state.instances"></select>
+         <!-- the database's facts as the picker's helper line (user + UX, 2026-10-05): it used to sit between
+              the picker and Scan, filled late, and pushed the button sideways. Its height is kept from the start. -->
+         <div class="sm-dbhelp" ng-if="!state.instanceProblem" title="{{dbFacts()}}">
+            <span class="sm-dbhelptext">{{dbFacts()}}<span class="sm-dbro" ng-if="state.user && !isAdmin()"> · {{'SAASMIG_DBREADONLY' | translate}}</span></span>
+            <span ng-if="state.productVersion && isV12()" class="sm-pill sm-REVIEW" translate="SAASMIG_ISV12"></span></div>
+         <div class="sm-dberror" ng-if="state.instanceProblem" role="alert">{{tx(state.instanceProblem === 'signin' ? 'SAASMIG_NOTSIGNEDIN' : 'SAASMIG_UNREACHABLE', {inst: state.instance})}}</div>
+      </div>
+      <div class="sm-besidehelp">
+         <!-- primary only before the first scan: after it, the open step's action leads -->
+         <button class="btn btn-sm" ng-class="state.scan && state.scan.instance === state.instance ? 'btn-default' : 'btn-primary'" ng-click="scan()" ng-disabled="!!state.busy || !state.instance || !state.productVersion" title="{{state.productVersion ? '' : (state.instanceProblem ? '' : ('SAASMIG_SCANWAIT' | translate))}}">
+            <i class="fa fa-search"></i> <span translate="{{state.scan && state.scan.instance === state.instance ? 'SAASMIG_SCANAGAIN' : 'SAASMIG_SCAN'}}"></span></button>
+      </div>
+      <!-- the running action takes the rest of this row and is cut to it, so a long message no longer
+           wraps onto a line of its own and moves the page (user, 2026-10-05); the full text is its title -->
+      <div class="sm-busy sm-besidehelp" ng-if="state.busy" role="status" title="{{state.busy}}">
+         <i class="fa fa-spinner fa-spin" aria-hidden="true"></i> <span class="sm-busytext">{{state.busy}}</span>
+         <a href="" ng-click="cancelRun()" translate="SAASMIG_CANCEL"></a>
+      </div>
+   </div>
+
+   <div class="sm-danger" ng-if="state.error"><b translate="SAASMIG_ERROR"></b> {{state.error}}</div>
+
+   <!-- the one project notice, only while it applies: the browser wants a click to allow the folder again,
+        or the folder has gone. The page keeps working without it. -->
+   <div class="ux-note ux-note-warning" ng-if="prjNotice() === 'perm'" role="alert" style="margin:8px 0 0">
+      <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+      <span>{{tx('SAASMIG_PRJPERM', {name: prjName()})}}</span>
+      <button class="ux-btn ux-btn-secondary" ng-click="prjAllow()" ng-disabled="!!state.busy" translate="SAASMIG_PRJALLOW"></button>
+      <a href="" class="ux-link" ng-click="prjClose()" translate="SAASMIG_PRJCLOSE"></a>
+   </div>
+   <div class="ux-note ux-note-error" ng-if="prjNotice() === 'missing'" role="alert" style="margin:8px 0 0">
+      <i class="fa fa-exclamation-circle" aria-hidden="true"></i>
+      <span translate="SAASMIG_PRJMISSING"></span>
+      <button class="ux-btn ux-btn-secondary" ng-click="prjFind()" ng-disabled="!!state.busy" translate="SAASMIG_PRJFIND"></button>
+      <a href="" class="ux-link" ng-click="prjClose()" translate="SAASMIG_PRJCLOSE"></a>
+   </div>
+
+   <!-- diagnostics off (the default since v0.7.1): one quiet line, no longer the first coloured thing on the page -->
+   <div class="ux-helper" ng-if="diag.mode === 'off'" style="margin:4px 0 0">
+      <a href="" class="ux-link" ng-click="state.tab='log'"><i class="fa fa-stethoscope" aria-hidden="true"></i> <span translate="SAASMIG_DIAGCHOOSE"></span></a></div>
+
+   <!-- the steps above the tabs, on every tab (stage 1, 2026-10-05): the tabs read as the tools of a
+        step, and "where am I" stays in view inside a tab. A click opens that step on the Overview. -->
+   <ol class="sm-stepper" aria-label="{{'SAASMIG_STEPSLABEL' | translate}}">
+      <li ng-repeat="x in steps()" class="sm-step-{{x.state}}" ng-class="{'sm-step-open': openStep() === x.n}">
+         <a href="" ng-click="toggleStep(x.n)" aria-current="{{x.state === 'current' ? 'step' : undefined}}">
+            <span class="sm-stepbar"></span>
+            <span class="sm-stepname"><i class="fa" ng-class="stepIcon[x.state]" aria-hidden="true"></i> {{x.n}} {{x.name}}</span>
+            <span class="ux-helper">{{x.summary}}</span></a></li>
+   </ol>
+
+   <!-- stage 2 (user, 2026-10-05): the tabs of the open step (underlined above), the tab in use, and
+        on the right Backups, Guide and Log, which belong to no step. "All tabs" shows the rest. -->
+   <ul class="nav nav-tabs sm-tabs">
+      <li ng-class="{active: state.tab==='overview'}"><a href="" ng-click="state.tab='overview'" title="{{'SAASMIG_TABOVERVIEW' | translate}}"><i class="fa fa-tachometer"></i> <span translate="SAASMIG_TABOVERVIEW"></span></a></li>
+      <li ng-if="tabShown('findings')" ng-class="{active: state.tab==='findings'}"><a href="" ng-click="state.tab='findings'" title="{{'SAASMIG_TABFINDINGS' | translate}}"><i class="fa fa-list"></i> <span translate="SAASMIG_TABFINDINGS"></span>
+         <span class="badge" ng-if="state.scan">{{summary().total}}</span></a></li>
+      <li ng-if="tabShown('apps')" ng-class="{active: state.tab==='apps'}"><a href="" ng-click="state.tab='apps'; state.tp || loadTp()" title="{{'SAASMIG_TABAPPS' | translate}}"><i class="fa fa-archive"></i> <span translate="SAASMIG_TABAPPS"></span>
+         <span class="badge" ng-if="state.tp && state.tp.inv.items.length">{{state.tp.inv.items.length}}</span></a></li>
+      <li ng-if="tabShown('bedrock')" ng-class="{active: state.tab==='bedrock'}"><a href="" ng-click="openBedrock()" title="{{'SAASMIG_TABBEDROCK' | translate}}"><i class="fa fa-cubes"></i> <span translate="SAASMIG_TABBEDROCK"></span>
+         <span class="badge" ng-if="state.bedrock.inv && state.bedrock.inv.rows.length">{{state.bedrock.inv.rows.length}}</span></a></li>
+      <li ng-if="tabShown('datafiles')" ng-class="{active: state.tab==='datafiles'}"><a href="" ng-click="openDataFiles()" title="{{'SAASMIG_TABDATAFILES' | translate}}"><i class="fa fa-upload"></i> <span translate="SAASMIG_TABDATAFILES"></span>
+         <span class="badge" ng-if="state.dataFiles && state.dataFiles.rows.length">{{state.dataFiles.rows.length}}</span></a></li>
+      <li ng-if="tabShown('cloud')" ng-class="{active: state.tab==='cloud'}"><a href="" ng-click="state.tab='cloud'; state.cloud || !cloudAllowed() || loadCloud()" title="{{'SAASMIG_TABCLOUD' | translate}}"><i class="fa fa-id-card-o"></i> <span translate="SAASMIG_TABCLOUD"></span></a></li>
+      <li ng-if="state.whereUsed" ng-class="{active: state.tab==='whereused'}"><a href="" ng-click="state.tab='whereused'" title="{{'SAASMIG_TABWHEREUSED' | translate}}"><i class="fa fa-sitemap"></i> <span translate="SAASMIG_TABWHEREUSED"></span>
+         <span class="badge" ng-if="state.whereUsed.refs">{{state.whereUsed.refs.length}}</span></a></li>
+      <li class="sm-tab-more" ng-if="state.allTabs || hiddenTabs()"><a href="" class="ux-link" ng-click="state.allTabs = !state.allTabs" aria-pressed="{{!!state.allTabs}}">{{(state.allTabs ? 'SAASMIG_STEPTABSONLY' : 'SAASMIG_ALLTABS') | translate}}</a></li>
+      <!-- Project, Backups, Guide and Log: icons on the right, on every step -->
+      <li class="sm-tab-icon" style="margin-left:auto" ng-class="{active: state.tab==='project'}"><a href="" ng-click="state.tab='project'" title="{{'SAASMIG_TABPROJECT' | translate}}"><i class="fa fa-folder-open-o" aria-hidden="true"></i> <span class="sr-only" translate="SAASMIG_TABPROJECT"></span></a></li>
+      <li class="sm-tab-icon" ng-class="{active: state.tab==='backups'}"><a href="" ng-click="state.tab='backups'" title="{{'SAASMIG_TABBACKUPS' | translate}}"><i class="fa fa-history" aria-hidden="true"></i> <span class="sr-only" translate="SAASMIG_TABBACKUPS"></span>
+         <span class="badge" ng-if="state.backups.length">{{state.backups.length}}</span></a></li>
+      <li class="sm-tab-icon" ng-class="{active: state.tab==='guide'}"><a href="" ng-click="state.tab='guide'" title="{{'SAASMIG_TABGUIDE' | translate}}"><i class="fa fa-book" aria-hidden="true"></i> <span class="sr-only" translate="SAASMIG_TABGUIDE"></span></a></li>
+      <li class="sm-tab-icon" ng-class="{active: state.tab==='log'}"><a href="" ng-click="state.tab='log'" title="{{'SAASMIG_TABLOG' | translate}}"><i class="fa fa-terminal" aria-hidden="true"></i> <span class="sr-only" translate="SAASMIG_TABLOG"></span></a></li>
+   </ul>
+
+   <!-- after a scan, on whichever tab is open: the first scan offers the next step, a rescan says what changed -->
+   <div class="sm-scannote" ng-if="state.scanNote && state.scanNote.instance === state.instance" role="status">
+      <i class="fa fa-check-circle" aria-hidden="true"></i>
+      <span class="sm-scannotetext" ng-if="state.scanNote.kind === 'first'"><b>{{tx('SAASMIG_NOTEFIRST', {s: state.scanNote.seconds})}}</b>
+         {{tx('SAASMIG_NOTEFIRSTBODY', {pct: state.scanNote.pct, act: state.scanNote.act, fix: state.scanNote.fixable})}}</span>
+      <span class="sm-scannotetext" ng-if="state.scanNote.kind === 'rescan'"><b>{{tx('SAASMIG_NOTERESCAN', {at: state.scanNote.at})}}</b> {{state.scanNote.changes}}</span>
+      <!-- a scan read back from the project: shown, never applied from, until scanned again -->
+      <span class="sm-scannotetext" ng-if="state.scanNote.kind === 'project'"><b>{{tx('SAASMIG_NOTEPROJECT', {at: (state.scanNote.at | date:'d MMM HH:mm')})}}</b>
+         <span ng-if="state.scanNote.refreshing" translate="SAASMIG_NOTEPROJECTREFRESH"></span>
+         <span ng-if="!state.scanNote.refreshing" translate="SAASMIG_NOTEPROJECTBODY"></span></span>
+      <!-- a saved scan that could not refresh itself (the database is not signed in yet): the one action -->
+      <button class="btn btn-primary btn-sm" ng-if="state.scanNote.kind === 'project' && !state.scanNote.refreshing" ng-click="scan()"
+         ng-disabled="!!state.busy || !state.productVersion" translate="SAASMIG_SCANAGAIN"></button>
+      <span class="ux-helper" ng-if="state.scanNote.saved" style="margin:0">· <span translate="SAASMIG_PRJSCANSAVED"></span></span>
+      <!-- the moment results are worth keeping: one link, this session's scan, backups and log go with it -->
+      <span class="ux-helper" ng-if="state.scanNote.kind === 'first' && !prjName() && prjPitchOk()" style="margin:0">· <a href="" class="ux-link" ng-click="prjKeep()" translate="SAASMIG_PRJKEEPSCAN"></a></span>
+      <button class="btn btn-default btn-sm" ng-if="isV12() && summary().onTm112" ng-click="openDataFiles()">{{tx('SAASMIG_UPLOADN', {n: summary().onTm112})}}</button>
+      <button class="btn btn-primary btn-sm" ng-if="state.scanNote.kind === 'first'" ng-click="scanNext()">{{(isV12() ? 'SAASMIG_NEXTVERIFY' : 'SAASMIG_NEXTPREPARE') | translate}}</button>
+      <a href="" class="ux-link" ng-if="state.scanNote.kind === 'rescan'" ng-click="showResult()" translate="SAASMIG_SHOWRESULT"></a>
+      <a href="" class="sm-notex" ng-click="state.scanNote = null" title="{{'SAASMIG_HIDE' | translate}}" aria-label="{{'SAASMIG_HIDE' | translate}}"><i class="fa fa-times" aria-hidden="true"></i></a>
+   </div>
+
+   <!-- ================================================================ OVERVIEW -->
+   <!-- Guided steps (user, 2026-10-05): a stepper, one tile row per unit (processes,
+        then findings) with a bar and a legend under each tile, and only the open
+        step's panel. The cfg, convert, compile and compare blocks are the ones the
+        page had; they moved into the step they belong to. The compile check serves
+        step 1 on v11 and step 5 on TM1 12, so it is one template, included twice. -->
+   <script type="text/ng-template" id="tm1r-compile-check.html">
+         <!-- opened by the Compile check row of the step's checklist (user, 2026-10-05) -->
+         <div class="sm-section" ng-if="state.compileOpen">
+            <div class="sm-sectionbody">
+               <div ng-if="!isV12()">
+                  <p class="sm-muted" translate="SAASMIG_V12CHECKHELP"></p>
+                  <div class="sm-bar">
+                     <div>
+                        <label translate="SAASMIG_TARGET"></label>
+                        <select class="form-control input-sm" ng-model="state.target" ng-options="i for i in otherInstances()">
+                           <option value="" translate="SAASMIG_TARGETNONE"></option></select>
+                     </div>
+                     <div><button class="btn btn-default btn-sm" ng-click="v12Check()" ng-disabled="!state.target || !!state.busy || targetMismatch()">
+                        <i class="fa fa-cogs"></i> <span translate="SAASMIG_V12CHECK"></span></button></div>
+                  </div>
+                  <div class="sm-danger" ng-if="targetMismatch()"><span translate="SAASMIG_TARGETNOTV12"></span> ({{state.target}}: {{state.targetVersion}})</div>
+                  <div class="sm-danger" ng-if="state.targetProblem">{{tx(state.targetProblem === 'signin' ? 'SAASMIG_NOTSIGNEDIN' : 'SAASMIG_UNREACHABLE', {inst: state.target})}}</div>
+               </div>
+               <div ng-if="isV12()">
+                  <p class="sm-muted" translate="SAASMIG_V12CHECKHELPSELF"></p>
+                  <button class="btn btn-default btn-sm" ng-click="v12Check()" ng-disabled="!!state.busy">
+                     <i class="fa fa-cogs"></i> <span translate="SAASMIG_V12CHECKSELF"></span></button>
+               </div>
+               <div ng-if="state.v12check">
+                  <div role="status" ng-class="state.v12check.failed.length ? 'sm-warn' : 'sm-ok'">
+                     {{state.v12check.done}} / {{state.v12check.total}} <span translate="SAASMIG_V12COMPILED"></span> {{state.v12check.target}} ·
+                     <b>{{state.v12check.failed.length}}</b> <span translate="SAASMIG_V12FAILED"></span>
+                     <span ng-if="state.v12check.cancelled" translate="SAASMIG_CANCELLED"></span>
+                  </div>
+                  <div class="sm-scroll" style="max-height:320px" ng-if="state.v12check.failed.length">
+                     <table class="table table-condensed sm-table">
+                        <tr><th translate="SAASMIG_PROCESS"></th><th translate="SAASMIG_V12ERRORS"></th></tr>
+                        <tr ng-repeat="f in state.v12check.failed"><td>{{f.name}}</td><td><div class="sm-code" ng-repeat="e in f.errors">{{e}}</div></td></tr>
+                     </table>
+                  </div>
+               </div>
+            </div>
+         </div>
+   </script>
+   <div ng-if="state.tab==='overview'" style="padding-top:10px">
+
+
+      <!-- one summary line in place of the tiles, which moved into step 1 (they are the scan's result) -->
+      <div ng-if="state.scan && processTiles()" class="sm-summaryline" role="status">
+         <b>{{state.scan.instance}}</b> · {{tx('SAASMIG_SUMPROCESSES', {n: processTiles().total})}}
+         · <a href="" class="ux-link" ng-click="openStepPanel(1)"><b>{{processTiles().ready}}%</b> <span translate="SAASMIG_SCORE"></span></a>
+         · <a href="" class="ux-link" ng-click="openTile('BLOCKER')">{{tx('SAASMIG_SUMBLOCKERS', {n: summary().bySeverity.BLOCKER})}}</a>
+         · <a href="" class="ux-link" ng-click="openTile('fixable')">{{tx('SAASMIG_SUMFIXABLE', {n: summary().fixable})}}</a>
+         <span ng-if="summary().onTm112">· <a href="" class="ux-link" ng-click="openDataFiles()" saas-mig-tip="(isV12() ? 'SAASMIG_ONTM112TIPV12' : 'SAASMIG_ONTM112TIP') | translate">{{tx(isV12() ? 'SAASMIG_SUMONTM112V12' : 'SAASMIG_SUMONTM112', {n: summary().onTm112})}}</a></span>
+         · <span class="sm-muted">{{tx('SAASMIG_SUMSCANNED', {at: (state.scan.at | date:'HH:mm')})}}</span></div>
+
+      <div ng-if="!state.scan">
+         <p class="sm-muted" translate="SAASMIG_OVERVIEWEMPTY"></p>
+
+         <div class="sm-warn" ng-if="isV12()" translate="SAASMIG_V12SOURCE"></div>
+      </div>
+
+
+
+      <!-- the open step: its checklist, then what the step needs on the page -->
+      <div class="sm-steppanel" ng-repeat="x in steps()" ng-if="openStep() === x.n">
+         <h4>{{x.n}} · {{x.title}}</h4>
+         <p class="sm-muted">{{x.help}}</p>
+         <ul class="sm-checklist" ng-if="x.items.length">
+            <li ng-repeat="i in x.items" class="sm-check-{{i.state}}" ng-class="{'sm-check-sub': i.sub, 'sm-check-head': i.head}">
+               <i class="fa" ng-class="checkIcon[i.state]" aria-hidden="true"></i>
+               <span class="sm-checkname">{{i.name}}</span>
+               <span class="sm-checktext" ng-if="i.action !== 'compile' && !i.toggle && !i.pick && !(i.inline && i.state !== 'done')">{{i.text}}</span>
+               <!-- step 4's row: the restored TM1 12 database, checked before anything switches (user, 2026-10-06) -->
+               <span class="sm-checktext sm-v12row" ng-if="i.pick">
+                  <select class="form-control input-sm sm-v12pick" ng-model="state.target" ng-options="n for n in otherInstances()" aria-label="{{'SAASMIG_ITEMV12' | translate}}">
+                     <option value="" translate="SAASMIG_V12NOTYET"></option></select>
+                  <span class="ux-helper" ng-class="{'sm-prj-error': i.state === 'blocked'}">{{i.text}}</span></span>
+               <button class="btn btn-primary btn-sm" ng-if="i.pick && i.state === 'done'" ng-click="useV12()" ng-disabled="!!state.busy" translate="SAASMIG_V12USE"></button>
+               <!-- the compile row opens and closes the check below the list -->
+               <a href="" class="ux-link sm-checktext" ng-if="i.action === 'compile'" ng-click="stepAction('compile')" aria-expanded="{{!!state.compileOpen}}">
+                  <i class="fa" ng-class="state.compileOpen ? 'fa-caret-down' : 'fa-caret-right'" aria-hidden="true"></i> {{i.text}}</a>
+               <!-- step 3, the same idea: a row with more to show opens its section, a row with one thing to do does it -->
+               <a href="" class="ux-link sm-checktext" ng-if="i.toggle" ng-click="toggleConv(i.toggle)" aria-expanded="{{!!state.convOpen[i.toggle]}}">
+                  <i class="fa" ng-class="state.convOpen[i.toggle] ? 'fa-caret-down' : 'fa-caret-right'" aria-hidden="true"></i> {{i.text}}</a>
+               <a href="" class="ux-link sm-checktext" ng-if="i.inline && i.state !== 'done'" ng-click="stepAction(i.action)">{{i.text}}</a>
+               <a href="" class="ux-link" ng-if="i.action && i.action !== 'compile' && !i.inline && !i.toggle && i.state !== 'done'" ng-click="stepAction(i.action)">{{i.act}}</a></li>
+         </ul>
+         <div ng-if="x.n === 1 && !isV12() && state.scan" ng-include="'tm1r-compile-check.html'"></div>
+         <!-- the scan's result: two rows of one unit each, a bar and a legend under each tile -->
+         <div ng-if="x.n === 1 && state.scan && processTiles()" class="sm-results">
+            <h5 translate="SAASMIG_RESULTSTITLE"></h5>
+         <div class="sm-muted">{{state.scan.instance}} · {{state.scan.at | date:'yyyy-MM-dd HH:mm'}} ·
+            {{state.scan.counts.processes}} <span translate="SAASMIG_PROCESSES"></span>,
+            {{state.scan.counts.cubes}} <span translate="SAASMIG_CUBES"></span>,
+            {{state.scan.counts.dimensions}} <span translate="SAASMIG_DIMENSIONS"></span>,
+            {{state.scan.counts.chores}} <span translate="SAASMIG_CHORES"></span> · {{state.scan.seconds}} s</div>
+
+
+            <div class="sm-rowlab"><span><b translate="SAASMIG_ROWPROCESSES"></b> · {{processTiles().total}}</span>
+               <span class="sm-score"><b>{{processTiles().ready}}%</b> <span translate="SAASMIG_SCORE"></span></span></div>
+            <div class="sm-meter" role="img" aria-label="{{tx('SAASMIG_SPLITPROCESSES', {a: processTiles().compiles, b: processTiles().blocked, c: processTiles().retire})}}">
+               <span class="sm-seg-ok" ng-style="{width: share(processTiles().compiles, processTiles().total) + '%'}"></span><span class="sm-seg-error" ng-style="{width: share(processTiles().blocked, processTiles().total) + '%'}"></span><span class="sm-seg-muted" ng-style="{width: share(processTiles().retire, processTiles().total) + '%'}"></span></div>
+            <div class="sm-grid4">
+               <div><div class="sm-ktile sm-k-ok"><b>{{processTiles().compiles}}</b><span translate="SAASMIG_KCOMPILES"></span></div>
+                  <div class="ux-helper sm-klegend">{{'SAASMIG_LCOMPILES' | translate}}</div></div>
+               <div><div class="sm-ktile sm-k-error sm-click" tabindex="0" role="button" ng-keydown="keyActivate($event)" ng-click="openTile('dropped')" title="{{tileTip('dropped')}}"><b>{{processTiles().blocked}}</b><span translate="SAASMIG_KBLOCKED"></span></div>
+                  <div class="ux-helper sm-klegend">{{(isV12() ? 'SAASMIG_LBLOCKEDV12' : 'SAASMIG_LBLOCKED') | translate}}</div></div>
+               <div><div class="sm-ktile sm-k-muted sm-click" tabindex="0" role="button" ng-keydown="keyActivate($event)" ng-click="openTile('apps')" title="{{tileTip('apps')}}"><b>{{processTiles().retire}}</b><span translate="SAASMIG_KRETIRE"></span></div>
+                  <div class="ux-helper sm-klegend">{{'SAASMIG_LRETIRE' | translate}}</div></div>
+               <div><div class="sm-ktile sm-k-warning sm-click" tabindex="0" role="button" ng-keydown="keyActivate($event)" ng-click="openTile('uses')" title="{{tileTip('uses')}}"><b>{{processTiles().callers}}</b><span translate="SAASMIG_KCALLERS"></span></div>
+                  <div class="ux-helper sm-klegend">{{'SAASMIG_LCALLERS' | translate}}</div></div>
+            </div>
+
+            <div class="sm-rowlab"><span><b translate="SAASMIG_ROWFINDINGS"></b> · {{tx('SAASMIG_ROWFINDINGSN', {n: summary().bySeverity.BLOCKER + summary().bySeverity.BREAKS + summary().bySeverity.REVIEW, i: summary().bySeverity.INFO})}}</span>
+               <a href="" class="ux-link" ng-click="state.tab='findings'" translate="SAASMIG_GOTOFINDINGS"></a></div>
+            <div class="sm-meter" role="img" aria-label="{{tx('SAASMIG_SPLITFINDINGS', {a: summary().bySeverity.BLOCKER, b: summary().bySeverity.BREAKS, c: summary().bySeverity.REVIEW})}}">
+               <span class="sm-seg-error" ng-style="{width: share(summary().bySeverity.BLOCKER, (summary().bySeverity.BLOCKER + summary().bySeverity.BREAKS + summary().bySeverity.REVIEW)) + '%'}"></span><span class="sm-seg-warning" ng-style="{width: share(summary().bySeverity.BREAKS, (summary().bySeverity.BLOCKER + summary().bySeverity.BREAKS + summary().bySeverity.REVIEW)) + '%'}"></span><span class="sm-seg-info" ng-style="{width: share(summary().bySeverity.REVIEW, (summary().bySeverity.BLOCKER + summary().bySeverity.BREAKS + summary().bySeverity.REVIEW)) + '%'}"></span></div>
+            <div class="sm-grid4">
+               <div><div class="sm-ktile sm-k-error sm-click" tabindex="0" role="button" ng-keydown="keyActivate($event)" ng-click="openTile('BLOCKER')" title="{{tileTip('BLOCKER')}}"><b>{{summary().bySeverity.BLOCKER}}</b><span translate="SAASMIG_KBLOCKER"></span></div>
+                  <div class="ux-helper sm-klegend">{{(isV12() ? 'SAASMIG_LBLOCKERV12' : 'SAASMIG_LBLOCKER') | translate}}</div></div>
+               <div><div class="sm-ktile sm-k-warning sm-click" tabindex="0" role="button" ng-keydown="keyActivate($event)" ng-click="openTile('BREAKS')" title="{{tileTip('BREAKS')}}"><b>{{summary().bySeverity.BREAKS}}</b><span translate="SAASMIG_KBREAKS"></span></div>
+                  <div class="ux-helper sm-klegend">{{'SAASMIG_LBREAKS' | translate}}</div></div>
+               <div><div class="sm-ktile sm-k-info sm-click" tabindex="0" role="button" ng-keydown="keyActivate($event)" ng-click="openTile('REVIEW')" title="{{tileTip('REVIEW')}}"><b>{{summary().bySeverity.REVIEW}}</b><span translate="SAASMIG_KREVIEW"></span></div>
+                  <div class="ux-helper sm-klegend">{{'SAASMIG_LREVIEW' | translate}}</div></div>
+               <div><div class="sm-ktile sm-k-ok sm-click" tabindex="0" role="button" ng-keydown="keyActivate($event)" ng-click="openTile('fixable')" title="{{tileTip('fixable')}}"><b>{{summary().fixable}}</b><span translate="SAASMIG_KFIXABLE"></span></div>
+                  <div class="ux-helper sm-klegend">{{'SAASMIG_LFIXABLE' | translate}}</div></div>
+            </div>
+            <!-- the same findings to act on, by the object they are on; each count opens that list -->
+            <div class="sm-bytype" ng-if="byType()">
+               <span class="sm-bytypelab" translate="SAASMIG_BYTYPE"></span>
+               <a href="" class="sm-typechip" ng-repeat="r in byType().shown" ng-click="openType(r.type)" title="{{tx('SAASMIG_BYTYPETIP', {n: r.n, f: r.fixable})}}">
+                  {{typeLabel(r.type)}} <b>{{r.n}}</b><span class="sm-muted" ng-if="r.fixable"> · {{tx('SAASMIG_BYTYPEFIX', {f: r.fixable})}}</span></a>
+               <span class="ux-helper" ng-if="byType().none">{{tx('SAASMIG_BYTYPENONE', {list: byType().none})}}</span>
+            </div>
+         </div>
+         <!-- step 3: one section per row, opened from the row (user, 2026-10-06) -->
+         <div ng-if="x.n === 3 && !isV12() && state.scan">
+            <!-- tm1s.cfg: read from the server with the scan -->
+            <div class="sm-section" ng-if="state.convOpen.cfg">
+               <div class="sm-sectionbody">
+               <p class="sm-muted" translate="SAASMIG_CFGHELP"></p>
+               <div ng-if="!state.cfg" class="sm-muted" translate="SAASMIG_CFGNOSCAN"></div>
+               <div ng-if="state.cfg.error" class="sm-warn" role="status">{{tx('SAASMIG_CFGREADFAIL', {e: state.cfg.error})}}</div>
+               <!-- one summary line, red only for what stops the migration utility; the parameters open on request -->
+               <div ng-if="state.cfg && !state.cfg.error" role="status"
+                    ng-class="state.cfg.blocked ? 'sm-danger' : (state.cfg.review ? 'sm-warn' : 'sm-ok')">
+                  <b ng-if="state.cfg.blocked" translate="SAASMIG_CFGBLOCKED"></b>
+                  <b ng-if="!state.cfg.blocked">{{tx('SAASMIG_CFGDIROK', {dir: state.cfg.databaseDirectory})}}</b>
+                  · {{tx('SAASMIG_CFGSUMMARY', {n: state.cfg.count, m: state.cfg.unsupported})}}
+                  <a href="" style="white-space:nowrap" ng-if="state.cfg.findings.length" ng-click="state.cfgOpen = !state.cfgOpen">
+                     <i class="fa" ng-class="state.cfgOpen ? 'fa-caret-down' : 'fa-caret-right'"></i>
+                     <span translate="{{state.cfgOpen ? 'SAASMIG_HIDE' : 'SAASMIG_SHOW'}}"></span></a>
+                  <table class="table table-condensed sm-table" ng-if="state.cfgOpen && state.cfg.findings.length" style="margin-top:6px">
+                     <tr ng-repeat="f in state.cfg.findings"><td style="width:90px"><span class="sm-pill sm-{{f.severity}}">{{f.severity}}</span></td>
+                        <td class="sm-code" style="width:38%">{{f.statement || f.object}}</td><td>{{f.suggestion}}</td></tr>
+                  </table>
+               </div>
+               </div>
+            </div>
+            <!-- the command; Copy ticks the row -->
+            <div class="sm-section" ng-if="state.convOpen.command">
+               <div class="sm-sectionbody">
+               <div ng-if="state.migrateCmd">
+                  <!-- the two folders on the v11 host, typed: a browser cannot see that disk -->
+                  <div class="sm-prjdbs" style="margin-bottom:var(--ux-3)" ng-init="cmdDirs()">
+                     <div class="ux-field" style="margin:0">
+                        <label class="ux-label" for="smCmdTool" translate="SAASMIG_CMDTOOL"></label>
+                        <input id="smCmdTool" class="ux-input" style="width:320px" ng-model="state.cmdDirsBy[state.instance].utility" ng-change="cmdDirsChanged()" ng-model-options="{debounce: 400}"
+                               placeholder="{{'SAASMIG_CMDTOOLHINT' | translate}}" autocomplete="off" spellcheck="false"></div>
+                     <div class="ux-field" style="margin:0">
+                        <label class="ux-label" for="smCmdOut" translate="SAASMIG_CMDOUT"></label>
+                        <input id="smCmdOut" class="ux-input" style="width:320px" ng-model="state.cmdDirsBy[state.instance].output" ng-change="cmdDirsChanged()" ng-model-options="{debounce: 400}"
+                               placeholder="{{prjOutputDir() || ('SAASMIG_CMDOUTHINT' | translate)}}" autocomplete="off" spellcheck="false">
+                        <span class="ux-helper" ng-if="prjOutputDir()">{{tx('SAASMIG_CMDOUTPRJ', {path: prjOutputDir()})}}</span></div>
+                  </div>
+                  <p class="ux-helper" translate="SAASMIG_CMDDIRSHELP"></p>
+                  <!-- a picked project that does not know its path yet: one field, and the output goes into it -->
+                  <form class="ux-note ux-note-info sm-prjpath" ng-if="project.isOpen() && project.current.mode === 'folder' && !project.current.project.hostPath"
+                        ng-submit="prjHostPathSave(prj.hostPathAsk)">
+                     <i class="fa fa-folder-open-o" aria-hidden="true"></i>
+                     <span>{{tx('SAASMIG_CMDPRJASK', {name: project.current.folder})}}</span>
+                     <input class="ux-input" style="width:300px" ng-model="prj.hostPathAsk" placeholder="{{'SAASMIG_PRJHOSTPATHHINT' | translate}}" autocomplete="off" spellcheck="false"
+                            aria-label="{{'SAASMIG_PRJHOSTPATH' | translate}}">
+                     <button type="submit" class="ux-btn ux-btn-secondary" ng-disabled="!prj.hostPathAsk" translate="SAASMIG_SAVE"></button></form>
+                  <div><span translate="SAASMIG_LOGCMD"></span>
+                     <button class="btn btn-default btn-xs" style="margin-left:6px" ng-click="cmdCopiedNow()">
+                        <i class="fa fa-clipboard"></i> <span translate="SAASMIG_COPY"></span></button></div>
+                  <div class="sm-code sm-fixed" style="margin-top:4px" ng-copy="cmdCopiedNow(true)">{{cmdText()}}</div>
+                  <div class="sm-muted" ng-if="!state.migrateCmd.cfgDir" translate="SAASMIG_LOGCMDNODIR"></div>
+               </div>
+               </div>
+            </div>
+            <!-- migrate.log: read it, and compare it with the scan -->
+            <div class="sm-section" ng-if="state.convOpen.log">
+               <div class="sm-sectionbody">
+               <div style="margin-bottom:6px"><span translate="SAASMIG_LOGREADSTEP"></span></div>
+               <button class="btn btn-default btn-sm" ng-if="prjOutputDir()" ng-click="readLogFromProject()" title="{{prjOutputDir()}}">
+                  <i class="fa fa-folder-open-o"></i> <span translate="SAASMIG_LOGFROMPRJ"></span></button>
+               <label class="btn btn-default btn-sm"><i class="fa fa-file-text-o"></i> <span translate="SAASMIG_LOGPICK"></span>
+                  <input type="file" accept=".log,.txt,.json" style="display:none" saas-mig-file="readLog(text, name)"></label>
+               <div class="sm-warn" ng-if="state.logFromProject.missing" role="status">{{tx('SAASMIG_LOGNOTINPRJ', {file: state.logFromProject.missing})}}</div>
+               <div class="sm-danger" ng-if="state.logFromProject.error" role="alert">{{state.logFromProject.error}}</div>
+               <!-- the verdict first: can step 4 start, and what is left (user, 2026-10-06) -->
+               <div ng-if="state.migrateLog.verdict" class="ux-note" role="status" style="display:block"
+                    ng-class="{'ux-note-error': state.migrateLog.verdict.level === 'stop', 'ux-note-warning': state.migrateLog.verdict.level === 'todo', 'ux-note-success': state.migrateLog.verdict.level === 'ready'}">
+                  <b>{{tx(state.migrateLog.verdict.level === 'stop' ? 'SAASMIG_VERDICTSTOP' : state.migrateLog.verdict.level === 'todo' ? (state.migrateLog.verdict.todos === 1 ? 'SAASMIG_VERDICTTODO1' : 'SAASMIG_VERDICTTODO') : 'SAASMIG_VERDICTREADY', {n: state.migrateLog.verdict.todos})}}</b>
+                  <ul class="sm-verdict">
+                     <li ng-repeat="v in state.migrateLog.verdict.items" class="sm-verdict-{{v.kind}}">
+                        <i class="fa" ng-class="{stop: 'fa-times-circle', todo: 'fa-exclamation-circle', after: 'fa-clock-o', fine: 'fa-check-circle'}[v.kind]" aria-hidden="true"></i>
+                        <span class="sm-verdicttag">{{{stop: 'SAASMIG_VERDICTTAGSTOP', todo: 'SAASMIG_VERDICTTAGTODO', after: 'SAASMIG_VERDICTTAGAFTER', fine: 'SAASMIG_VERDICTTAGFINE'}[v.kind] | translate}}</span> {{v.text}}</li>
+                  </ul>
+               </div>
+               <div ng-if="state.migrateLog" role="status" ng-class="state.migrateLog.processes.length ? 'sm-warn' : 'sm-ok'">
+                  <b>{{state.migrateLog.fileName}}</b>: <b>{{state.migrateLog.processes.length}}</b> <span translate="SAASMIG_LOGDROPPED"></span> ·
+                  <b>{{state.migrateLog.dataSource.length}}</b> <span translate="SAASMIG_LOGDATASOURCE"></span> ·
+                  {{state.migrateLog.log.errors.length}} <span translate="SAASMIG_LOGERRORS"></span>
+                  <span ng-if="state.migrateLog.log.finished === 'clean'"> · <span translate="SAASMIG_LOGCOMPLETED"></span></span>
+                  <span ng-if="state.migrateLog.log.finished === 'problems'"> · <span translate="SAASMIG_LOGFINISHEDPROBLEMS"></span></span>
+                  <span ng-if="state.migrateLog.log.memory"> · {{state.migrateLog.log.memory}}</span>
+                  <div ng-if="state.migrateLog.log.backup"><span translate="SAASMIG_LOGBACKUPMADE"></span> <span class="sm-code">{{state.migrateLog.log.backup.file}}</span></div>
+                  <div ng-if="state.migrateLog.log.finished && !state.migrateLog.log.backup" class="sm-muted" translate="SAASMIG_LOGNOBACKUPLINE"></div>
+                  <div ng-if="!state.migrateLog.log.finished" translate="SAASMIG_LOGUNFINISHED"></div>
+                  <div ng-if="state.migrateLog.log.summary.length" class="sm-muted">{{state.migrateLog.log.summary.join(' · ')}}</div>
+                  <div ng-if="state.migrateLog.compare.notPredicted.length"><b translate="SAASMIG_LOGNOTPREDICTED"></b> {{state.migrateLog.compare.notPredicted.join(', ')}}</div>
+                  <div ng-if="state.migrateLog.compare.predictedNotInLog.length"><b translate="SAASMIG_LOGNOTINLOG"></b> {{state.migrateLog.compare.predictedNotInLog.join(', ')}}</div>
+                  <div ng-if="state.migrateLog.compare && !state.migrateLog.compare.notPredicted.length && !state.migrateLog.compare.predictedNotInLog.length">{{tx('SAASMIG_LOGAGREES', {n: state.migrateLog.processes.length})}}</div>
+                  <div ng-if="!state.migrateLog.compare" class="sm-muted" translate="SAASMIG_LOGNOSCAN"></div>
+                  <div ng-repeat="n in state.migrateLog.log.notes">{{n}}</div>
+                  <h5 ng-if="state.migrateLog.processes.length" translate="SAASMIG_LOGDROPPEDTITLE"></h5>
+                  <div class="sm-code" ng-repeat="p in state.migrateLog.processes | limitTo: 200">{{p}}<span ng-repeat="e in state.migrateLog.log.processes[p]"> · {{e.region}} {{e.line}} {{e.details}}</span></div>
+                  <h5 ng-if="state.migrateLog.dataSource.length" translate="SAASMIG_LOGDATASOURCETITLE"></h5>
+                  <div class="sm-code" ng-repeat="p in state.migrateLog.dataSource | limitTo: 200">{{p}}<span ng-if="state.migrateLog.log.dataSource[p]"> · {{state.migrateLog.log.dataSource[p]}}</span></div>
+                  <div ng-if="state.migrateLog.warnCounts.length" class="sm-muted" style="margin-top:6px">
+                     <span translate="SAASMIG_LOGOTHERWARN"></span> <span ng-repeat="w in state.migrateLog.warnCounts">{{w.message}} ({{w.n}}){{$last ? '' : ' · '}}</span></div>
+               </div>
+               </div>
+            </div>
+         </div>
+         <div ng-if="x.n === 5 && isV12() && state.scan" ng-include="'tm1r-compile-check.html'"></div>
+         <div ng-if="x.n === 5 && state.scan">
+            <div ng-if="!isV12()">
+               <h4 translate="SAASMIG_COMPARETITLE"></h4>
+               <p class="sm-muted" translate="SAASMIG_COMPAREHELP"></p>
+               <!-- its own picker: it shares state.target with the compile check in step 1 -->
+               <div class="sm-bar">
+                  <div>
+                     <label translate="SAASMIG_TARGET"></label>
+                     <select class="form-control input-sm" ng-model="state.target" ng-options="i for i in otherInstances()">
+                        <option value="" translate="SAASMIG_TARGETNONE"></option></select>
+                  </div>
+                  <div><button class="btn btn-default btn-sm" ng-click="compare()" ng-disabled="!state.target || !!state.busy || targetMismatch()"><i class="fa fa-exchange"></i> <span translate="SAASMIG_COMPARE"></span></button></div>
+               </div>
+               <div class="sm-danger" ng-if="targetMismatch()"><span translate="SAASMIG_TARGETNOTV12"></span> ({{state.target}}: {{state.targetVersion}})</div>
+            </div>
+            <div ng-if="isV12()">
+               <h4 translate="SAASMIG_COMPAREV11TITLE"></h4>
+               <p class="sm-muted" translate="SAASMIG_COMPAREV11HELP"></p>
+               <div class="sm-bar">
+                  <div>
+                     <label translate="SAASMIG_SOURCEV11"></label>
+                     <select class="form-control input-sm" ng-model="state.target" ng-options="i for i in otherInstances()">
+                        <option value="" translate="SAASMIG_TARGETNONE"></option></select>
+                  </div>
+                  <div><button class="btn btn-default btn-sm" ng-click="compare()" ng-disabled="!state.target || !!state.busy || targetMismatch()">
+                     <i class="fa fa-exchange"></i> <span translate="SAASMIG_COMPARE"></span></button></div>
+               </div>
+               <div class="sm-danger" ng-if="targetMismatch()"><span translate="SAASMIG_SOURCENOTV11"></span> ({{state.target}}: {{state.targetVersion}})</div>
+               <div class="sm-danger" ng-if="state.targetProblem">{{tx(state.targetProblem === 'signin' ? 'SAASMIG_NOTSIGNEDIN' : 'SAASMIG_UNREACHABLE', {inst: state.target})}}</div>
+            </div>
+            <div ng-if="state.compare" class="sm-warn" role="status">
+               <div ng-repeat="k in ['processes','cubes','dimensions','chores']"><b>{{state.compare[k].length}}</b> {{k}}
+                  <span ng-if="!state.compare.fromV12"><span translate="SAASMIG_MISSING"></span> {{state.compare.other}}</span>
+                  <span ng-if="state.compare.fromV12"><span translate="SAASMIG_MISSINGFROMV11"></span> {{state.compare.other}}</span></div>
+               <div class="sm-scroll" style="max-height:320px;margin-top:6px" ng-if="state.compare.processes.length">
+                  <table class="table table-condensed sm-table">
+                     <tr ng-repeat="p in state.compare.processes"><td>{{p}}</td><td class="sm-muted">{{state.compare.reasons[p]}}</td></tr>
+                  </table>
+               </div>
+            </div>
+         </div>
+         <p><a class="ux-link" ng-href="{{stepGuide(x.n)}}" target="_blank"><i class="fa fa-book" aria-hidden="true"></i> <span translate="SAASMIG_STEPGUIDE"></span></a></p>
+      </div>
+   </div>
+
+   <!-- ================================================================ FINDINGS -->
+   <div ng-if="state.tab==='findings'" style="padding-top:10px">
+      <div ng-if="!state.scan" class="sm-muted" translate="SAASMIG_OVERVIEWEMPTY"></div>
+      <div ng-if="state.scan">
+         <div class="sm-bar sm-filterbar">
+            <div><label translate="SAASMIG_SEVERITY"></label>
+               <select class="form-control input-sm" ng-model="state.filters.severity">
+                  <option value="" translate="SAASMIG_ALL"></option><option value="ACT" translate="SAASMIG_SEVACT"></option><option>BLOCKER</option><option>BREAKS</option><option>REVIEW</option><option>INFO</option></select></div>
+            <div><label translate="SAASMIG_OBJECTFILTER"></label>
+               <select class="form-control input-sm" ng-model="state.filters.objectType">
+                  <option value="" translate="SAASMIG_ALL"></option>
+                  <option ng-repeat="k in core.OBJECT_TYPES" value="{{k}}">{{typeLabel(k)}}</option>
+                  <option value="Other">{{typeLabel('Other')}}</option></select></div>
+            <div><label translate="SAASMIG_FILTER"></label><input type="text" class="form-control input-sm" ng-model="state.filters.text"></div>
+            <div><label translate="SAASMIG_ONLY"></label>
+               <div class="form-control input-sm sm-checks">
+                  <label><input type="checkbox" ng-model="state.filters.fixableOnly"> <span translate="SAASMIG_FIXABLEONLY"></span></label>
+                  <label><input type="checkbox" ng-model="state.filters.deprecatedOnly"> <span translate="SAASMIG_DEPRECATEDONLY"></span></label>
+               </div></div>
+            <div><label translate="SAASMIG_INCLUDE"></label>
+               <div class="form-control input-sm sm-checks">
+                  <label><input type="checkbox" ng-model="state.filters.showApps"> <span translate="SAASMIG_SHOWAPPS"></span></label>
+                  <label><input type="checkbox" ng-model="state.filters.showBedrock"> <span translate="SAASMIG_SHOWBEDROCK"></span></label>
+                  <span class="sm-skipctl" ng-if="skippedCount()" saas-mig-tip="'SAASMIG_SKIPPEDTIP' | translate">
+                     <label><input type="checkbox" ng-model="state.filters.showSkipped"> <span><span translate="SAASMIG_SHOWSKIPPED"></span> (<b>{{skippedCount()}}</b>)</span></label>
+                     · <a href="" ng-click="unskipAll()" translate="SAASMIG_UNSKIPALL"></a></span>
+               </div></div>
+         </div>
+         <div class="sm-actionbar">
+            <div class="sm-chips">
+               <span ng-repeat="c in severityChips()" class="sm-pill sm-chip sm-{{c.key}}" ng-class="{'sm-chip-on': state.filters.severity === c.key, 'sm-chip-off': state.filters.severity && state.filters.severity !== c.key}"
+                  saas-mig-tip="severityTip(c.key) + ' ' + ('SAASMIG_CHIPCLICK' | translate)" ng-click="toggleSeverity(c.key)" ng-bind="c.key + ' · ' + c.count"></span>
+               <a href="" ng-if="state.filters.severity" ng-click="toggleSeverity(state.filters.severity)" translate="SAASMIG_CHIPALL"></a>
+            </div>
+            <div class="sm-actions">
+               <span class="sm-muted" ng-if="hiddenSelected()" saas-mig-tip="'SAASMIG_HIDDENSELTIP' | translate">
+                  <b>{{hiddenSelected()}}</b> <span translate="SAASMIG_HIDDENSEL"></span>
+                  · <a href="" ng-click="clearSelection()" translate="SAASMIG_CLEARALLSEL"></a></span>
+               <button class="btn btn-primary btn-sm" ng-click="openBulk()" ng-disabled="!selectedCount() || !isAdmin() || !!state.busy || scanStale()" title="{{scanStale() ? ('SAASMIG_PRJSTALE' | translate) : ''}}">
+                  <i class="fa fa-magic"></i> <span>{{selectedCount() ? tx('SAASMIG_APPLYSELECTEDN', {n: selectedCount(), m: selectedFindingCount()}) : ('SAASMIG_APPLYSELECTED' | translate)}}</span></button>
+               <button class="btn btn-default btn-sm" ng-click="exportCsv()"><i class="fa fa-download" aria-hidden="true"></i> <span translate="SAASMIG_EXPORTCSV"></span></button>
+            </div>
+         </div>
+         <div class="sm-warn" ng-if="!isAdmin()" translate="SAASMIG_NOTADMIN"></div>
+
+         <!-- bulk confirm -->
+         <div class="sm-warn" ng-if="state.bulk">
+            <b translate="SAASMIG_BULKTITLE"></b>
+            <p><span ng-if="!isV12()" translate="SAASMIG_LIVEWARNING"></span><span ng-if="isV12()" translate="SAASMIG_LIVEWARNINGV12"></span></p>
+            <p>{{state.bulk.fixable.length}} <span translate="SAASMIG_BULKOBJECTS"></span> · {{state.bulk.statements}} <span translate="SAASMIG_BULKSTATEMENTS"></span>
+               <span ng-if="state.bulk.blocked.length"> · <b>{{state.bulk.blocked.length}}</b> <span translate="SAASMIG_BULKBLOCKED"></span>:
+                  <span ng-repeat="b in state.bulk.blocked">{{b.name}}{{$last ? '' : ', '}}</span></span></p>
+            <p class="sm-muted"><span translate="SAASMIG_BACKUPNOTE"></span> <span ng-if="state.target && !isV12()"> <span translate="SAASMIG_BULKV12"></span> {{state.target}}.</span></p>
+            <button class="btn btn-danger btn-sm" ng-click="applyBulk()" ng-disabled="!state.bulk.fixable.length"><span translate="SAASMIG_APPLYNOW"></span></button>
+            <button class="btn btn-default btn-sm" ng-click="closeBulk()"><span translate="SAASMIG_CANCEL"></span></button>
+         </div>
+
+         <div class="sm-split">
+            <div class="sm-left">
+               <div class="sm-scroll" saas-mig-fill="visibleFindings().length">
+                  <table class="table table-condensed sm-table" saas-mig-resizable="'findings2'">
+                     <tr>
+                        <th style="width:24px" saas-mig-nosize><input type="checkbox" ng-if="isAdmin() && headState() !== 'empty'" ng-checked="headState() === 'all'"
+                           saas-mig-indeterminate="headState() === 'some'" ng-click="toggleAllVisible()" saas-mig-tip="headTip()"></th>
+                        <th><span translate="SAASMIG_SEVERITY"></span></th><th><span translate="SAASMIG_OBJECT"></span></th>
+                        <th><span translate="SAASMIG_WHAT"></span></th><th><span translate="SAASMIG_FIX"></span></th><th saas-mig-nosize></th>
+                     </tr>
+                     <tr ng-repeat="f in visibleFindings() | limitTo: 1500" class="sm-row" ng-class="{'sm-active': state.detail.finding === f, 'sm-skipped': isSkipped(f)}" ng-click="openDetail(f)">
+                        <td ng-click="$event.stopPropagation()"><input type="checkbox" ng-if="fixable(f) && isAdmin()" ng-checked="isSelected(f)" ng-click="toggle(f, $event)"></td>
+                        <td><span class="sm-pill sm-{{f.severity}}" saas-mig-tip="severityTip(f.severity)">{{f.severity}}</span></td>
+                        <td class="sm-objcell" title="{{f.objectType}} {{f.object}}"><span class="sm-muted">{{f.objectType}}</span><br><a class="sm-objlink" ng-if="objectHref(f)" ng-href="{{objectHref(f)}}" ng-click="$event.stopPropagation()"
+                              saas-mig-tip="'SAASMIG_OPENOBJECTTIP' | translate">{{f.object}}</a><span ng-if="!objectHref(f)">{{f.object}}</span>
+                           <span class="sm-pill sm-dep" ng-if="f.deprecated">{{isV12() ? ('SAASMIG_DROPPEDV12' | translate) : ('SAASMIG_DROPPED' | translate)}}</span>
+                           <a href="" class="sm-tablink" ng-if="f.tm1Applications || f.rule === 'apps.tm1Applications'" ng-click="$event.stopPropagation(); openApps()"
+                              saas-mig-tip="'SAASMIG_GOTOAPPSTIP' | translate"><i class="fa fa-archive"></i> <span translate="SAASMIG_TABAPPS"></span></a>
+                           <a href="" class="sm-tablink" ng-if="f.bedrock || f.rule === 'bedrock.group'" ng-click="$event.stopPropagation(); openBedrock()"
+                              saas-mig-tip="'SAASMIG_GOTOBEDROCKTIP' | translate"><i class="fa fa-cubes"></i> <span translate="SAASMIG_TABBEDROCK"></span></a></td>
+                        <td class="sm-what"><b><span class="sm-muted sm-where">{{core.PROCEDURE_LABEL[f.procedure] || f.procedure}}<span ng-if="f.line"> {{f.line}}</span> · </span>{{f.function || f.referenced || f.path}}</b>
+                           <div class="sm-clip" title="{{f.statement}}">{{f.statement}}</div></td>
+                        <td><span class="sm-pill sm-manual" ng-if="isSkipped(f)" translate="SAASMIG_SKIPPED"></span>
+                           <span class="sm-pill" ng-if="!isSkipped(f) && f.fix !== core.FIX_ON_TM1_12" ng-class="fixable(f) ? 'sm-fix' : 'sm-manual'">{{f.fix}}</span>
+                           <span class="sm-pill sm-ontm112" ng-if="!isSkipped(f) && f.fix === core.FIX_ON_TM1_12" saas-mig-tip="(isV12() ? 'SAASMIG_ONTM112TIPV12' : 'SAASMIG_ONTM112TIP') | translate">{{f.fix}}</span></td>
+                        <td ng-click="$event.stopPropagation()"><a href="" class="sm-skipbtn" ng-if="canSkip(f)" ng-click="setSkipped(f, !isSkipped(f))"
+                           saas-mig-tip="(isSkipped(f) ? 'SAASMIG_UNSKIPTIP' : 'SAASMIG_SKIPTIP') | translate"><i class="fa" ng-class="isSkipped(f) ? 'fa-undo' : 'fa-eye-slash'"></i></a></td>
+                     </tr>
+                  </table>
+               </div>
+               <div class="sm-muted" ng-if="visibleFindings().length > 1500" translate="SAASMIG_TRUNCATED"></div>
+            </div>
+            <div class="sm-gutter" ng-if="state.detail" saas-mig-splitter="'findings'" saas-mig-tip="'SAASMIG_SPLITTIP' | translate"></div>
+            <div class="sm-right" ng-if="state.detail">
+               <div class="sm-panel" saas-mig-fill="state.detail">
+                  <a href="" class="sm-close" ng-click="closeDetail()" aria-label="{{'SAASMIG_CLOSE' | translate}}"><i class="fa fa-times" aria-hidden="true"></i></a>
+                  <h4><span class="sm-pill sm-{{state.detail.finding.severity}}">{{state.detail.finding.severity}}</span>
+                     {{state.detail.finding.objectType}} <a class="sm-objlink" ng-if="objectHref(state.detail.finding)" ng-href="{{objectHref(state.detail.finding)}}"
+                        saas-mig-tip="'SAASMIG_OPENOBJECTTIP' | translate">{{state.detail.finding.object}}</a><span ng-if="!objectHref(state.detail.finding)">{{state.detail.finding.object}}</span></h4>
+                  <p>{{state.detail.finding.suggestion}}</p>
+                  <!-- ON TM1 12: where it gets done, one click away -->
+                  <p ng-if="state.detail.finding.fix === core.FIX_ON_TM1_12"><span class="sm-pill sm-ontm112" saas-mig-tip="(isV12() ? 'SAASMIG_ONTM112TIPV12' : 'SAASMIG_ONTM112TIP') | translate">{{core.FIX_ON_TM1_12}}</span>
+                     <a href="" class="ux-link" ng-click="openDataFiles()">{{(isV12() ? 'SAASMIG_UPLOADINDATAFILES' : 'SAASMIG_OPENDATAFILES') | translate}}</a></p>
+
+                  <p ng-if="fixEvidence(state.detail.finding)" class="sm-muted" style="margin-top:-4px">
+                     <span class="sm-pill" ng-class="fixEvidence(state.detail.finding).level >= 5 ? 'sm-ok-pill' : 'sm-manual'"
+                        saas-mig-tip="fixEvidence(state.detail.finding).l5 || ''">{{tx('SAASMIG_EVIDENCE', {level: fixEvidence(state.detail.finding).level})}}</span>
+                     {{tx(fixEvidence(state.detail.finding).evidence === 'model' ? 'SAASMIG_EVIDENCEMODEL' : 'SAASMIG_EVIDENCECANARY', {model: fixVerifiedWith.model, utility: fixVerifiedWith.utility, date: fixVerifiedWith.date})}}
+                     <span ng-if="fixEvidence(state.detail.finding).followUp"><br><b translate="SAASMIG_EVIDENCEFOLLOWUP"></b> {{fixEvidence(state.detail.finding).followUp}}</span>
+                  </p>
+                  <div ng-if="canSkip(state.detail.finding)" style="margin:0 0 8px">
+                     <span class="sm-pill sm-manual" ng-if="isSkipped(state.detail.finding)" translate="SAASMIG_SKIPPED"></span>
+                     <button class="btn btn-default btn-xs" ng-click="setSkipped(state.detail.finding, !isSkipped(state.detail.finding))"
+                        saas-mig-tip="(isSkipped(state.detail.finding) ? 'SAASMIG_UNSKIPTIP' : 'SAASMIG_SKIPTIP') | translate">
+                        <i class="fa" ng-class="isSkipped(state.detail.finding) ? 'fa-undo' : 'fa-eye-slash'"></i>
+                        <span translate="{{isSkipped(state.detail.finding) ? 'SAASMIG_UNSKIP' : 'SAASMIG_SKIP'}}"></span></button></div>
+                  <div class="sm-code" ng-if="state.detail.finding.statement">{{state.detail.finding.statement}}</div>
+                  <div ng-if="state.detail.finding.assembledMdx" style="margin-top:8px"><h5 style="margin-bottom:4px"><span translate="SAASMIG_ASSEMBLED"></span> <span class="sm-muted">{{state.detail.finding.builtOn.join(', ')}}</span></h5>
+                     <div class="sm-code">{{state.detail.finding.assembledMdx}}</div></div>
+                  <div ng-if="state.detail.finding.fixedMdx && !state.detail.finding.fixedStatement || state.detail.finding.fixedNote" style="margin-top:8px">
+                     <h5 style="margin-bottom:4px"><span translate="{{state.detail.finding.assembledMdx ? 'SAASMIG_FIXEDMDX' : 'SAASMIG_FIXEDSTATEMENT'}}"></span>
+                        <button class="btn btn-default btn-xs" style="margin-left:6px" ng-click="copyText(state.detail.finding.fixedStatement || state.detail.finding.fixedMdx)">
+                           <i class="fa fa-clipboard"></i> <span translate="SAASMIG_COPY"></span></button></h5>
+                     <div class="sm-code sm-fixed">{{state.detail.finding.fixedStatement || state.detail.finding.fixedMdx}}</div>
+                     <p class="sm-muted" translate="{{state.detail.finding.fixedNote || 'SAASMIG_FIXEDNOTE'}}"></p>
+                  </div>
+                  <div ng-if="state.detail.finding.rule === 'apps.tm1Applications'"><span translate="SAASMIG_APPSNOTE"></span>
+                     <a href="" ng-click="openApps()" translate="SAASMIG_GOTOAPPS"></a></div>
+                  <div ng-if="state.detail.finding.tm1Applications"><a href="" ng-click="openApps()" translate="SAASMIG_GOTOAPPS"></a></div>
+                  <div ng-if="state.detail.finding.bedrock"><a href="" ng-click="openBedrock()" translate="SAASMIG_GOTOBEDROCK"></a></div>
+
+                  <!-- 2: delete a process, refused while anything still calls it -->
+                  <div ng-if="state.detail.finding.objectType === 'Process' && isAdmin()" style="margin:8px 0">
+                     <button class="btn btn-default btn-xs" ng-if="!state.del || state.del.name !== state.detail.finding.object" ng-click="checkDelete(state.detail.finding.object)" ng-disabled="!!state.busy">
+                        <i class="fa fa-trash"></i> <span translate="SAASMIG_DELPROC"></span></button>
+                     <div ng-if="state.del && state.del.name === state.detail.finding.object">
+                        <div ng-if="state.del.checking"><i class="fa fa-spinner fa-spin"></i> <span translate="SAASMIG_DELCHECKING"></span></div>
+                        <div class="sm-danger" ng-if="state.del.error">{{state.del.error}}</div>
+                        <div class="sm-danger" ng-if="state.del.callers.blocked">
+                           <b translate="SAASMIG_DELBLOCKED"></b>
+                           <div class="sm-code" ng-repeat="c in state.del.callers.calls.concat(state.del.callers.mentions)">{{c.fromType}} {{c.from}} · {{core.PROCEDURE_LABEL[c.procedure] || c.procedure}}<span ng-if="c.line"> {{c.line}}</span>: {{c.statement | limitTo: 160}}</div>
+                           <button class="btn btn-default btn-xs" ng-click="state.del = null" translate="SAASMIG_CANCEL"></button>
+                        </div>
+                        <div class="sm-danger" ng-if="state.del.callers && !state.del.callers.blocked">
+                           <p><b translate="SAASMIG_DELCONFIRMTITLE"></b> {{state.del.name}} · <span translate="SAASMIG_DELNOCALLERS"></span></p>
+                           <!-- one summary line; the calls open on request, one line each (user, 2026-09-30) -->
+                           <div class="sm-warn" ng-if="state.del.callers.possible.length">
+                              <i class="fa fa-exclamation-triangle"></i> <b>{{possibleSummary(state.del)}}</b>
+                              <a href="" style="white-space:nowrap" ng-click="state.del.showPossible = !state.del.showPossible">
+                                 <i class="fa" ng-class="state.del.showPossible ? 'fa-caret-down' : 'fa-caret-right'"></i>
+                                 <span translate="{{state.del.showPossible ? 'SAASMIG_HIDE' : 'SAASMIG_SHOW'}}"></span></a>
+                              <div ng-if="state.del.showPossible" style="margin-top:4px">
+                                 <div class="sm-clip" style="max-width:none" ng-repeat="c in state.del.callers.possible" title="{{c.statement}}">{{c.from}} · {{core.PROCEDURE_LABEL[c.procedure]}} {{c.line}}: {{oneLine(c.statement)}}</div></div></div>
+                           <p class="sm-muted" translate="SAASMIG_DELNOTE"></p>
+                           <button class="btn btn-danger btn-xs" ng-click="deleteProcess()" ng-disabled="!!state.busy || scanStale()"><i class="fa fa-trash"></i> <span translate="SAASMIG_DELNOW"></span></button>
+                           <button class="btn btn-default btn-xs" ng-click="state.del = null" translate="SAASMIG_CANCEL"></button>
+                        </div>
+                     </div>
+                  </div>
+                  <!-- TM1SubsetBasis on TM1 12: the list is read from a v11 database the user picks (user, 2026-10-02) -->
+                  <div class="sm-warn" style="margin:8px 0" ng-if="state.detail.finding.rule === 'mdx.subsetBasis' && state.detail.finding.basisCheck && state.detail.finding.fix !== 'REWRITE' && isV12()">
+                     <span translate="SAASMIG_BASISASK"></span>
+                     <select class="form-control input-sm" style="display:inline-block;width:auto;margin:0 6px" ng-model="basisFrom.db" ng-init="basisFrom.db = basisFrom.db || state.target" ng-options="i for i in otherInstances()">
+                        <option value="" translate="SAASMIG_TARGETNONE"></option></select>
+                     <button class="btn btn-default btn-xs" ng-click="readBasisFrom(basisFrom.db)" ng-disabled="!basisFrom.db || !!state.busy"><i class="fa fa-download"></i> <span translate="SAASMIG_BASISREAD"></span></button>
+                     <div class="sm-danger" ng-if="state.basisFromError">{{state.basisFromError}}</div>
+                  </div>
+                  <!-- element security: READ for the listed groups, never part of Apply selected (user, 2026-10-01) -->
+                  <div ng-if="state.detail.finding.rule === 'mdx.elementSecurity' && state.detail.finding.groups.length && isAdmin()" style="margin:8px 0">
+                     <button class="btn btn-default btn-xs" ng-if="!state.grant || state.grant.finding !== state.detail.finding" ng-click="checkGrant(state.detail.finding)" ng-disabled="!!state.busy">
+                        <i class="fa fa-unlock-alt"></i> <span translate="SAASMIG_GRANTCHECK"></span> {{state.detail.finding.referenced}}</button>
+                     <div ng-if="state.grant && state.grant.finding === state.detail.finding">
+                        <div ng-if="state.grant.checking"><i class="fa fa-spinner fa-spin"></i> <span translate="SAASMIG_GRANTCHECKING"></span></div>
+                        <div class="sm-danger" ng-if="state.grant.error">{{state.grant.error}}</div>
+                        <div class="sm-danger" ng-if="state.grant.plan && !state.grant.plan.writable">
+                           <b translate="SAASMIG_GRANTRULE"></b> {{state.grant.cube}}: {{state.grant.plan.ruleDerived.join(', ')}}.
+                           <span translate="SAASMIG_GRANTRULEHOW"></span>
+                           <div><button class="btn btn-default btn-xs" ng-click="cancelGrant()" translate="SAASMIG_CANCEL"></button></div>
+                        </div>
+                        <div class="sm-muted" ng-if="state.grant.leftOut.length"><b translate="SAASMIG_GRANTLEFTOUT"></b> {{state.grant.leftOut.join(', ')}}</div>
+                        <div ng-if="state.grant.nobody"><span translate="SAASMIG_GRANTNOBODY"></span>
+                           <div><button class="btn btn-default btn-xs" ng-click="cancelGrant()" translate="SAASMIG_CANCEL"></button></div></div>
+                        <div class="sm-warn" ng-if="state.grant.plan && state.grant.plan.writable">
+                           <p><b translate="SAASMIG_GRANTTITLE"></b> {{state.grant.element}} · {{state.grant.groups.join(', ')}}</p>
+                           <p ng-if="state.grant.consolidated" translate="SAASMIG_GRANTCONSOLIDATED"></p>
+                           <p class="sm-muted" translate="SAASMIG_GRANTNOTE"></p>
+                           <button class="btn btn-danger btn-xs" ng-click="applyGrant()" ng-disabled="!!state.busy || scanStale()"><i class="fa fa-unlock-alt"></i> <span translate="SAASMIG_GRANTNOW"></span></button>
+                           <button class="btn btn-default btn-xs" ng-click="cancelGrant()" translate="SAASMIG_CANCEL"></button>
+                        </div>
+                     </div>
+                  </div>
+                  <div ng-if="state.detail.finding.rule === 'bedrock.group'"><span translate="SAASMIG_BEDROCKNOTE"></span>
+                     <a href="" ng-click="openBedrock()" translate="SAASMIG_GOTOBEDROCK"></a></div>
+
+                  <!-- a process Apply refuses: MANUAL in the list too, and here the lines that block it -->
+                  <div class="sm-danger" ng-if="state.detail.finding.refused">
+                     <span translate="SAASMIG_REFUSED"></span>
+                     <div ng-repeat="b in state.detail.finding.refused" class="sm-code">{{core.PROCEDURE_LABEL[b.procedure]}} {{b.line}}: {{b.statement}}<span ng-if="b.reason"> ({{b.reason}})</span></div>
+                  </div>
+                  <div ng-if="state.detail.preview">
+                     <h5 translate="SAASMIG_PREVIEW"></h5>
+                     <div class="sm-danger" ng-if="!state.detail.preview.fix.fixable">
+                        <span translate="SAASMIG_NOTFIXABLE"></span>
+                        <div ng-repeat="b in state.detail.preview.fix.blockers" class="sm-code">{{core.PROCEDURE_LABEL[b.procedure]}} {{b.line}}: {{b.statement}}<span ng-if="b.reason"> ({{b.reason}})</span></div>
+                     </div>
+                     <div ng-if="state.detail.preview.fix.kept.length" class="sm-muted"><span translate="SAASMIG_KEPT"></span> <b>{{state.detail.preview.fix.kept.length}}</b></div>
+                     <div ng-if="state.detail.preview.fix.fixable && !state.detail.preview.fix.changed" class="sm-muted" translate="SAASMIG_NOTHINGTOAPPLY"></div>
+                     <div ng-if="state.detail.preview.fix.changed">
+                        <p class="sm-muted">{{state.detail.preview.fix.removed.length}} <span translate="SAASMIG_BULKSTATEMENTS"></span>
+                           <span ng-if="state.detail.preview.fix.needsManualWork"> · <b translate="SAASMIG_NEEDSMANUAL"></b></span></p>
+                        <div ng-repeat="h in state.detail.preview.hunks">
+                           <b>{{h.procedure}}</b>
+                           <div class="sm-diff">
+                              <div ng-repeat="r in h.rows" ng-class="{'sm-del': r.op==='-', 'sm-add': r.op==='+', 'sm-gap': r.op==='…'}"><span class="sm-ln">{{r.op==='+' ? r.b : r.a}}</span>{{r.op}} {{r.text}}</div>
+                           </div>
+                        </div>
+                        <!-- one line for this object; the bulk confirmation keeps the full text (user, 2026-09-29) -->
+                        <div class="sm-warn"><span translate="{{applyNoteKey(state.detail.preview.type)}}"></span>
+                           <span ng-if="!isV12() && commentsOut(state.detail.preview)" translate="SAASMIG_APPLYNOTE_V11EFFECT"></span></div>
+                        <button class="btn btn-danger btn-sm" ng-click="applyDetail()" ng-disabled="!isAdmin() || !!state.busy || !state.detail.preview.fix.fixable || scanStale()" title="{{scanStale() ? ('SAASMIG_PRJSTALE' | translate) : ''}}">
+                           <i class="fa fa-magic"></i> <span translate="SAASMIG_APPLYTHIS"></span></button>
+                        <span class="sm-muted" ng-if="state.target && !isV12()"> <span translate="SAASMIG_BULKV12"></span> {{state.target}}</span>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </div>
+      </div>
+   </div>
+
+   <!-- ================================================================ TM1 APPLICATIONS -->
+   <div ng-if="state.tab==='apps'" style="padding-top:10px">
+      <p class="sm-muted" translate="SAASMIG_APPSHELP"></p>
+      <div ng-if="!state.scan" class="sm-muted" translate="SAASMIG_SCANFIRST"></div>
+      <div ng-if="state.scan && state.tp">
+         <div ng-if="!state.tp.inv.items.length && !state.tp.inv.uses.length" class="sm-ok" translate="SAASMIG_APPSNONE"></div>
+         <!-- every }tp_ object gone, but something still names one (user, v0.8.4): that is a warning, not
+              an all-clear, and the list of those objects then takes the whole width -->
+         <div ng-if="!state.tp.inv.items.length && state.tp.inv.uses.length" class="sm-warn">{{state.tp.inv.uses.length === 1 ? ('SAASMIG_APPSNONELEFT1' | translate) : tx('SAASMIG_APPSNONELEFT', {n: state.tp.inv.uses.length})}}</div>
+         <div ng-if="state.tp.inv.items.length">
+            <div class="sm-bar">
+               <div class="sm-muted" style="padding-bottom:6px">
+                  <span ng-repeat="(k, n) in state.tp.inv.counts"><b>{{n}}</b> {{k}}{{$last ? '' : ' · '}}</span>
+                  · <b>{{tpSelected().length}}</b> <span translate="SAASMIG_SELECTEDN"></span></div>
+               <div>
+                  <button class="btn btn-default btn-sm" ng-click="tpSelectAll(true)" translate="SAASMIG_SELECTALL"></button>
+                  <button class="btn btn-default btn-sm" ng-click="tpSelectAll(false)" translate="SAASMIG_CLEAR"></button>
+                  <button class="btn btn-danger btn-sm" ng-click="state.tp.confirm = true" ng-disabled="!tpSelected().length || !isAdmin() || !!state.busy || scanStale()">
+                     <i class="fa fa-trash"></i> <span translate="SAASMIG_APPSDELETE"></span> ({{tpSelected().length}})</button>
+               </div>
+            </div>
+            <div class="sm-warn" ng-if="!isAdmin()" translate="SAASMIG_NOTADMIN"></div>
+            <div class="sm-danger" ng-if="state.tp.confirm">
+               <b translate="SAASMIG_APPSCONFIRMTITLE"></b>
+               <p><span translate="SAASMIG_APPSCONFIRM"></span> <b>{{state.instance}}</b>: {{tpSelected().length}} <span translate="SAASMIG_OBJECTS"></span>.</p>
+               <p class="sm-muted" translate="SAASMIG_APPSBACKUPNOTE"></p>
+               <p class="sm-muted" ng-if="state.tp.inv.uses.length"><b>{{state.tp.inv.uses.length}}</b> <span translate="SAASMIG_APPSUSESWARN"></span></p>
+               <div ng-if="state.tp.unreadable.length" class="sm-warn">
+                  <b>{{state.tp.unreadable.length}}</b> <span translate="SAASMIG_APPSUNREADABLE"></span>
+                  <div class="sm-code" ng-repeat="u in state.tp.unreadable">{{u}}</div>
+                  <label style="font-weight:normal"><input type="checkbox" ng-model="state.tp.ackCells"> <span translate="SAASMIG_APPSUNREADABLEACK"></span></label>
+               </div>
+               <button class="btn btn-danger btn-sm" ng-click="applyTp()" ng-disabled="state.tp.unreadable.length && !state.tp.ackCells"><span translate="SAASMIG_APPSDELETENOW"></span></button>
+               <button class="btn btn-default btn-sm" ng-click="state.tp.confirm = false" translate="SAASMIG_CANCEL"></button>
+            </div>
+         </div>
+         <div ng-if="state.tp.result" role="status" ng-class="state.tp.result.failed || state.tp.result.error ? 'sm-warn' : 'sm-ok'">
+            {{state.tp.result.at | date:'HH:mm:ss'}} · <b>{{state.tp.result.deleted}}</b> <span translate="SAASMIG_DELETEDN"></span>
+            · <b>{{state.tp.result.failed}}</b> <span translate="SAASMIG_FAILEDN"></span>
+            <span ng-if="state.tp.result.error"> · {{state.tp.result.error}}</span>
+            <div class="sm-code" ng-repeat="r in state.tp.result.results | filter:{outcome:'error'}">{{r.item.type}} {{r.item.name}}: {{r.message}}</div>
+         </div>
+         <div class="sm-split">
+            <div class="sm-left" ng-if="state.tp.inv.items.length">
+               <div class="sm-scroll" saas-mig-fill="state.tp.inv.items.length">
+                  <table class="table table-condensed sm-table">
+                     <tr><th style="width:24px"></th><th translate="SAASMIG_TYPE"></th><th translate="SAASMIG_OBJECT"></th><th></th></tr>
+                     <tr ng-repeat="i in state.tp.inv.items">
+                        <td><input type="checkbox" ng-model="state.tp.selected[i.key]"></td>
+                        <td class="sm-muted">{{i.type}}</td>
+                        <td>{{i.parent ? i.parent + ' / ' : ''}}{{i.name}}</td>
+                        <td><span class="sm-pill sm-manual" ng-if="i.control" translate="SAASMIG_CONTROLOBJECT"></span></td>
+                     </tr>
+                  </table>
+               </div>
+            </div>
+            <div class="sm-gutter" ng-if="state.tp.inv.items.length && state.tp.inv.uses.length" saas-mig-splitter="'apps'" saas-mig-tip="'SAASMIG_SPLITTIP' | translate"></div>
+            <div class="sm-right" ng-if="state.tp.inv.uses.length">
+               <div class="sm-panel" saas-mig-fill="state.tp.inv.uses.length">
+                  <h5><span class="sm-pill sm-BREAKS">BREAKS</span> <span translate="SAASMIG_APPSUSES"></span></h5>
+                  <p class="sm-muted" translate="SAASMIG_APPSUSESHELP"></p>
+                  <table class="table table-condensed sm-table">
+                     <tr ng-repeat="u in state.tp.inv.uses"><td><span class="sm-muted">{{u.objectType}}</span><br>{{u.object}}</td>
+                        <td class="sm-muted">{{u.where}}</td><td><b>{{u.referenced}}</b><div class="sm-clip" title="{{u.statement}}">{{u.statement}}</div></td></tr>
+                  </table>
+               </div>
+            </div>
+         </div>
+      </div>
+   </div>
+
+   <!-- ================================================================ WHERE USED -->
+   <div ng-if="state.tab==='whereused' && state.whereUsed" style="padding-top:10px">
+      <h4 style="margin-top:0"><i class="fa fa-sitemap"></i> <span translate="SAASMIG_WHEREUSEDTITLE"></span>
+         <span class="sm-muted">{{state.whereUsed.type}}</span> <b>{{state.whereUsed.name}}</b>
+         <button class="btn btn-default btn-xs" style="margin-left:8px" ng-click="openWhereUsed(state.whereUsed)" ng-disabled="!!state.busy"><i class="fa fa-refresh"></i> <span translate="SAASMIG_WHEREUSEDREFRESH"></span></button></h4>
+      <p class="sm-muted" translate="SAASMIG_WHEREUSEDHELP"></p>
+      <div ng-if="!state.whereUsed.refs" class="sm-muted" translate="SAASMIG_WHEREUSEDSCANNING"></div>
+      <div ng-if="state.whereUsed.refs && !state.whereUsed.refs.length" class="sm-ok" translate="SAASMIG_WHEREUSEDNONE"></div>
+      <div ng-if="state.whereUsed.refs.length">
+         <div ng-class="state.whereUsed.breaking ? 'sm-warn' : 'sm-ok'">{{tx('SAASMIG_WHEREUSEDSUMMARY', {o: state.whereUsed.groups.length, n: state.whereUsed.refs.length, b: state.whereUsed.breaking})}}</div>
+         <div class="sm-scroll" saas-mig-fill="state.whereUsed.refs.length">
+            <table class="table table-condensed sm-table">
+               <tr><th translate="SAASMIG_WHEREUSEDBY"></th><th translate="SAASMIG_WHEREUSEDHOW"></th><th translate="SAASMIG_WHEREUSEDSTATUS"></th></tr>
+               <tr ng-repeat-start="g in state.whereUsed.groups">
+                  <td><span class="sm-muted">{{g.fromType}}</span><br>
+                     <a class="sm-objlink" ng-if="whereUsedHref(g)" ng-href="{{whereUsedHref(g)}}">{{g.from}}</a><span ng-if="!whereUsedHref(g)">{{g.from}}</span></td>
+                  <td>{{g.hows.join(', ')}}
+                     <div><a href="" class="sm-muted" ng-click="g.open = !g.open"><i class="fa" ng-class="g.open ? 'fa-caret-down' : 'fa-caret-right'"></i> {{tx('SAASMIG_WHEREUSEDLINES', {n: g.refs.length})}}</a></div></td>
+                  <td><span ng-if="g.status" class="sm-pill sm-{{g.status}}">{{g.status}}</span><span ng-if="!g.status" class="sm-muted">—</span></td>
+               </tr>
+               <tr ng-repeat-end ng-if="g.open">
+                  <td colspan="3" style="border-top:none;padding-top:0">
+                     <div ng-repeat="r in g.refs" class="sm-code sm-clip" title="{{r.statement}}"><span class="sm-muted">{{r.where}}</span> · {{r.how}}<span ng-if="r.statement"> · {{r.statement}}</span></div></td>
+               </tr>
+            </table>
+         </div>
+      </div>
+   </div>
+
+   <!-- ================================================================ DATA FILES -->
+   <!-- Built with the UX kit (UX-GUIDELINES.md), v0.8.0: drop zone, one action bar, a summary
+        line, filter chips, and one table that carries selection and each row's result. -->
+   <div ng-if="state.tab==='datafiles'" style="padding-top:10px">
+      <p class="sm-muted" translate="SAASMIG_DFHELP"></p>
+      <div ng-if="!state.scan" class="sm-muted" translate="SAASMIG_SCANFIRST"></div>
+      <div ng-if="state.scan && state.dataFiles">
+         <div ng-if="!state.dataFiles.rows.length" class="ux-note ux-note-success"><i class="fa fa-check" aria-hidden="true"></i> <span translate="SAASMIG_DFNONE"></span></div>
+         <div ng-if="state.dataFiles.rows.length">
+            <div class="ux-note ux-note-info" ng-if="!isV12()"><i class="fa fa-info-circle" aria-hidden="true"></i> <span translate="SAASMIG_DFV11"></span></div>
+            <!-- nothing picked yet: the drop zone, with both choosers inside it -->
+            <div ng-if="isV12() && !state.dataFiles.files.length" class="ux-dropzone" ng-class="{'ux-dropzone-over': dfDrag.over}"
+                 saas-mig-drop="dataFilesPicked(files)" saas-mig-drop-over="dfDrag.over">
+               <i class="fa fa-folder-open-o ux-dropzone-icon" aria-hidden="true"></i>
+               <div>
+                  <div><b translate="SAASMIG_DFDROP"></b> <span translate="SAASMIG_DFDROPOR"></span>
+                     <label class="ux-link" tabindex="0" ng-keydown="dfKeyPick($event)"><span translate="SAASMIG_DFCHOOSEFOLDER"></span><input type="file" multiple webkitdirectory class="ux-visually-hidden" tabindex="-1" saas-mig-files="dataFilesPicked(files)"></label>
+                     · <label class="ux-link" tabindex="0" ng-keydown="dfKeyPick($event)"><span translate="SAASMIG_DFCHOOSEFILES"></span><input type="file" multiple class="ux-visually-hidden" tabindex="-1" saas-mig-files="dataFilesPicked(files)"></label></div>
+                  <div class="ux-helper" translate="SAASMIG_DFDROPHELP"></div>
+               </div>
+            </div>
+            <!-- after a pick: one line, and still a drop target for a second try -->
+            <div ng-if="isV12() && state.dataFiles.files.length" class="ux-dropzone ux-dropzone-done" ng-class="{'ux-dropzone-over': dfDrag.over}"
+                 saas-mig-drop="dataFilesPicked(files)" saas-mig-drop-over="dfDrag.over">
+               <i class="fa fa-check-circle ux-dropzone-icon" aria-hidden="true"></i>
+               <div style="flex:1">{{tx('SAASMIG_DFPICKEDLINE', {n: state.dataFiles.files.length, found: state.dataFiles.view.found, rows: state.dataFiles.rows.length})}}<span ng-if="dfFolderName()"> · <span class="sm-code">{{dfFolderName()}}</span></span></div>
+               <button class="ux-btn ux-btn-ghost" ng-click="dataFilesClear()"><i class="fa fa-times" aria-hidden="true"></i> <span translate="SAASMIG_DFCLEAR"></span></button>
+            </div>
+            <div class="ux-actionbar">
+               <div class="ux-field">
+                  <label class="ux-label" for="sm-df-root" translate="SAASMIG_DFROOT"></label>
+                  <input id="sm-df-root" class="ux-input" ng-model="state.dataFiles.root" ng-model-options="{debounce: 400}" ng-change="loadDataFiles()">
+               </div>
+               <div class="ux-helper" style="flex:1; min-width:200px; padding-bottom:8px" translate="SAASMIG_DFROOTHELP"></div>
+               <div class="ux-push" ng-if="isV12()">
+                  <button class="ux-btn ux-btn-primary" ng-click="state.dataFiles.confirm = true" ng-disabled="!dataFilesReady().length || !isAdmin() || !!state.busy"
+                          saas-mig-tip="!dataFilesReady().length ? ('SAASMIG_DFNOTHINGSELECTED' | translate) : ''">
+                     <i class="fa fa-upload" aria-hidden="true"></i> <span translate="SAASMIG_DFAPPLY"></span> ({{dataFilesReady().length}})</button>
+               </div>
+            </div>
+            <div class="ux-note ux-note-warning" ng-if="isV12() && !isAdmin()"><i class="fa fa-lock" aria-hidden="true"></i> <span translate="SAASMIG_NOTADMIN"></span></div>
+            <!-- confirm in place, not a modal: the list behind it stays readable -->
+            <div class="ux-note ux-note-error" ng-if="state.dataFiles.confirm" style="display:block">
+               <b translate="SAASMIG_DFCONFIRMTITLE"></b>
+               <p style="margin:4px 0">{{tx('SAASMIG_DFCONFIRM', {n: dataFilesReady().length, db: state.instance})}}</p>
+               <p class="ux-helper" translate="SAASMIG_DFBACKUPNOTE"></p>
+               <button class="ux-btn ux-btn-primary" ng-click="applyDataFiles()" ng-disabled="scanStale()"><span translate="SAASMIG_DFAPPLYNOW"></span></button>
+               <button class="ux-btn ux-btn-secondary" ng-click="state.dataFiles.confirm = false" translate="SAASMIG_CANCEL"></button>
+            </div>
+            <div ng-if="state.dataFiles.summary" class="ux-note" role="status" ng-class="state.dataFiles.summary.attention || state.dataFiles.view.failed.length ? 'ux-note-warning' : 'ux-note-success'">
+               <i class="fa" aria-hidden="true" ng-class="state.dataFiles.summary.attention || state.dataFiles.view.failed.length ? 'fa-exclamation-triangle' : 'fa-check'"></i>
+               <span>{{tx('SAASMIG_DFSUMMARY', {done: state.dataFiles.summary.done, attention: state.dataFiles.summary.attention})}}</span>
+               <a href="" ng-if="state.dataFiles.summary.attention" ng-click="dfFilter('attention')" translate="SAASMIG_DFSHOWATTENTION"></a>
+               <div ng-repeat="e in state.dataFiles.view.failed" style="flex-basis:100%">{{e}}</div>
+            </div>
+            <!-- conflicts are named above the table too: the row may be far down a filtered or long list -->
+            <div class="ux-note ux-note-warning" ng-if="isV12() && state.dataFiles.view.conflicts.length && !state.dataFiles.compare">
+               <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+               <span>{{state.dataFiles.view.conflicts.length === 1 ? ('SAASMIG_DFCONFLICTNOTE1' | translate) : tx('SAASMIG_DFCONFLICTNOTE', {n: state.dataFiles.view.conflicts.length})}}</span>
+               <button class="ux-btn-link" style="font-size:14px" ng-click="dfShowConflicts()">
+                  <i class="fa" ng-class="state.dataFiles.view.conflicts.length === 1 ? 'fa-columns' : 'fa-filter'" aria-hidden="true"></i>
+                  <span>{{(state.dataFiles.view.conflicts.length === 1 ? 'SAASMIG_DFCOMPARE' : 'SAASMIG_DFSHOWATTENTION') | translate}}</span></button>
+            </div>
+            <div class="ux-helper" ng-if="isV12()" style="margin:-4px 0 8px">
+               <span ng-if="state.dataFiles.checking"><i class="fa fa-spinner fa-spin" aria-hidden="true"></i> <span translate="SAASMIG_DFSERVERCHECKING"></span></span>
+               <span ng-if="!state.dataFiles.checking && state.dataFiles.checkedAt">{{tx('SAASMIG_DFCHECKED', {time: (state.dataFiles.checkedAt | date:'HH:mm:ss')})}}
+                  · <a href="" ng-click="dfServerCheck()" translate="SAASMIG_DFREFRESH"></a></span>
+               <span ng-if="state.dataFiles.checkError" style="color:var(--ux-error)"> · {{state.dataFiles.checkError}}</span>
+            </div>
+            <div class="ux-chips" ng-if="isV12()" role="tablist">
+               <a href="" role="tab" ng-repeat="c in ['all','attention','missing','ready','done']" ng-if="c === 'all' || state.dataFiles.view.counts[c]"
+                  class="ux-chip" ng-class="{'ux-chip-warning': c === 'attention', 'ux-chip-active': (state.dataFiles.filter || 'all') === c}"
+                  aria-selected="{{(state.dataFiles.filter || 'all') === c}}" ng-click="dfFilter(c)">{{dfText('filter', c)}} <b>{{state.dataFiles.view.counts[c]}}</b></a>
+            </div>
+            <!-- Compare (user, v0.8.1): a dialog, because it is a side trip from one row and the diff needs the room -->
+            <div class="tm1-readiness-plugin ux-portal" ng-if="state.dataFiles.compare" saas-mig-portal>
+            <div class="ux-modal-backdrop" ng-click="$event.target === $event.currentTarget && !state.dataFiles.compare.replacing && dfCompareClose()">
+               <div class="ux-modal" role="dialog" aria-modal="true" aria-labelledby="sm-df-cmp-title" tabindex="-1" saas-mig-autofocus
+                    ng-keydown="$event.keyCode === 27 && !state.dataFiles.compare.replacing && dfCompareClose()">
+                  <div class="ux-modal-head">
+                     <h3 id="sm-df-cmp-title">{{tx('SAASMIG_DFCMPTITLE', {name: state.dataFiles.compare.v.row.target})}}</h3>
+                     <button class="ux-btn ux-btn-ghost" ng-click="dfCompareClose()" ng-disabled="state.dataFiles.compare.replacing" aria-label="{{'SAASMIG_CLOSE' | translate}}"><i class="fa fa-times" aria-hidden="true"></i></button>
+                  </div>
+                  <div class="ux-modal-body">
+                     <div ng-if="state.dataFiles.compare.loading" class="ux-helper"><i class="fa fa-spinner fa-spin" aria-hidden="true"></i> <span translate="SAASMIG_DFCMPLOADING"></span></div>
+                     <div ng-if="state.dataFiles.compare.error" class="ux-note ux-note-error"><i class="fa fa-exclamation-circle" aria-hidden="true"></i> {{state.dataFiles.compare.error}}</div>
+                     <div ng-if="!state.dataFiles.compare.loading && state.dataFiles.compare.server">
+                        <table class="ux-facts">
+                           <tr><th></th><th translate="SAASMIG_DFCMPONSERVER"></th><th translate="SAASMIG_DFCMPPICKED"></th></tr>
+                           <tr><th translate="SAASMIG_DFCMPFILE"></th><td class="sm-code">{{state.dataFiles.compare.v.row.target}}</td><td class="sm-code">{{state.dataFiles.compare.picked.name}}</td></tr>
+                           <tr><th translate="SAASMIG_DFCMPSIZE"></th><td>{{state.dataFiles.compare.server.size | number}} B</td><td class="ux-differs">{{state.dataFiles.compare.picked.size | number}} B</td></tr>
+                           <tr ng-if="state.dataFiles.compare.server.lines !== undefined"><th translate="SAASMIG_DFCMPLINES"></th><td>{{state.dataFiles.compare.server.lines | number}}</td>
+                              <td ng-class="{'ux-differs': state.dataFiles.compare.server.lines !== state.dataFiles.compare.picked.lines}">{{state.dataFiles.compare.picked.lines | number}}</td></tr>
+                           <tr ng-if="state.dataFiles.compare.server.enc"><th translate="SAASMIG_DFCMPENCODING"></th><td>{{state.dataFiles.compare.server.enc}} · {{state.dataFiles.compare.server.eol}}</td>
+                              <td ng-class="{'ux-differs': state.dataFiles.compare.server.enc !== state.dataFiles.compare.picked.enc || state.dataFiles.compare.server.eol !== state.dataFiles.compare.picked.eol}">{{state.dataFiles.compare.picked.enc}} · {{state.dataFiles.compare.picked.eol}}</td></tr>
+                           <tr ng-if="state.dataFiles.compare.server.updated"><th translate="SAASMIG_DFCMPUPDATED"></th><td>{{state.dataFiles.compare.server.updated | date:'yyyy-MM-dd HH:mm'}}</td><td></td></tr>
+                        </table>
+                        <div class="ux-note ux-note-info" ng-if="state.dataFiles.compare.tooLarge"><i class="fa fa-info-circle" aria-hidden="true"></i> {{tx('SAASMIG_DFCMPTOOLARGE', {mb: 8})}}</div>
+                        <div class="ux-note ux-note-info" ng-if="state.dataFiles.compare.diff && !state.dataFiles.compare.diff.tooBig && !state.dataFiles.compare.diff.removed && !state.dataFiles.compare.diff.added"><i class="fa fa-info-circle" aria-hidden="true"></i> <span translate="SAASMIG_DFCMPSAMETEXT"></span></div>
+                        <div class="ux-note ux-note-warning" ng-if="state.dataFiles.compare.diff.tooBig"><i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+                           {{tx('SAASMIG_DFCMPTOOBIG', {line: state.dataFiles.compare.diff.firstDiff, removed: state.dataFiles.compare.diff.removed, added: state.dataFiles.compare.diff.added})}}</div>
+                        <div ng-if="state.dataFiles.compare.hunks && state.dataFiles.compare.hunks.lines.length">
+                           <p class="ux-helper">{{tx('SAASMIG_DFCMPSUMMARY', {removed: state.dataFiles.compare.diff.removed, added: state.dataFiles.compare.diff.added})}}</p>
+                           <table class="ux-diff">
+                              <tr ng-repeat="l in state.dataFiles.compare.hunks.lines" ng-class="{'ux-del': l.op === '-', 'ux-add': l.op === '+', 'ux-gap': l.gap}">
+                                 <td ng-if="l.gap" colspan="4">{{tx('SAASMIG_DFCMPGAP', {n: l.gap})}}</td>
+                                 <td ng-if="!l.gap" class="ux-ln">{{l.a}}</td><td ng-if="!l.gap" class="ux-ln">{{l.b}}</td><td ng-if="!l.gap" class="ux-ln">{{l.op === '=' ? ' ' : l.op}}</td><td ng-if="!l.gap">{{l.text}}</td>
+                              </tr>
+                           </table>
+                           <p class="ux-helper" ng-if="state.dataFiles.compare.hunks.cut">{{tx('SAASMIG_DFCMPCUT', {n: 400})}}</p>
+                        </div>
+                     </div>
+                  </div>
+                  <div class="ux-modal-foot">
+                     <div ng-if="state.dataFiles.compare.confirm" class="ux-note ux-note-error" style="flex-basis:100%; margin:0; display:block">
+                        {{tx('SAASMIG_DFREPLACECONFIRM', {path: state.dataFiles.compare.v.row.target, db: state.instance, size: (state.dataFiles.compare.picked.size | number), old: (state.dataFiles.compare.server.size | number)})}}</div>
+                     <button class="ux-btn ux-btn-secondary" ng-click="state.dataFiles.compare.confirm ? (state.dataFiles.compare.confirm = false) : dfCompareClose()" ng-disabled="state.dataFiles.compare.replacing">
+                        {{(state.dataFiles.compare.confirm ? 'SAASMIG_CANCEL' : 'SAASMIG_CLOSE') | translate}}</button>
+                     <button class="ux-btn ux-btn-danger" ng-if="isAdmin() && !state.dataFiles.compare.confirm" ng-click="state.dataFiles.compare.confirm = true"
+                             ng-disabled="state.dataFiles.compare.loading || !state.dataFiles.compare.server || state.dataFiles.compare.replacing || scanStale()"><span translate="SAASMIG_DFREPLACE"></span></button>
+                     <button class="ux-btn ux-btn-danger" ng-if="state.dataFiles.compare.confirm" ng-click="dfReplace()" ng-disabled="state.dataFiles.compare.replacing">
+                        <i class="fa fa-spinner fa-spin" ng-if="state.dataFiles.compare.replacing" aria-hidden="true"></i> <span translate="SAASMIG_DFREPLACENOW"></span></button>
+                  </div>
+               </div>
+            </div>
+            </div>
+            <div class="ux-table-wrap" saas-mig-fill="state.dataFiles.view">
+               <!-- fixed proportions (user, v0.8.3): automatic widths gave Process and File the room and
+                    squeezed the paths; one Data source column replaces "Reads now" + "Will read", which
+                    were the same path on almost every row -->
+               <table class="ux-table ux-table-fixed">
+                  <colgroup ng-if="isV12()"><col style="width:40px"><col style="width:18%"><col style="width:31%"><col style="width:23%"><col style="width:28%"></colgroup>
+                  <colgroup ng-if="!isV12()"><col style="width:24%"><col style="width:48%"><col style="width:28%"></colgroup>
+                  <thead><tr>
+                     <th class="ux-col-check" ng-if="isV12()"><input type="checkbox" aria-label="{{'SAASMIG_DFSELECTALL' | translate}}" ng-checked="dfSelection().all" saas-mig-indeterminate="dfSelection().some" ng-click="dfToggleAll()" ng-disabled="!dfSelection().selectable"></th>
+                     <th translate="SAASMIG_PROCESS"></th><th translate="SAASMIG_DFSOURCECOL" saas-mig-tip="'SAASMIG_DFSOURCECOLTIP' | translate"></th><th translate="SAASMIG_DFFILECOL"></th><th ng-if="isV12()" translate="SAASMIG_DFSTATUSCOL"></th></tr></thead>
+                  <tbody>
+                  <tr ng-repeat="v in state.dataFiles.view.rows" ng-class="{'ux-row-warning': v.status === 'attention', 'ux-row-selected': dfIsSelected(v)}">
+                     <td class="ux-col-check" ng-if="isV12()" saas-mig-tip="dfSelectable(v) ? '' : ('SAASMIG_DFNOTSELECTABLE' | translate)"><input type="checkbox" aria-label="{{v.row.process}}" ng-checked="dfIsSelected(v)" ng-click="dfToggle(v)" ng-disabled="!dfSelectable(v)"></td>
+                     <td>{{v.row.process}}</td>
+                     <td>
+                        <!-- unchanged: the one path; changing: the old path muted, then the new one -->
+                        <span ng-if="v.live.reads || v.row.inPlace || v.row.setInCode" class="ux-code" saas-mig-path="v.live.reads ? v.live.reads.path : v.row.original"></span>
+                        <span ng-if="v.row.setInCode" class="ux-tag" saas-mig-tip="'SAASMIG_DFSETINCODETIP' | translate" translate="SAASMIG_DFSETINCODE"></span>
+                        <div ng-if="!v.live.reads && !v.row.inPlace && !v.row.setInCode">
+                           <div class="ux-code ux-secondary" saas-mig-path="v.row.original"></div>
+                           <div class="ux-code"><span class="ux-secondary" aria-hidden="true">→ </span><span saas-mig-path="v.row.target"></span></div></div></td>
+                     <td style="overflow-wrap:break-word"><span ng-if="!v.match" class="ux-secondary">{{v.row.file}}</span>
+                        <span ng-if="v.match.file"><span saas-mig-path="v.match.file.relPath"></span> <span class="ux-secondary">({{v.match.file.size | number}} B)</span></span>
+                        <span ng-if="v.match && !v.match.file" class="ux-secondary">{{v.row.file}} · <span ng-if="v.match.why === 'missing'" translate="SAASMIG_DFNOFILEMISSING"></span><span ng-if="v.match.why === 'ambiguous'" translate="SAASMIG_DFNOFILEAMBIGUOUS"></span></span></td>
+                     <td ng-if="isV12()" class="ux-col-result">
+                        <div ng-if="v.live.conflict" class="ux-cell-actions">
+                           <span class="ux-tag ux-tag-warning"><i class="fa fa-exclamation-triangle" aria-hidden="true"></i><span translate="SAASMIG_DFLIVECONFLICT"></span></span>
+                           <button class="ux-btn-link" ng-click="dfCompare(v)" aria-label="{{tx('SAASMIG_DFCOMPAREFOR', {name: v.row.process})}}"><i class="fa fa-columns" aria-hidden="true"></i><span translate="SAASMIG_DFCOMPARE"></span></button></div>
+                        <span ng-if="v.result && !v.live.conflict" class="ux-tag" ng-class="dfTagClass(v)">{{dfText('file', v.result.file)}} · {{dfText('change', v.result.change)}}</span>
+                        <div ng-if="v.result.error" class="ux-helper">{{v.result.error}}</div>
+                        <span ng-if="!v.result && !v.live.conflict && v.live.reads" class="ux-tag ux-tag-success" translate="SAASMIG_DFLIVEREADS"
+                              saas-mig-tip="tx('SAASMIG_DFLIVEREADSTIP', {path: v.live.reads.path, size: (v.live.reads.size | number), at: (v.live.reads.updated | date:'yyyy-MM-dd HH:mm')})"></span>
+                        <span ng-if="!v.result && v.live.readsMissing && v.status !== 'ready'" class="ux-tag ux-tag-error" translate="SAASMIG_DFLIVEMISSING"></span>
+                        <span ng-if="!v.result && v.status === 'ready'" class="ux-tag ux-tag-info">{{v.live.there ? ('SAASMIG_DFLIVESAME' | translate) : dfText('filter', 'ready')}}</span></td>
+                  </tr>
+                  <tr ng-if="!state.dataFiles.view.rows.length"><td colspan="{{isV12() ? 5 : 3}}" class="ux-empty" translate="SAASMIG_DFNOROWS"></td></tr>
+                  </tbody>
+               </table>
+            </div>
+         </div>
+      </div>
+   </div>
+
+   <!-- ================================================================ BEDROCK -->
+   <div ng-if="state.tab==='bedrock'" style="padding-top:10px">
+      <p class="sm-muted" translate="SAASMIG_BEDROCKHELP"></p>
+      <div class="sm-warn" ng-if="state.productVersion && !isV12()" translate="SAASMIG_BEDROCKV11"></div>
+      <div ng-if="!state.scan" class="sm-muted" translate="SAASMIG_SCANFIRST"></div>
+      <div ng-if="state.scan">
+         <div class="sm-bar">
+            <div>
+               <label translate="SAASMIG_BEDROCKSOURCE"></label>
+               <select class="form-control input-sm" ng-model="state.bedrock.source">
+                  <option value="github" translate="SAASMIG_BEDROCKGITHUB"></option>
+                  <option value="bundled" ng-if="bedrockBundled" translate="SAASMIG_BEDROCKBUNDLED"></option></select>
+            </div>
+            <div><button class="btn btn-default btn-sm" ng-click="loadBedrock()" ng-disabled="state.bedrock.loading || !!state.busy">
+               <i class="fa" ng-class="state.bedrock.loading ? 'fa-spinner fa-spin' : 'fa-cloud-download'"></i> <span translate="SAASMIG_BEDROCKLOAD"></span></button></div>
+            <div class="sm-muted" style="padding-bottom:6px" ng-if="state.bedrock.reference">
+               <b>{{state.bedrock.reference.count}}</b> <span translate="SAASMIG_BEDROCKLOADED"></span> {{state.bedrock.reference.url}} · {{state.bedrock.reference.at | date:'HH:mm:ss'}}</div>
+         </div>
+         <div class="sm-muted" ng-if="state.bedrock.source === 'bundled'"><span translate="SAASMIG_BEDROCKBUNDLEDNOTE"></span> {{core.BEDROCK_SOURCES.bundledCommit.substring(0, 12)}} ({{core.BEDROCK_SOURCES.bundledDate}}).</div>
+         <div class="sm-danger" ng-if="state.bedrock.error">{{state.bedrock.error}} <span translate="{{bedrockBundled ? 'SAASMIG_BEDROCKTRYBUNDLED' : 'SAASMIG_BEDROCKNOBUNDLED'}}"></span></div>
+         <div class="sm-warn" ng-if="!state.bedrock.reference" translate="SAASMIG_BEDROCKNOREF"></div>
+
+         <div ng-if="state.bedrock.inv">
+            <div ng-if="!state.bedrock.inv.rows.length && !state.bedrock.inv.missing.length" class="sm-ok" translate="SAASMIG_BEDROCKNONE"></div>
+            <div class="sm-warn" ng-if="state.bedrock.inv.dynamic.length">
+               <b>{{state.bedrock.inv.dynamic.length}}</b> <span translate="SAASMIG_BEDROCKDYNAMIC"></span>
+               <div class="sm-code" ng-repeat="d in state.bedrock.inv.dynamic" title="{{d.statement}}">{{d.name}} · {{core.PROCEDURE_LABEL[d.procedure]}} {{d.line}}: {{d.statement | limitTo: 160}}</div></div>
+            <div class="sm-bar" ng-if="state.bedrock.inv.rows.length || state.bedrock.inv.missing.length">
+               <div class="sm-muted" style="padding-bottom:6px">
+                  <b>{{bedrockCounts().upgrade}}</b> <span translate="SAASMIG_BRUPGRADES"></span> ·
+                  <b>{{bedrockCounts().install}}</b> <span translate="SAASMIG_BRINSTALLS"></span> ·
+                  <b>{{bedrockCounts().delete}}</b> <span translate="SAASMIG_BRDELETES"></span> ·
+                  <b>{{bedrockCounts().callers + bedrockCounts().chores}}</b> <span translate="SAASMIG_BRCALLERS"></span></div>
+               <div><label translate="SAASMIG_BRSETALL"></label>
+                  <button class="btn btn-default btn-xs" ng-if="isV12() && state.bedrock.reference" ng-click="bedrockSetAll('upgrade')" translate="SAASMIG_BRA_UPGRADE"></button>
+                  <button class="btn btn-default btn-xs" ng-click="bedrockSetAll('delete')" translate="SAASMIG_BRA_DELETE"></button>
+                  <button class="btn btn-default btn-xs" ng-click="bedrockSetAll('leave')" translate="SAASMIG_BRA_LEAVE"></button>
+                  <button class="btn btn-default btn-xs" ng-click="bedrockSetAll('default')" title="{{'SAASMIG_BRSETDEFAULTHELP' | translate}}" translate="SAASMIG_BRSETDEFAULT"></button></div>
+               <div class="checkbox" style="margin:0 0 6px" ng-if="isV12()"><label><input type="checkbox" ng-model="state.bedrock.fixCallers"> <span translate="SAASMIG_BRFIXCALLERS"></span></label></div>
+               <div><button class="btn btn-danger btn-sm" ng-click="state.bedrock.confirm = true" ng-disabled="!bedrockWork() || !isAdmin() || !!state.busy || scanStale()">
+                  <i class="fa fa-magic"></i> <span translate="SAASMIG_BRAPPLY"></span></button></div>
+            </div>
+            <div class="sm-warn" ng-if="!isAdmin()" translate="SAASMIG_NOTADMIN"></div>
+            <div class="sm-danger" ng-if="state.bedrock.confirm">
+               <b translate="SAASMIG_BRCONFIRMTITLE"></b>
+               <p>{{state.instance}}: {{bedrockCounts().upgrade}} <span translate="SAASMIG_BRUPGRADES"></span>, {{bedrockCounts().install}} <span translate="SAASMIG_BRINSTALLS"></span>,
+                  {{bedrockCounts().delete}} <span translate="SAASMIG_BRDELETES"></span>, {{bedrockCounts().callers + bedrockCounts().chores}} <span translate="SAASMIG_BRCALLERS"></span>.</p>
+               <p class="sm-muted" translate="SAASMIG_BRCONFIRM"></p>
+               <button class="btn btn-danger btn-sm" ng-click="applyBedrock()" translate="SAASMIG_APPLYNOW"></button>
+               <button class="btn btn-default btn-sm" ng-click="state.bedrock.confirm = false" translate="SAASMIG_CANCEL"></button>
+            </div>
+            <div ng-if="state.bedrock.result" role="status" ng-class="state.bedrock.result.failed || state.bedrock.result.error ? 'sm-warn' : 'sm-ok'">
+               {{state.bedrock.result.at | date:'HH:mm:ss'}} · <b>{{state.bedrock.result.results.length - state.bedrock.result.failed}}</b> <span translate="SAASMIG_DONEN"></span>
+               · <b>{{state.bedrock.result.failed}}</b> <span translate="SAASMIG_FAILEDN"></span>
+               <span ng-if="state.bedrock.result.error"> · {{state.bedrock.result.error}}</span>
+               <div class="sm-code" ng-repeat="r in state.bedrock.result.results | filter:{outcome:'error'}">{{r.action}} {{r.name}}: {{r.message}}</div>
+            </div>
+
+            <div class="sm-chips" ng-if="state.bedrock.inv.rows.length || state.bedrock.inv.missing.length">
+               <b translate="SAASMIG_BRLEGEND"></b>
+               <span ng-repeat="c in bedrockChips()" class="sm-pill sm-chip {{c.cls}}" ng-class="{'sm-chip-on': state.bedrock.filter === c.key, 'sm-chip-off': state.bedrock.filter && state.bedrock.filter !== c.key}"
+                  saas-mig-tip="c.tip + ' ' + ('SAASMIG_CHIPCLICK' | translate)" ng-click="toggleBedrockFilter(c.key)" ng-bind="c.label + ' · ' + c.count"></span>
+               <a href="" ng-if="state.bedrock.filter" ng-click="toggleBedrockFilter(state.bedrock.filter)" translate="SAASMIG_CHIPALL"></a>
+               <a href="__/plugins/tm1-12-readiness/MIGRATION-GUIDE.html#36-bedrock" target="_blank" saas-mig-tip="'SAASMIG_BRLEGENDMORE' | translate"><i class="fa fa-info-circle"></i></a>
+            </div>
+            <!-- no Bedrock process and none called: the note above says so, and an empty table would only repeat it -->
+            <div class="sm-split" ng-if="state.bedrock.inv.rows.length || state.bedrock.inv.missing.length">
+               <div class="sm-left">
+                  <div class="sm-scroll" saas-mig-fill="state.bedrock.inv.rows.length">
+                     <table class="table table-condensed sm-table">
+                        <tr><th translate="SAASMIG_PROCESS"></th><th translate="SAASMIG_BRSTATED"></th><th translate="SAASMIG_BRSTATUS"></th>
+                           <th translate="SAASMIG_BRUSEDBY"></th><th translate="SAASMIG_BRACTION"></th></tr>
+                        <tr ng-repeat="m in bedrockMissingRows()">
+                           <td>{{m.name}}</td><td class="sm-muted">—</td><td><span class="sm-pill sm-BREAKS" saas-mig-tip="statusTip('missing')" translate="SAASMIG_BRMISSING"></span></td>
+                           <td class="sm-muted"><span ng-repeat="c in m.callers">{{c.from}}{{$last ? '' : ', '}}</span><span ng-if="m.via.length"> (<span translate="SAASMIG_BRVIA"></span> {{m.via.join(', ')}})</span></td>
+                           <td><label class="sm-muted" style="font-weight:normal;margin:0"><input type="checkbox" ng-model="state.bedrock.install[m.name]" ng-change="planCallers()" ng-disabled="!isV12() || !state.bedrock.reference">
+                              <span translate="SAASMIG_BRINSTALL"></span></label></td>
+                        </tr>
+                        <tr ng-repeat="r in bedrockRows()">
+                           <td>{{r.name}}<div class="sm-muted" ng-if="r.kind === 'v3'">→ {{r.target || '?'}}</div></td>
+                           <td class="sm-muted">{{r.stated || '—'}}</td>
+                           <td><span class="sm-pill" ng-class="{'sm-fix': r.status==='current', 'sm-BREAKS': r.status==='outdated' || r.status==='v3', 'sm-manual': r.status==='unknown' || r.status==='notLoaded'}" saas-mig-tip="statusTip(r.status)">{{statusLabel(r.status)}}</span>
+                              <span class="sm-pill sm-dep" ng-if="r.removedFunctions.length" saas-mig-tip="failsTip(r)">{{failsLabel()}}</span></td>
+                           <td class="sm-muted"><span ng-if="!r.used" translate="SAASMIG_BRUNUSED"></span>
+                              <span ng-repeat="c in r.callers | limitTo: 4">{{c.from}}{{$last ? '' : ', '}}</span><span ng-if="r.callers.length > 4"> +{{r.callers.length - 4}}</span>
+                              <span ng-if="r.via.length"> (<span translate="SAASMIG_BRVIA"></span> {{r.via.length}})</span></td>
+                           <td><select class="form-control input-sm" style="min-width:110px" ng-model="state.bedrock.choice[r.name]" ng-change="planCallers()"
+                              ng-options="a as actionLabel(a) for a in bedrockActions(r)"></select></td>
+                        </tr>
+                     </table>
+                  </div>
+               </div>
+               <div class="sm-gutter" ng-if="state.bedrock.callers && (state.bedrock.callers.processes.length || state.bedrock.callers.chores.length || state.bedrock.callers.manual.length)"
+                  saas-mig-splitter="'bedrock'" saas-mig-tip="'SAASMIG_SPLITTIP' | translate"></div>
+               <div class="sm-right" ng-if="state.bedrock.callers && (state.bedrock.callers.processes.length || state.bedrock.callers.chores.length || state.bedrock.callers.manual.length)">
+                  <div class="sm-panel" saas-mig-fill="state.bedrock.callers">
+                     <h5 translate="SAASMIG_BRCALLERSTITLE"></h5>
+                     <p class="sm-muted" translate="SAASMIG_BRCALLERSHELP"></p>
+                     <div class="sm-warn" ng-if="!isV12()" translate="SAASMIG_BRCALLERSV11"></div>
+                     <div ng-repeat="c in state.bedrock.callers.processes">
+                        <b>{{c.name}}</b> <span class="sm-muted" ng-repeat="e in c.fix.edits">· {{e.callee}}<span ng-if="e.dropped.length"> −{{e.dropped.join(', ')}}</span><span ng-if="e.added.length"> +{{e.added.join(', ')}}</span></span>
+                        <div ng-repeat="h in c.hunks"><span class="sm-muted">{{h.procedure}}</span>
+                           <div class="sm-diff"><div ng-repeat="x in h.rows" ng-class="{'sm-del': x.op==='-', 'sm-add': x.op==='+', 'sm-gap': x.op==='…'}"><span class="sm-ln">{{x.op==='+' ? x.b : x.a}}</span>{{x.op}} {{x.text}}</div></div>
+                        </div>
+                     </div>
+                     <div ng-repeat="c in state.bedrock.callers.chores">
+                        <b>{{c.name}}</b> <span class="sm-muted" translate="SAASMIG_CHORE"></span>
+                        <div class="sm-code" ng-repeat="e in c.fix.edits">{{e.procedure}} {{e.callee}}<span ng-if="e.dropped.length"> −{{e.dropped.join(', ')}}</span><span ng-if="e.added.length"> +{{e.added.join(', ')}}</span></div>
+                     </div>
+                     <div ng-if="state.bedrock.callers.manual.length">
+                        <h5><span class="sm-pill sm-manual">MANUAL</span></h5>
+                        <div ng-repeat="m in state.bedrock.callers.manual" style="margin-bottom:6px"><b>{{m.object}}</b> <span class="sm-muted">{{core.PROCEDURE_LABEL[m.procedure] || m.procedure}} {{m.line}}</span>
+                           <div>{{m.reason}}</div><div class="sm-clip" title="{{m.statement}}">{{m.statement}}</div></div>
+                     </div>
+                  </div>
+               </div>
+            </div>
+         </div>
+      </div>
+   </div>
+
+   <!-- ================================================================ CLOUDID -->
+   <div ng-if="state.tab==='cloud'" style="padding-top:10px">
+      <p class="sm-muted" translate="SAASMIG_CLOUDHELP"></p>
+      <!-- CloudID is a v11 preparation step: on TM1 v12 the tab only says so -->
+      <div class="sm-warn" ng-if="isV12()" translate="SAASMIG_CLOUDV12"></div>
+      <div class="sm-muted" ng-if="!state.productVersion"><i class="fa fa-spinner fa-spin"></i></div>
+      <div class="sm-switch" role="tablist" style="margin-bottom:12px" ng-if="cloudAllowed()">
+         <button class="btn btn-sm" role="tab" ng-class="{active: state.cloudView !== 'groups'}" ng-click="state.cloudView = 'clients'"><i class="fa fa-user"></i> <span translate="SAASMIG_CLOUDCLIENTS"></span></button>
+         <button class="btn btn-sm" role="tab" ng-class="{active: state.cloudView === 'groups'}" ng-click="state.cloudView = 'groups'; state.groupCloud || loadGroupCloud()"><i class="fa fa-users"></i> <span translate="SAASMIG_CLOUDGROUPS"></span></button>
+      </div>
+      <div ng-if="state.cloudView !== 'groups'">
+      <div ng-if="cloudAllowed() && state.cloud.loading"><i class="fa fa-spinner fa-spin"></i></div>
+      <div class="sm-danger" ng-if="cloudAllowed() && state.cloud.error">{{state.cloud.error}}</div>
+      <div ng-if="cloudAllowed() && state.cloud && !state.cloud.loading">
+         <div ng-if="!state.cloud.exists">
+            <div class="sm-warn"><b translate="SAASMIG_CLOUDMISSING"></b> <span translate="SAASMIG_CLOUDMISSINGHELP"></span></div>
+            <button class="btn btn-primary btn-sm" ng-if="!state.cloud.confirmCreate" ng-click="state.cloud.confirmCreate = true" ng-disabled="!isAdmin()">
+               <i class="fa fa-plus"></i> <span translate="SAASMIG_CLOUDCREATE"></span></button>
+            <div class="sm-danger" ng-if="state.cloud.confirmCreate">
+               <p translate="SAASMIG_CLOUDCREATECONFIRM"></p>
+               <button class="btn btn-danger btn-sm" ng-click="createCloudId()" translate="SAASMIG_CLOUDCREATE"></button>
+               <button class="btn btn-default btn-sm" ng-click="state.cloud.confirmCreate = false" translate="SAASMIG_CANCEL"></button>
+            </div>
+         </div>
+         <div ng-if="state.cloud.exists">
+            <div class="sm-bar">
+               <button class="btn btn-default btn-sm" ng-click="exportCloud()"><i class="fa fa-download"></i> <span translate="SAASMIG_CLOUDEXPORT"></span></button>
+               <label class="btn btn-default btn-sm" style="margin:0" ng-class="{disabled: !isAdmin()}"><i class="fa fa-upload"></i> <span translate="SAASMIG_CLOUDIMPORT"></span>
+                  <input type="file" accept=".csv,.txt" style="display:none" saas-mig-file="importCloud(text, name)" ng-disabled="!isAdmin()"></label>
+               <button class="btn btn-primary btn-sm" ng-click="saveCloudEdits()" ng-disabled="!cloudDirty() || !isAdmin() || !!state.busy || !state.cloud.validation.ok">
+                  <i class="fa fa-save"></i> <span translate="SAASMIG_CLOUDSAVE"></span> ({{cloudDirty()}})</button>
+               <button class="btn btn-default btn-sm" ng-click="loadCloud()" aria-label="{{'SAASMIG_READAGAIN' | translate}}" saas-mig-tip="'SAASMIG_READAGAIN' | translate"><i class="fa fa-refresh" aria-hidden="true"></i></button>
+            </div>
+            <div ng-if="state.cloud.validation">
+               <div class="sm-danger" ng-if="state.cloud.validation.duplicates.length"><b translate="SAASMIG_CLOUDDUPS"></b>
+                  <span ng-repeat="d in state.cloud.validation.duplicates">{{d.cloudId}}: {{d.clients.join(', ')}}{{$last ? '' : ' · '}}</span></div>
+               <div class="sm-warn" ng-if="state.cloud.validation.blanks.length"><b>{{state.cloud.validation.blanks.length}}</b> <span translate="SAASMIG_CLOUDBLANKS"></span></div>
+               <div class="sm-warn" ng-if="state.cloud.validation.adminHasCloudId === false" translate="SAASMIG_CLOUDADMIN"></div>
+               <div class="sm-muted" ng-if="state.cloud.validation.notEmailLike.length">{{state.cloud.validation.notEmailLike.length}} <span translate="SAASMIG_CLOUDNOTEMAIL"></span></div>
+            </div>
+            <!-- import preview -->
+            <div class="sm-warn" ng-if="state.cloud.import">
+               <b>{{state.cloud.import.fileName}}</b> ·
+               {{state.cloud.import.changes.length}} <span translate="SAASMIG_CLOUDCHANGES"></span> ·
+               {{state.cloud.import.unchanged.length}} <span translate="SAASMIG_CLOUDUNCHANGED"></span> ·
+               {{state.cloud.import.unknown.length}} <span translate="SAASMIG_CLOUDUNKNOWN"></span>
+               <div ng-if="state.cloud.import.unknown.length" class="sm-muted"><span ng-repeat="u in state.cloud.import.unknown">{{u.client}}{{$last ? '' : ', '}}</span></div>
+               <div class="sm-danger" ng-if="!state.cloud.import.validation.ok"><span translate="SAASMIG_CLOUDDUPS"></span>
+                  <span ng-repeat="d in state.cloud.import.validation.duplicates">{{d.cloudId}}: {{d.clients.join(', ')}} </span></div>
+               <table class="table table-condensed sm-table" ng-if="state.cloud.import.changes.length">
+                  <tr><th translate="SAASMIG_CLIENT"></th><th translate="SAASMIG_FROM"></th><th translate="SAASMIG_TO"></th></tr>
+                  <tr ng-repeat="c in state.cloud.import.changes"><td>{{c.client}}</td><td class="sm-muted">{{c.from || '—'}}</td><td><b>{{c.to || '—'}}</b></td></tr>
+               </table>
+               <button class="btn btn-danger btn-sm" ng-click="applyCloudImport()" ng-disabled="!state.cloud.import.validation.ok || !state.cloud.import.changes.length || !isAdmin()" translate="SAASMIG_CLOUDAPPLYIMPORT"></button>
+               <button class="btn btn-default btn-sm" ng-click="state.cloud.import = null" translate="SAASMIG_CANCEL"></button>
+            </div>
+            <div class="sm-scroll" saas-mig-fill="state.cloud.clients.length">
+               <table class="table table-condensed sm-table">
+                  <tr><th translate="SAASMIG_CLIENT"></th><th translate="SAASMIG_DISPLAY"></th><th translate="SAASMIG_GROUPS"></th><th style="width:34%">CloudID</th></tr>
+                  <tr ng-repeat="c in state.cloud.clients">
+                     <td>{{c.name}}</td><td class="sm-muted">{{c.displayName}}</td><td class="sm-muted">{{c.groups.join(', ')}}</td>
+                     <td><input type="text" class="form-control input-sm sm-cloud" ng-model="c.cloudId" ng-change="cloudChanged(c)" ng-disabled="!isAdmin()"
+                        ng-style="{'background': state.cloud.edits[c.name] ? '#fff8e1' : (c.cloudId ? '' : '#ffebee')}"></td>
+                  </tr>
+               </table>
+            </div>
+         </div>
+      </div>
+      </div>
+
+      <!-- groups: }GroupProperties, created by the plugin (the utility's README) -->
+      <div ng-if="cloudAllowed() && state.cloudView === 'groups'">
+         <p class="sm-muted" translate="SAASMIG_GCLOUDHELP"></p>
+         <div ng-if="state.groupCloud.loading"><i class="fa fa-spinner fa-spin"></i></div>
+         <div class="sm-danger" ng-if="state.groupCloud.error">{{state.groupCloud.error}}</div>
+         <div ng-if="state.groupCloud && !state.groupCloud.loading">
+            <div ng-if="!groupCloudReady()">
+               <div class="sm-warn"><b translate="SAASMIG_GCLOUDMISSING"></b>
+                  <span ng-if="!state.groupCloud.dim">}GroupProperties (dimension)</span>
+                  <span ng-if="state.groupCloud.dim && !state.groupCloud.element">CloudID (element)</span>
+                  <span ng-if="!state.groupCloud.cube">· }GroupProperties (cube)</span></div>
+               <button class="btn btn-primary btn-sm" ng-if="!state.groupCloud.confirmCreate" ng-click="state.groupCloud.confirmCreate = true" ng-disabled="!isAdmin()">
+                  <i class="fa fa-plus"></i> <span translate="SAASMIG_GCLOUDCREATE"></span></button>
+               <div class="sm-danger" ng-if="state.groupCloud.confirmCreate">
+                  <p translate="SAASMIG_GCLOUDCREATECONFIRM"></p>
+                  <button class="btn btn-danger btn-sm" ng-click="createGroupCloud()" translate="SAASMIG_GCLOUDCREATE"></button>
+                  <button class="btn btn-default btn-sm" ng-click="state.groupCloud.confirmCreate = false" translate="SAASMIG_CANCEL"></button>
+               </div>
+            </div>
+            <div ng-if="groupCloudReady()">
+               <div class="sm-bar">
+                  <button class="btn btn-default btn-sm" ng-click="exportGroupCloud()"><i class="fa fa-download"></i> <span translate="SAASMIG_CLOUDEXPORT"></span></button>
+                  <label class="btn btn-default btn-sm" style="margin:0" ng-class="{disabled: !isAdmin()}"><i class="fa fa-upload"></i> <span translate="SAASMIG_CLOUDIMPORT"></span>
+                     <input type="file" accept=".csv,.txt" style="display:none" saas-mig-file="importGroupCloud(text, name)" ng-disabled="!isAdmin()"></label>
+                  <button class="btn btn-primary btn-sm" ng-click="saveGroupCloudEdits()" ng-disabled="!groupCloudDirty() || !isAdmin() || !!state.busy || !state.groupCloud.validation.ok">
+                     <i class="fa fa-save"></i> <span translate="SAASMIG_CLOUDSAVE"></span> ({{groupCloudDirty()}})</button>
+                  <button class="btn btn-default btn-sm" ng-click="loadGroupCloud()" aria-label="{{'SAASMIG_READAGAIN' | translate}}" saas-mig-tip="'SAASMIG_READAGAIN' | translate"><i class="fa fa-refresh" aria-hidden="true"></i></button>
+               </div>
+               <div ng-if="state.groupCloud.validation">
+                  <div class="sm-danger" ng-if="state.groupCloud.validation.duplicates.length"><b translate="SAASMIG_CLOUDDUPS"></b>
+                     <span ng-repeat="d in state.groupCloud.validation.duplicates">{{d.cloudId}}: {{d.clients.join(', ')}}{{$last ? '' : ' · '}}</span></div>
+                  <div class="sm-warn" ng-if="state.groupCloud.validation.blanks.length"><b>{{state.groupCloud.validation.blanks.length}}</b> <span translate="SAASMIG_GCLOUDBLANKS"></span></div>
+               </div>
+               <div class="sm-warn" ng-if="state.groupCloud.import">
+                  <b>{{state.groupCloud.import.fileName}}</b> ·
+                  {{state.groupCloud.import.changes.length}} <span translate="SAASMIG_CLOUDCHANGES"></span> ·
+                  {{state.groupCloud.import.unchanged.length}} <span translate="SAASMIG_CLOUDUNCHANGED"></span> ·
+                  {{state.groupCloud.import.unknown.length}} <span translate="SAASMIG_GCLOUDUNKNOWN"></span>
+                  <div class="sm-danger" ng-if="!state.groupCloud.import.validation.ok"><span translate="SAASMIG_CLOUDDUPS"></span>
+                     <span ng-repeat="d in state.groupCloud.import.validation.duplicates">{{d.cloudId}}: {{d.clients.join(', ')}} </span></div>
+                  <table class="table table-condensed sm-table" ng-if="state.groupCloud.import.changes.length">
+                     <tr><th translate="SAASMIG_GROUP"></th><th translate="SAASMIG_FROM"></th><th translate="SAASMIG_TO"></th></tr>
+                     <tr ng-repeat="c in state.groupCloud.import.changes"><td>{{c.client}}</td><td class="sm-muted">{{c.from || '—'}}</td><td><b>{{c.to || '—'}}</b></td></tr>
+                  </table>
+                  <button class="btn btn-danger btn-sm" ng-click="applyGroupCloudImport()" ng-disabled="!state.groupCloud.import.validation.ok || !state.groupCloud.import.changes.length || !isAdmin()" translate="SAASMIG_CLOUDAPPLYIMPORT"></button>
+                  <button class="btn btn-default btn-sm" ng-click="state.groupCloud.import = null" translate="SAASMIG_CANCEL"></button>
+               </div>
+               <div class="sm-scroll" saas-mig-fill="state.groupCloud.groups.length">
+                  <table class="table table-condensed sm-table">
+                     <tr><th translate="SAASMIG_GROUP"></th><th></th><th style="width:40%">CloudID</th></tr>
+                     <tr ng-repeat="x in state.groupCloud.groups">
+                        <td>{{x.name}}</td>
+                        <td><span class="sm-pill sm-fix" ng-if="x.always" saas-mig-tip="'SAASMIG_GCLOUDALWAYSTIP' | translate" translate="SAASMIG_GCLOUDALWAYS"></span></td>
+                        <td><input type="text" class="form-control input-sm sm-cloud" ng-model="x.cloudId" ng-change="groupCloudChanged(x)" ng-disabled="!isAdmin()"
+                           ng-style="{'background': state.groupCloud.edits[x.name] ? '#fff8e1' : (x.cloudId || x.always ? '' : '#ffebee')}"></td>
+                     </tr>
+                  </table>
+               </div>
+            </div>
+         </div>
+      </div>
+   </div>
+
+   <!-- ================================================================ PROJECT -->
+   <!-- Every project flow happens here, inline (UX §6.8): start, new, open, recent, details. -->
+   <div ng-if="state.tab==='project'" style="padding-top:10px" class="sm-prjform">
+      <div class="ux-note ux-note-success" ng-if="prj.note === 'created' && project.isOpen()" role="status"><i class="fa fa-check-circle" aria-hidden="true"></i>
+         <span>{{tx(project.current.mode === 'browser' ? 'SAASMIG_PRJCREATEDFILE' : 'SAASMIG_PRJCREATED', {folder: project.current.folder})}}</span></div>
+      <div class="ux-note ux-note-info" ng-if="prj.note === 'closed' && !project.current" role="status"><i class="fa fa-info-circle" aria-hidden="true"></i>
+         <span translate="SAASMIG_PRJCLOSED"></span></div>
+      <div class="ux-note" ng-class="prj.problem.code === 'newer' || prj.problem.code === 'locked' ? 'ux-note-warning' : 'ux-note-error'" ng-if="prj.problem" role="alert">
+         <i class="fa fa-exclamation-circle" aria-hidden="true"></i> <span>{{prj.problem.text}}</span>
+         <a href="" class="ux-link" ng-if="prj.problem.code === 'notproject' && prj.problem.picked" ng-click="prjStartNew(prj.problem.picked)" translate="SAASMIG_PRJSTARTHERE"></a>
+      </div>
+
+      <!-- details of the open project -->
+      <div ng-if="project.isOpen() && prj.view === 'detail'">
+         <h4>{{project.current.project.name}}</h4>
+         <table class="ux-facts">
+            <tr><th translate="SAASMIG_PRJFOLDER"></th><td>{{project.current.mode === 'browser' ? ('SAASMIG_PRJINBROWSER' | translate) : project.current.folder}}</td></tr>
+            <tr><th translate="SAASMIG_PRJV11"></th><td>{{project.current.project.databases.v11 || ('SAASMIG_PRJNOTYET' | translate)}}</td></tr>
+            <tr><th translate="SAASMIG_PRJV12"></th><td>{{project.current.project.databases.v12 || ('SAASMIG_PRJNOTYET' | translate)}}
+               <a href="" class="ux-link" ng-if="!project.current.project.databases.v12 && isV12() && state.instance" ng-click="prjAddDb()">· {{tx('SAASMIG_PRJADDDB', {db: state.instance})}}</a></td></tr>
+            <tr ng-if="project.current.mode === 'folder'"><th translate="SAASMIG_PRJHOSTPATH"></th>
+               <td><form class="sm-prjpath" ng-submit="prjHostPathSave(prj.hostPathDraft)" ng-init="prj.hostPathDraft = project.current.project.hostPath || ''">
+                  <input class="ux-input" style="width:320px" ng-model="prj.hostPathDraft" placeholder="{{'SAASMIG_PRJHOSTPATHHINT' | translate}}" autocomplete="off" spellcheck="false"
+                         aria-label="{{'SAASMIG_PRJHOSTPATH' | translate}}">
+                  <button type="submit" class="ux-btn ux-btn-secondary" ng-disabled="(prj.hostPathDraft || '') === (project.current.project.hostPath || '')" translate="SAASMIG_SAVE"></button></form>
+                  <div class="ux-helper" translate="SAASMIG_PRJHOSTPATHHELP"></div></td></tr>
+            <tr><th translate="SAASMIG_PRJCREATEDAT"></th><td>{{project.current.project.created | date:'d MMM yyyy HH:mm'}}</td></tr>
+            <tr><th translate="SAASMIG_PRJLASTSAVED"></th><td>{{project.current.project.updated | date:'d MMM yyyy HH:mm'}}</td></tr>
+            <tr><th translate="SAASMIG_PRJCONTENTS"></th><td>{{tx('SAASMIG_PRJCONTENTSVAL', {s: prjCounts().s, b: prjCounts().b, d: prjCounts().d})}}</td></tr>
+         </table>
+         <p class="ux-helper" translate="SAASMIG_PRJSHAREHELP"></p>
+         <div class="sm-prjfoot">
+            <button class="ux-btn ux-btn-secondary" ng-click="prj.view = 'start'" translate="SAASMIG_PRJSWITCH"></button>
+            <button class="ux-btn ux-btn-ghost" ng-click="prjDownload()" translate="SAASMIG_PRJDOWNLOAD"></button>
+            <button class="ux-btn ux-btn-ghost" ng-click="prjClose()" translate="SAASMIG_PRJCLOSE"></button>
+         </div>
+      </div>
+
+      <!-- start: one primary (New project), Open, and the recent list -->
+      <div ng-if="prj.view !== 'new' && (!project.isOpen() || prj.view !== 'detail')">
+         <h4 ng-if="!project.isOpen()" translate="SAASMIG_TABPROJECT"></h4>
+         <p translate="SAASMIG_PRJINTRO"></p>
+         <div class="ux-note ux-note-info" ng-if="!prjSupported()"><i class="fa fa-info-circle" aria-hidden="true"></i> <span translate="SAASMIG_PRJNOPICKER"></span></div>
+         <div class="sm-prjfoot" style="margin:0 0 var(--ux-5)">
+            <button class="ux-btn ux-btn-primary" ng-click="prjStartNew()" ng-disabled="!!state.busy" translate="SAASMIG_PRJNEW"></button>
+            <button class="ux-btn ux-btn-secondary" ng-if="prjSupported()" ng-click="prjOpenFolder()" ng-disabled="!!state.busy" translate="SAASMIG_PRJOPEN"></button>
+            <label class="ux-btn ux-btn-secondary" ng-if="!prjSupported()"><span translate="SAASMIG_PRJOPENFILE"></span>
+               <input type="file" accept=".json" style="display:none" saas-mig-file="prjImport(text, name)"></label>
+         </div>
+         <h4 translate="SAASMIG_PRJRECENT"></h4>
+         <div class="ux-table-wrap">
+            <table class="ux-table ux-table-fixed">
+               <colgroup><col style="width:28%"><col style="width:28%"><col style="width:22%"><col style="width:22%"></colgroup>
+               <thead><tr><th translate="SAASMIG_TABPROJECT"></th><th translate="SAASMIG_PRJDATABASES"></th><th translate="SAASMIG_PRJFOLDER"></th><th translate="SAASMIG_PRJLASTOPENED"></th></tr></thead>
+               <tbody>
+                  <tr ng-if="!project.recent.length"><td colspan="4" class="ux-empty" translate="SAASMIG_PRJNORECENT"></td></tr>
+                  <tr ng-repeat="r in project.recent track by r.id">
+                     <td><a href="" class="ux-link" ng-click="prjOpenRecent(r)">{{r.name}}</a>
+                        <span class="ux-tag ux-tag-info" ng-if="project.isOpen() && project.current.project.id === r.id" translate="SAASMIG_PRJTAGOPEN"></span></td>
+                     <td class="ux-secondary">{{r.databases.v11 || '—'}} → {{r.databases.v12 || ('SAASMIG_PRJNOTYET' | translate)}}</td>
+                     <td class="ux-code">{{r.mode === 'browser' ? ('SAASMIG_PRJINBROWSER' | translate) : r.folder}}</td>
+                     <td><div class="ux-cell-actions">{{r.lastOpened | date:'d MMM HH:mm'}}
+                        <button class="ux-btn-link" ng-click="prjForget(r)" ng-if="!(project.isOpen() && project.current.project.id === r.id)" translate="SAASMIG_PRJREMOVE"></button></div></td>
+                  </tr>
+               </tbody>
+            </table>
+         </div>
+         <p class="ux-helper" translate="SAASMIG_PRJRECENTHELP"></p>
+      </div>
+
+      <!-- new project, inline -->
+      <form ng-if="prj.view === 'new' && prj.form" ng-submit="prjCreate()" novalidate>
+         <h4 translate="SAASMIG_PRJNEW"></h4>
+         <div class="ux-field" ng-class="{'sm-prjfield-error': prj.form.errors.name}">
+            <label class="ux-label" for="smPrjName" translate="SAASMIG_PRJNAME"></label>
+            <input id="smPrjName" class="ux-input" ng-model="prj.form.name" maxlength="80" autocomplete="off">
+            <span class="sm-prjerr" ng-if="prj.form.errors.name" translate="SAASMIG_PRJERRNAME"></span>
+            <span class="ux-helper" translate="SAASMIG_PRJNAMEHELP"></span>
+         </div>
+         <div class="sm-prjdbs">
+            <div class="ux-field">
+               <label class="ux-label" for="smPrjV11" translate="SAASMIG_PRJV11"></label>
+               <select id="smPrjV11" class="ux-input" ng-model="prj.form.v11" ng-options="i as i for i in state.instances"><option value="" translate="SAASMIG_PRJNOTYET"></option></select>
+            </div>
+            <div class="ux-field">
+               <label class="ux-label" for="smPrjV12" translate="SAASMIG_PRJV12"></label>
+               <select id="smPrjV12" class="ux-input" ng-model="prj.form.v12" ng-options="i as i for i in state.instances"><option value="" translate="SAASMIG_PRJNOTYET"></option></select>
+               <span class="ux-helper" translate="SAASMIG_PRJV12HELP"></span>
+            </div>
+         </div>
+         <div class="ux-field" ng-if="prjSupported()" ng-class="{'sm-prjfield-error': prj.form.errors.folder}">
+            <span class="ux-label" translate="SAASMIG_PRJFOLDER"></span>
+            <span ng-if="!prj.form.picked"><button type="button" class="ux-btn ux-btn-secondary" ng-click="prjChoose()" translate="SAASMIG_PRJCHOOSE"></button></span>
+            <span ng-if="prj.form.picked"><i class="fa fa-check" style="color:var(--ux-success)" aria-hidden="true"></i> <b class="ux-code">{{prj.form.picked.name}}</b>
+               <a href="" class="ux-link" ng-click="prjChoose()" translate="SAASMIG_PRJCHANGE"></a></span>
+            <span class="sm-prjerr" ng-if="prj.form.errors.folder" translate="SAASMIG_PRJERRFOLDER"></span>
+            <span class="ux-helper" translate="SAASMIG_PRJFOLDERHELP"></span>
+         </div>
+         <div class="ux-note ux-note-info" ng-if="prj.form.folderNote === 'busy'"><i class="fa fa-info-circle" aria-hidden="true"></i> <span translate="SAASMIG_PRJFOLDERBUSY"></span></div>
+         <div class="ux-note ux-note-error" ng-if="prj.form.folderNote === 'plugin'"><i class="fa fa-exclamation-circle" aria-hidden="true"></i> <span translate="SAASMIG_PRJPLUGINFOLDER"></span></div>
+         <div class="ux-note ux-note-warning" ng-if="prj.form.folderNote === 'project'"><i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+            <span>{{tx('SAASMIG_PRJFOLDERISPRJ', {name: prj.form.existing.name})}}</span>
+            <a href="" class="ux-link" ng-click="prjOpenPicked(prj.form.existing.picked)" translate="SAASMIG_PRJOPENINSTEAD"></a></div>
+         <div class="ux-note ux-note-info" ng-if="!prjSupported()"><i class="fa fa-info-circle" aria-hidden="true"></i> <span translate="SAASMIG_PRJNOPICKER"></span></div>
+         <label class="ux-helper" style="display:block" ng-if="state.scan || state.backups.length || state.log.length">
+            <input type="checkbox" ng-model="prj.form.keep"> {{tx('SAASMIG_PRJKEEPSESSION', {b: state.backups.length})}}</label>
+         <div class="sm-prjfoot">
+            <button type="submit" class="ux-btn ux-btn-primary" ng-disabled="!!state.busy">{{(prjSupported() ? 'SAASMIG_PRJCREATE' : 'SAASMIG_PRJCREATEFILE') | translate}}</button>
+            <button type="button" class="ux-btn ux-btn-ghost" ng-click="prj.view = project.isOpen() ? 'detail' : 'start'; prj.form = null" translate="SAASMIG_CANCEL"></button>
+         </div>
+      </form>
+   </div>
+
+   <!-- ================================================================ BACKUPS -->
+   <div ng-if="state.tab==='backups'" style="padding-top:10px">
+      <p class="sm-muted">{{(project.isOpen() ? 'SAASMIG_BACKUPSHELPPRJ' : 'SAASMIG_BACKUPSHELP') | translate}}</p>
+      <label class="btn btn-default btn-sm" ng-class="{disabled: !isAdmin()}"><i class="fa fa-upload"></i> <span translate="SAASMIG_RESTOREFILE"></span>
+         <input type="file" accept=".json" style="display:none" saas-mig-file="readBackup(text, name)" ng-disabled="!isAdmin()"></label>
+      <div class="sm-danger" ng-if="state.restore.error">{{state.restore.fileName}}: {{state.restore.error}}</div>
+      <div class="sm-warn" ng-if="state.restore.backup">
+         <b>{{state.restore.fileName}}</b> · {{state.restore.backup.instance}} · {{state.restore.backup.created}} · {{state.restore.backup.entries.length}} <span translate="SAASMIG_OBJECTS"></span>
+         <ul><li ng-repeat="e in state.restore.backup.entries">{{e.type}} {{e.name}}</li></ul>
+         <button class="btn btn-danger btn-sm" ng-click="restoreFrom(state.restore.backup)" ng-disabled="!isAdmin() || !!state.busy" translate="SAASMIG_RESTORE"></button>
+         <button class="btn btn-default btn-sm" ng-click="state.restore = null" translate="SAASMIG_CANCEL"></button>
+      </div>
+      <h4>{{(project.isOpen() ? 'SAASMIG_PRJBACKUPS' : 'SAASMIG_SESSIONBACKUPS') | translate}}</h4>
+      <div ng-if="!state.backups.length" class="sm-muted" translate="SAASMIG_NOBACKUPS"></div>
+      <table class="table table-condensed sm-table" ng-if="state.backups.length">
+         <tr><th translate="SAASMIG_FILE"></th><th translate="SAASMIG_WHEN"></th><th translate="SAASMIG_OBJECTS"></th><th></th></tr>
+         <tr ng-repeat="b in state.backups"><td>{{b.name}}
+               <span class="ux-tag" ng-class="b.where === 'project' ? 'ux-tag-success' : ''">{{(b.where === 'project' ? 'SAASMIG_TAGINPRJ' : 'SAASMIG_TAGDOWNLOADED') | translate}}</span></td>
+            <td>{{b.at | date:(b.backup ? 'HH:mm:ss' : 'd MMM HH:mm')}}</td><td>{{b.count}}</td>
+            <td><button class="btn btn-default btn-xs" ng-click="restoreRow(b)" ng-disabled="!isAdmin() || !!state.busy" translate="SAASMIG_RESTORE"></button></td></tr>
+
+      </table>
+   </div>
+
+   <!-- ================================================================ GUIDE -->
+   <div ng-if="state.tab==='guide'" style="padding-top:10px">
+      <div class="sm-panel sm-guide" saas-mig-fill="state.tab">
+         <p><a href="__/plugins/tm1-12-readiness/MIGRATION-GUIDE.html" target="_blank"><i class="fa fa-external-link"></i> <span translate="SAASMIG_GUIDEFULL"></span></a>
+            · <a href="__/plugins/tm1-12-readiness/USER-GUIDE.html" target="_blank"><i class="fa fa-picture-o"></i> <span translate="SAASMIG_USERGUIDE"></span></a>
+            · <span class="sm-muted" translate="SAASMIG_CREDIT"></span>
+            · <a href="mailto:meissa@cubewise.com" title="{{ 'SAASMIG_CONTACTHELP' | translate }}"><i class="fa fa-envelope-o"></i> <span translate="SAASMIG_CONTACT"></span></a></p>
+         <h4>1. Assess</h4>
+         <ul>
+            <li>Scan the v11 model here. The overview counts the processes that <b>will not compile on TM1 12</b> — any process with a BLOCKER. The migration utility carries them over and reports each on an error line ("Issue(s) found during TI Process migration"); they fail on TM1 12 until fixed. Its "Objects processed with problems" list is a different one: processes whose data-source file was not found. After the restore, the <b>Data files</b> tab uploads those files to the TM1 12 Files area and points each process at its new path.</li>
+            <li>With a TM1 v12 database connected in Arc, run the <b>v12 compile check</b>: it dry-runs every v11 process against the real v12 compiler and saves nothing.</li>
+            <li>Inventory what lives outside TM1: scheduled tasks, TM1RunTI, TM1py scripts, TM1 Web websheets, Perspectives and Architect, TM1 Applications, ODBC sources. PAfE must be 2.0.77 or later; only the OData REST API remains.</li>
+         </ul>
+         <h4>2. Prepare v11</h4>
+         <ul>
+            <li><b>First</b>, decide on TM1 Applications (<code>}tp_*</code>): it does not exist in TM1 v12. If it is retired, the <b>TM1 Applications</b> tab deletes every <code>}tp_*</code> object after a backup.</li>
+            <li><b>Then</b> Bedrock: the <b>Bedrock</b> tab shows which Bedrock processes are in use. <b>Delete the unused ones now</b>: Bedrock 4 calls functions TM1 12 does not have, so each one would migrate only to fail to compile there. The upgrade of the ones in use to Bedrock 5 runs on the TM1 12 database.</li>
+            <li><b>Then</b> apply the fixes to what is left (every Apply backs up first, dry-run compiles, writes, re-reads and compiles; it rolls back on failure). A fix changes v11 behaviour until cutover — each finding says how.</li>
+            <li>A finding you decide to leave can be <b>skipped</b> (the eye icon on its row): it leaves the list and the counts, and Apply leaves its statement as it is. Skips are remembered for this instance in this browser; <i>Show skipped</i> brings them back. Each object name opens the object in Arc.</li>
+            <li>Prepare <b>CloudID</b> (CloudID tab) <b>before converting</b>: the utility reads it. Once the element exists, only clients with a value migrate; their private views and subsets move with them.</li>
+            <li>Rename objects whose names contain <code>\ / : * ? " &lt; &gt; | ' ; ,</code>; fix element-type conflicts (N in one hierarchy, C in another — the utility stops at the first); delete or repair views on missing elements.</li>
+            <li>Move source files under the data directory: directories outside <code>DatabaseDirectory</code> are ignored, and TM1 12 confines TI files to the content area.</li>
+            <li>ODBC: install the ODBC Data Connector (ODBCIS) near the data — 64-bit system DSN, CA-signed certificate, port 5555, IP allow-list; set <code>ODBCServiceRoot</code> in PAW.</li>
+            <li>TI paths: use forward slashes (<code>/</code>), not backslashes — TM1 12 runs on Linux.</li>
+            <li>Groups: a <code>}GroupProperties</code> dimension and cube with a <b>CloudID</b> element choose and rename the groups that migrate (CloudID tab). Clients whose names are CAM IDs can take their e-mail address with the utility's <code>--extract-cam-emails</code> option.</li>
+         </ul>
+         <h4>3. Convert</h4>
+         <ul>
+            <li>This plugin prepares the model; <b>IBM's Database Migration Utility</b> converts it into a valid TM1 12 backup file to upload.</li>
+            <li>Download the utility from Planning Analytics on the cloud: <b>Administration → Databases</b>, the <b>download icon</b> at the top right, then <b>Database Migration Utility</b>. The same menu offers the ODBC Data Connector.<br>
+               <img src="__/plugins/tm1-12-readiness/img/paw-download-migration-utility.png" alt="Administration, Databases: the download icon, then Database Migration Utility" style="max-width:100%;border:1px solid #ddd;margin-top:6px"></li>
+            <li>Free disk of 2.5× the database size, plus RAM to load it. Then, in order, in step 3 on the <b>Overview</b> of the v11 database: the <b>tm1s.cfg</b> line must not be red (the utility needs <code>DatabaseDirectory</code>); <b>Save data</b> runs SaveDataAll, because the utility reads the files on disk, not the server&#39;s memory; <b>Copy</b> the command and run it on the v11 host from the utility&#39;s <code>bin64</code> folder; <b>Read migrate.log</b> to compare what it rejected with the scan.</li>
+            <li><b>Old feeder files:</b> start the model on a recent v11 release before saving, so TM1 writes the feeder files in the latest format — the one the utility expects.</li>
+            <li><b>Stop the v11 service before converting</b> (or at least use Save data), so every in-memory change is on disk and no file is in use while the utility reads the data directory.</li>
+            <li>The log is JSON lines; an <code>error</code> means that object is not in the output. Fix it on v11 (step 2) and convert again.</li>
+         </ul>
+         <h4>4. Create and restore</h4>
+         <ul><li>PAW → Administration → Databases → Create, with the <b>same name</b> as v11 (names are case-sensitive and cannot be renamed); RAM/CPU ≥ v11; Backup → Upload → Restore.</li></ul>
+         <h4>5. Verify v12</h4>
+         <ul>
+            <li>Scan the v12 database here. Open MDX subsets and views: a subset referenced by identifier (<code>[dim].[hier].[subset]</code>) returns <b>an empty set with no error</b> in TM1 12 — use <code>TM1SubsetToSet</code>.</li>
+            <li>Open the <b>Bedrock</b> tab on the TM1 12 database: it upgrades the Bedrock processes in use to Bedrock 5, installs the ones callers need, updates the callers, and deletes the unused ones.</li>
+            <li>Rebuild chores in PAW; upload external files to <code>Contents('Files')</code>; delete <code>}Capabilities</code>; move <code>}CubeProperties</code> settings to cube properties; validate data per cube; re-baseline performance.</li>
+         </ul>
+      </div>
+   </div>
+
+   <!-- ================================================================ LOG -->
+   <div ng-if="state.tab==='log'" style="padding-top:10px">
+      <!-- diagnostics for support (user, 2026-10-03): off by default, nothing recorded until a mode is chosen -->
+      <div class="sm-panel" style="margin-bottom:10px">
+         <h5 style="margin-top:0"><i class="fa fa-stethoscope"></i> <span translate="SAASMIG_DIAGTITLE"></span></h5>
+         <p class="sm-muted" translate="SAASMIG_DIAGHELP"></p>
+         <div class="sm-diag-modes">
+            <label ng-repeat="m in ['off', 'pseudonym', 'removed', 'full']" style="display:block;font-weight:normal;margin:2px 0">
+               <input type="radio" name="sm-diag-mode" ng-checked="diag.mode === m" ng-click="setDiagMode(m)">
+               <b>{{dfDiagLabel(m)}}</b> <span class="sm-muted">— {{dfDiagHelp(m)}}</span></label>
+         </div>
+         <div style="margin-top:6px" ng-if="diag.mode && diag.mode !== 'off'">
+            <span class="sm-muted">{{tx('SAASMIG_DIAGKEPT', {n: diag.entries.length})}}</span>
+            <button class="btn btn-default btn-xs" style="margin-left:8px" ng-click="downloadDiag()" ng-disabled="!diag.entries.length"><i class="fa fa-download"></i> <span translate="SAASMIG_DIAGDOWNLOAD"></span></button>
+            <button class="btn btn-default btn-xs" ng-click="clearDiag()" ng-disabled="!diag.entries.length"><i class="fa fa-trash"></i> <span translate="SAASMIG_DIAGCLEAR"></span></button>
+         </div>
+      </div>
+      <!-- kept in this browser (user, 2026-10-02) -->
+      <div style="margin-bottom:6px" ng-if="state.log.length">
+         <span class="sm-muted">{{tx('SAASMIG_LOGKEPT', {n: state.log.length})}}</span>
+         <button class="btn btn-default btn-xs" style="margin-left:8px" ng-click="downloadLog()"><i class="fa fa-download"></i> <span translate="SAASMIG_LOGDOWNLOAD"></span></button>
+         <button class="btn btn-default btn-xs" ng-click="deleteLog()"><i class="fa fa-trash"></i> <span translate="SAASMIG_LOGDELETE"></span></button>
+      </div>
+      <div class="sm-scroll" saas-mig-fill="state.log.length">
+         <table class="table table-condensed sm-table">
+            <tr ng-repeat="l in state.log"><td class="sm-muted" style="width:130px;white-space:nowrap">{{l.at | date:'yyyy-MM-dd HH:mm:ss'}}</td><td class="sm-muted" style="width:120px">{{l.instance}}</td><td style="width:70px">{{l.kind}}</td><td class="sm-code">{{l.text}}</td></tr>
+         </table>
+      </div>
+      <div class="sm-muted" ng-if="!state.log.length" translate="SAASMIG_NOLOG"></div>
+   </div>
+</div>

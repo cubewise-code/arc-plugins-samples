@@ -1,0 +1,2457 @@
+<div class="calculation-explorer-plugin">
+   <style>
+      /* ---- Arc's themed Bootstrap drops .nav > li and .nav > li > a, so the
+              tab strip is styled here rather than inherited ---- */
+      .calculation-explorer-plugin .ce-tabs {
+         display: flex;
+         flex-wrap: wrap;
+         align-items: flex-end;
+         gap: 2px;
+         list-style: none;
+         margin: 16px 0 0;
+         padding: 0;
+         border-bottom: 1px solid var(--ux-border-subtle);
+      }
+
+      .calculation-explorer-plugin .ce-tabs > li {
+         display: block;
+         float: none;
+         margin: 0;
+      }
+
+      /* Carbon line tabs (UX-GUIDELINES.md). 1px transparent top + 7px bottom padding + a 2px
+         underline is the old box's height exactly: ceFill's pads are measured against this strip. */
+      .calculation-explorer-plugin .ce-tabs > li > a {
+         display: flex;
+         align-items: center;
+         gap: 7px;
+         padding: 8px 15px 7px;
+         font-size: 13px;
+         color: var(--ux-text-2);
+         text-decoration: none;
+         border: 0;
+         border-top: 1px solid transparent;
+         border-bottom: 2px solid transparent;
+         border-radius: 0;
+         margin-bottom: -1px;
+      }
+
+      .calculation-explorer-plugin .ce-tabs > li > a:hover {
+         color: var(--ux-text);
+         border-bottom-color: var(--ux-border);
+      }
+
+      .calculation-explorer-plugin .ce-tabs > li.active > a {
+         color: var(--ux-text);
+         border-bottom-color: var(--ux-interactive);
+         font-weight: 600;
+      }
+
+      /* .badge loses its background in Arc's theme */
+      .calculation-explorer-plugin .badge {
+         background-color: var(--ux-layer-hover);
+         color: var(--ux-text);
+         font-size: 10.5px;
+         padding: 1px 7px;
+         border-radius: 9px;
+         font-weight: 600;
+      }
+
+      .calculation-explorer-plugin .ce-tabs > li.active > a .badge {
+         background-color: var(--ux-info-bg);
+         color: var(--ux-info);
+      }
+
+      /* ---- The page-level trace indicator, at the right-hand end of the tab
+              strip. Its home is measured (backlog 18) and the numbers are the
+              reason for it: 0.00 px on every ce-fill box and on the About
+              block's fold clearance, at 2133x987 and at an emulated 850-high
+              container, because this strip's existing 37.81 px line box
+              already fits a 21.44 px badge for free.
+
+              `margin-left: auto` rather than `float: right`: .ce-tabs is a
+              flex container, where a float is a no-op. align-items: flex-end
+              above is what drops the badge onto the tabs' own baseline, and it
+              is why a *shorter* box than the tab links costs nothing -- so
+              this padding must stay under the links' 8px/13px.
+
+              The cube name is width-bounded rather than trusted: node cannot
+              decide whether a row wraps (4k), the strip's spare room was
+              measured at 706.6 px against 410.8 px of tabs at a 1172 px
+              content width, and a cube name is as long as somebody made
+              it. ---- */
+      /* ---- The walk indicator, and it MOVED OUT of the tab strip.
+              It lived there as an 11.5px item at the right-hand end because
+              that cost 0.00 px of layout, which was the right thing to
+              measure and the wrong place to stop: the user reported it "very
+              small and not really visible", and an indicator nobody notices
+              is precisely the feedback gap v1.9.0 and v1.10.0 exist to close
+              -- a user who sees nothing happen clicks again, and with item 0
+              open the second click used to cost another 400 MB.
+
+              This is the escape hatch the old strip comment already named AND
+              already measured: an absolutely positioned child of the plugin
+              root, which anchors to div.lm_content (position: relative, while
+              the plugin root is static), measured at 0.00 px with
+              elementFromPoint confirming it paints above Arc's chrome.
+
+              Two deliberate choices. `pointer-events: none`, so a banner can
+              never eat a click -- it reports state and must not become an
+              eighth gesture. And bottom-anchored rather than top: the thing
+              it reports on is the toolbars and the tree, and an overlay that
+              covers them while you wait is its own usability bug. Anchoring
+              to the container means 2.8's clipping cannot hide it. ---- */
+      .calculation-explorer-plugin .ce-walkbar {
+         position: absolute;
+         left: 50%;
+         bottom: 14px;
+         transform: translateX(-50%);
+         z-index: 30;
+         pointer-events: none;
+         display: flex;
+         flex-direction: column;
+         align-items: stretch;
+         gap: 8px;
+         max-width: 92%;
+         padding: 11px 18px;
+         font-size: 14px;
+         line-height: 1.35;
+         font-weight: 600;
+         color: var(--ux-warning);
+         background: var(--ux-warning-bg);
+         border: 1px solid var(--ux-warning-edge);
+         border-left: 4px solid var(--ux-warning-edge);
+         border-radius: 6px;
+         box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+      }
+
+      /* One line per thing the server is doing, stacked. It was a single flex
+         row until §5e put a row per cancellable walk in it; the line below
+         keeps each of those rows reading exactly as that row did. */
+      .calculation-explorer-plugin .ce-walkline {
+         display: flex;
+         align-items: center;
+         gap: 10px;
+      }
+
+      /* The bar is deliberately click-through -- it overlays the tree and
+         must not eat a click meant for a row underneath -- so its own controls
+         have to opt back in. Without this the Cancel button renders, hovers,
+         and does nothing at all: backlog 23's defect, one layer up. */
+      .calculation-explorer-plugin .ce-walkbar button {
+         pointer-events: auto;
+      }
+
+      /* **Only the two names may give way, and they truncate rather than wrap.**
+         Reported from a client model and then measured at 1500x950 with a CAM
+         identity in the row: the name wrapped to three lines, took the row to
+         57px, squeezed the cube to 81px of its content and shrank the button
+         until `Cancel` rendered as `C…`. Everything that carries its meaning
+         only in full -- the verb, TM1's clock, the control -- is fixed at its
+         natural width; the two names are the only flexible items, and each is
+         capped, clipped and recoverable through its own title. Ellipsis inside
+         a flex child needs the min-width: 0 as well as the overflow, which is
+         why both are here rather than only on the spans. */
+      .calculation-explorer-plugin .ce-walkbar .ce-walkline > * {
+         flex: 0 0 auto;
+         white-space: nowrap;
+      }
+
+      .calculation-explorer-plugin .ce-walkbar .ce-walkuser,
+      .calculation-explorer-plugin .ce-walkbar .ce-walking-cube {
+         flex: 0 1 auto;
+         min-width: 0;
+         overflow: hidden;
+         text-overflow: ellipsis;
+      }
+
+      .calculation-explorer-plugin .ce-walkbar .ce-walkuser {
+         max-width: 240px;
+         font-weight: 700;
+      }
+
+      .calculation-explorer-plugin .ce-walkbar .ce-walkbar-spin {
+         font-size: 18px;
+         color: var(--ux-warning);
+      }
+
+      .calculation-explorer-plugin .ce-walkbar .ce-walking-cube {
+         display: inline-block;
+         max-width: 260px;
+         overflow: hidden;
+         text-overflow: ellipsis;
+         white-space: nowrap;
+         vertical-align: bottom;
+         font-weight: 400;
+         color: var(--ux-text-2);
+      }
+
+      .calculation-explorer-plugin .ce-walkbar .ce-walking-secs {
+         font-variant-numeric: tabular-nums;
+         font-weight: 700;
+         padding: 1px 8px;
+         border-radius: 10px;
+         background: var(--ux-warning-edge);
+         color: #ffffff;
+      }
+
+      /* .table-condensed does not condense either */
+      .calculation-explorer-plugin table.ce-grid > thead > tr > th,
+      .calculation-explorer-plugin table.ce-grid > tbody > tr > th,
+      .calculation-explorer-plugin table.ce-grid > tbody > tr > td {
+         padding: 4px 9px;
+      }
+
+      /* The coordinate rows scroll inside this rather than pushing the button
+         that acts on them off a page Arc does not scroll (§5d item 34). The
+         max-height here is only a fallback -- ce-fill measures the real one
+         against the clipping container and reserves room for the button. */
+      /* Only in manual and MDX mode -- see the tab 0 comment. */
+      .calculation-explorer-plugin .ce-tab0-scroll {
+         overflow-y: auto;
+         overflow-x: hidden;
+      }
+
+      .calculation-explorer-plugin .ce-coordwrap {
+         max-height: calc(100vh - 520px);
+         min-height: 112px;
+         overflow-y: auto;
+         overflow-x: hidden;
+      }
+
+      /* The table's own bottom margin inside a scroll box is dead space at the
+         end of the scroll, and it pushes the last row further from the button. */
+      .calculation-explorer-plugin .ce-coordwrap > table {
+         margin-bottom: 0;
+      }
+
+      /* 150, not 240: the pickers sit above the grid on a page Arc clips, so
+         every pixel they keep is a row of data the grid cannot show. That
+         decision is now expressed as ce-fill-max on the elements, so the boxes
+         SHRINK when the page is short without ever growing past the 150 this
+         comment argues for (§5d item 31). */
+      .calculation-explorer-plugin .ce-picker {
+         max-height: 150px;
+         overflow-y: auto;
+         border: 1px solid var(--ux-border-subtle);
+         border-radius: 3px;
+      }
+
+      .calculation-explorer-plugin .ce-picker .list-group-item {
+         padding: 4px 10px;
+         border-left: 0;
+         border-right: 0;
+         cursor: pointer;
+         font-size: 12.5px;
+      }
+
+      .calculation-explorer-plugin .ce-picker .list-group-item.active {
+         background-color: var(--ux-interactive);
+         border-color: var(--ux-interactive);
+      }
+
+      /* ---- Scroll boxes. Arc's tab area does not scroll for a plugin's own
+              tall content, so the tree and the grid carry their own. The
+              max-height here is only a fallback: ce-fill measures where the box
+              actually sits and sizes it to the viewport. ---- */
+      /* 160px here and ce-fill-min="160" on the element are ONE floor declared
+         twice, and they have to agree: CSS min-height beats the inline
+         max-height ceFill writes, so whichever is larger is the number that
+         binds. The attribute said 150 until it was measured -- ceFill applied
+         max-height:150px and the box rendered 160 -- which quietly made every
+         pad calculation written against it 10px optimistic (4j, 4k). */
+      .calculation-explorer-plugin .ce-gridwrap {
+         max-height: calc(100vh - 420px);
+         min-height: 160px;
+         overflow: auto;
+         border: 1px solid var(--ux-border-subtle);
+         border-radius: 3px;
+      }
+
+      .calculation-explorer-plugin table.ce-grid {
+         margin-bottom: 0;
+         font-size: 12px;
+      }
+
+      .calculation-explorer-plugin table.ce-grid th {
+         position: sticky;
+         top: 0;
+         background-color: var(--ux-layer);
+         z-index: 2;
+         white-space: nowrap;
+      }
+
+      .calculation-explorer-plugin table.ce-grid th.ce-rowhdr {
+         left: 0;
+         z-index: 3;
+         text-align: left;
+      }
+
+      .calculation-explorer-plugin table.ce-grid tbody th.ce-rowhdr {
+         position: sticky;
+         top: auto;
+         left: 0;
+         z-index: 1;
+         background-color: var(--ux-layer);
+         font-weight: normal;
+         white-space: nowrap;
+      }
+
+      .calculation-explorer-plugin table.ce-grid td {
+         text-align: right;
+         cursor: pointer;
+         font-variant-numeric: tabular-nums;
+         white-space: nowrap;
+      }
+
+      .calculation-explorer-plugin table.ce-grid td:hover {
+         outline: 2px solid var(--ux-interactive);
+         outline-offset: -2px;
+      }
+
+      /* While a walk is in flight the grid stops taking clicks. Belt and
+       * braces with traceCell's own guard: this also kills the :hover
+       * outline, so the grid stops *inviting* the click as well (5a). */
+      .calculation-explorer-plugin table.ce-grid.ce-grid-busy > tbody > tr > td {
+         pointer-events: none;
+      }
+
+      /* The cell the walk was started from. Outlined rather than dimmed --
+       * the reader still wants to see which number they asked about. */
+      .calculation-explorer-plugin td.ce-cell-tracing {
+         outline: 2px solid var(--ux-interactive);
+         outline-offset: -2px;
+         background-color: var(--ux-info-bg);
+      }
+
+      .calculation-explorer-plugin .ce-cell-spin {
+         margin-right: 4px;
+         color: var(--ux-interactive);
+      }
+
+      .calculation-explorer-plugin td.ce-rule-cell {
+         background-color: var(--ux-purple-bg);
+      }
+
+      .calculation-explorer-plugin td.ce-cons-cell {
+         font-weight: 600;
+      }
+
+      .calculation-explorer-plugin td.ce-empty {
+         color: var(--ux-text-3);
+      }
+
+      /* Cell outside the fetched window — still traceable, just not read yet. */
+      .calculation-explorer-plugin td.ce-missing {
+         background-image: repeating-linear-gradient(135deg, var(--ux-layer) 0 3px, transparent 3px 6px);
+      }
+
+      .calculation-explorer-plugin .ce-legend {
+         font-size: 11.5px;
+         color: var(--ux-text-2);
+         margin-top: 4px;
+      }
+
+      .calculation-explorer-plugin .ce-legend i.ce-swatch {
+         display: inline-block;
+         width: 10px;
+         height: 10px;
+         background-color: var(--ux-purple-bg);
+         border: 1px solid var(--ux-purple-edge);
+         margin-right: 3px;
+      }
+
+      .calculation-explorer-plugin .ce-tree {
+         border: 1px solid var(--ux-border-subtle);
+         border-radius: 3px;
+         padding: 4px 0;
+         max-height: calc(100vh - 330px);
+         min-height: 200px;
+         overflow-y: auto;
+         overflow-x: auto;
+      }
+
+      .calculation-explorer-plugin .ce-line {
+         display: flex;
+         align-items: baseline;
+         gap: 8px;
+         padding: 2px 8px;
+      }
+
+      .calculation-explorer-plugin .ce-row:hover .ce-line {
+         background-color: var(--ux-layer);
+      }
+
+      .calculation-explorer-plugin .ce-row.ce-focus .ce-line {
+         background-color: var(--ux-warning-bg);
+         box-shadow: inset 3px 0 0 var(--ux-warning-edge);
+      }
+
+      .calculation-explorer-plugin .ce-twisty-bound {
+         cursor: pointer;
+         color: var(--ux-warning);
+      }
+
+      /* Reads the way the disabled *Trace deeper* button on the same row
+         reads. Without this the twisty stayed live during a walk and its
+         click was dropped in silence -- the defect 4o fixed for the grid,
+         reintroduced by the release that added this control. */
+      .calculation-explorer-plugin .ce-twisty-off {
+         pointer-events: none;
+         opacity: 0.4;
+      }
+
+      .calculation-explorer-plugin .ce-twisty {
+         flex: 0 0 14px;
+         width: 14px;
+         color: var(--ux-text-2);
+         cursor: pointer;
+         text-align: center;
+      }
+
+      /* Item 10: `tm1.TraceFeeders` answers a `Fed` boolean per fed cell, and
+         this is that tick. Three states and three colours, and the third is
+         grey on purpose -- "the server did not say" may not be dressed as a
+         verdict, which is the lesson item 36 cost. */
+      .calculation-explorer-plugin .ce-fedmark {
+         display: inline-block;
+         width: 14px;
+         text-align: center;
+      }
+
+      .calculation-explorer-plugin .ce-fed-yes { color: var(--ux-success); }
+      .calculation-explorer-plugin .ce-fed-no { color: var(--ux-error); }
+      .calculation-explorer-plugin .ce-fed-unknown { color: var(--ux-text-3); }
+
+      /* The label is the toggle, not a 14px caret beside it. Backlog 23 was a
+         twisty whose click target was small enough to miss in silence, and a
+         fed cell's label is the widest thing on the row. */
+      .calculation-explorer-plugin .ce-fedlabel {
+         cursor: pointer;
+      }
+
+      .calculation-explorer-plugin .ce-fedlabel:hover {
+         text-decoration: underline;
+      }
+
+      .calculation-explorer-plugin .ce-fedmembers {
+         margin: 2px 0 6px 32px;
+         color: var(--ux-text-2);
+      }
+
+      .calculation-explorer-plugin .ce-fedrow {
+         padding: 1px 0;
+      }
+
+      .calculation-explorer-plugin .ce-badge {
+         flex: 0 0 auto;
+         font-size: 10px;
+         font-weight: 700;
+         text-transform: uppercase;
+         letter-spacing: 0.03em;
+         border: 1px solid currentColor;
+         border-radius: 3px;
+         padding: 0 4px;
+         line-height: 15px;
+      }
+
+      .calculation-explorer-plugin .ce-rule { color: var(--ux-purple); }
+      .calculation-explorer-plugin .ce-cons { color: var(--ux-interactive); }
+      .calculation-explorer-plugin .ce-simple { color: var(--ux-success); }
+      .calculation-explorer-plugin .ce-other { color: var(--ux-text-2); }
+
+      .calculation-explorer-plugin .ce-loc {
+         flex: 1 1 auto;
+         min-width: 0;
+         font-family: Menlo, Consolas, monospace;
+         font-size: 12px;
+         overflow: hidden;
+         text-overflow: ellipsis;
+         white-space: nowrap;
+      }
+
+      .calculation-explorer-plugin .ce-loc .ce-hop {
+         color: var(--ux-interactive);
+         font-weight: 600;
+      }
+
+      .calculation-explorer-plugin .ce-unres {
+         color: var(--ux-text-2);
+         font-style: italic;
+      }
+
+      .calculation-explorer-plugin .ce-val {
+         flex: 0 0 120px;
+         text-align: right;
+         font-weight: 600;
+         font-variant-numeric: tabular-nums;
+      }
+
+      .calculation-explorer-plugin .ce-val.ce-zero {
+         color: var(--ux-text-3);
+         font-weight: 400;
+      }
+
+      .calculation-explorer-plugin .ce-share {
+         flex: 0 0 58px;
+         text-align: right;
+         color: var(--ux-text-2);
+         font-size: 11.5px;
+         font-variant-numeric: tabular-nums;
+      }
+
+      .calculation-explorer-plugin .ce-actions {
+         flex: 0 0 34px;
+         text-align: right;
+      }
+
+      .calculation-explorer-plugin .ce-actions .btn {
+         padding: 0 5px;
+         font-size: 11px;
+         line-height: 16px;
+      }
+
+      .calculation-explorer-plugin .ce-bar {
+         height: 3px;
+         background-color: var(--ux-layer-hover);
+         border-radius: 2px;
+         max-width: 380px;
+         margin: 0 0 2px 40px;
+      }
+
+      .calculation-explorer-plugin .ce-bar i {
+         display: block;
+         height: 3px;
+         background-color: var(--ux-interactive);
+         border-radius: 2px;
+      }
+
+      .calculation-explorer-plugin .ce-detail {
+         padding: 0 8px 6px 8px;
+      }
+
+      .calculation-explorer-plugin .ce-stmt {
+         border: 1px solid var(--ux-border-subtle);
+         border-left: 3px solid var(--ux-purple);
+         border-radius: 3px;
+         margin: 4px 0 4px 40px;
+         background-color: var(--ux-layer);
+      }
+
+      .calculation-explorer-plugin .ce-where {
+         padding: 3px 8px;
+         font-size: 11.5px;
+         color: var(--ux-text-2);
+         background-color: var(--ux-layer);
+      }
+
+      .calculation-explorer-plugin .ce-stmt pre {
+         margin: 0;
+         border: 0;
+         border-radius: 0;
+         background: transparent;
+         font-size: 11.5px;
+         line-height: 1.5;
+         padding: 7px 8px;
+      }
+
+      /* ---- Compact chrome. Arc clips this page instead of scrolling it, so
+              the header is kept as short as it can be without losing anything:
+              measured live, the old header ate 718 of 818 available pixels. ---- */
+      .calculation-explorer-plugin .ce-head h2 {
+         font-size: 19px;
+         margin: 6px 0 2px;
+      }
+
+      .calculation-explorer-plugin .ce-head p {
+         margin-bottom: 6px;
+         font-size: 12.5px;
+      }
+
+      .calculation-explorer-plugin .ce-tabs {
+         margin-top: 8px;
+      }
+
+      .calculation-explorer-plugin .ce-coordbar {
+         display: flex;
+         align-items: flex-start;
+         gap: 6px;
+         margin-bottom: 6px;
+      }
+
+      .calculation-explorer-plugin .ce-coordtoggle {
+         flex: 0 0 auto;
+         color: var(--ux-text-2);
+         font-size: 11px;
+         padding: 2px 4px;
+      }
+
+      .calculation-explorer-plugin .ce-coordtoggle:hover {
+         color: var(--ux-interactive);
+         text-decoration: none;
+      }
+
+      /* Boxed in both states: a bare line of monospace did not read as
+         something you could select, which was the point of the complaint. It
+         starts expanded, because reading the whole cell reference is the
+         common case and collapsing it is the exception. */
+      .calculation-explorer-plugin .ce-coordline {
+         flex: 1 1 auto;
+         min-width: 0;
+         font-family: Menlo, Consolas, monospace;
+         font-size: 12.5px;
+         margin: 0;
+         padding: 4px 8px;
+         background-color: var(--ux-layer);
+         border: 1px solid var(--ux-border-subtle);
+         border-radius: 3px;
+         white-space: normal;
+         word-break: break-word;
+         user-select: text;
+         cursor: text;
+      }
+
+      .calculation-explorer-plugin .ce-coordline:hover {
+         border-color: var(--ux-border);
+      }
+
+      /* Collapsed: still boxed, just clipped to one line. */
+      .calculation-explorer-plugin .ce-coordline-shut {
+         white-space: nowrap;
+         overflow: hidden;
+         text-overflow: ellipsis;
+      }
+
+      /* The two takeover boxes read as one setting with two halves, so they get
+         a small group label and an indent rather than sitting loose among the
+         other checkboxes. */
+      .calculation-explorer-plugin .ce-takeover {
+         margin-top: 4px;
+      }
+
+      .calculation-explorer-plugin .ce-takeover-label {
+         display: block;
+         font-size: 11px;
+         color: var(--ux-text-2);
+         line-height: 1.3;
+      }
+
+      .calculation-explorer-plugin .ce-takeover .ce-checkbox {
+         padding-left: 8px;
+      }
+
+      .calculation-explorer-plugin .alert {
+         margin-bottom: 8px;
+      }
+
+      .calculation-explorer-plugin .ce-cards {
+         display: flex;
+         flex-wrap: wrap;
+         gap: 6px;
+         margin-bottom: 8px;
+      }
+
+      .calculation-explorer-plugin .ce-card {
+         border: 1px solid var(--ux-border-subtle);
+         border-radius: 4px;
+         padding: 3px 10px;
+         min-width: 84px;
+      }
+
+      .calculation-explorer-plugin .ce-card span {
+         display: block;
+         font-size: 9.5px;
+         text-transform: uppercase;
+         letter-spacing: 0.04em;
+         color: var(--ux-text-2);
+      }
+
+      .calculation-explorer-plugin .ce-card strong {
+         font-size: 15px;
+      }
+
+      .calculation-explorer-plugin .ce-depth {
+         width: 46px;
+         height: 24px;
+         padding: 2px 4px;
+         font-size: 12px;
+         display: inline-block;
+         margin-left: 4px;
+      }
+
+      /* Sticky so the filters, the export buttons and the breadcrumb do not
+         scroll away on a short window, where the tree keeps its min-height and
+         the page itself scrolls instead. */
+      .calculation-explorer-plugin .ce-toolbar {
+         display: flex;
+         flex-wrap: wrap;
+         gap: 6px;
+         align-items: center;
+         margin-bottom: 8px;
+         position: sticky;
+         top: 0;
+         z-index: 4;
+         background-color: #fff;
+         padding: 4px 0;
+      }
+
+      .calculation-explorer-plugin .ce-crumbs {
+         position: sticky;
+         top: 40px;
+         z-index: 3;
+      }
+
+      .calculation-explorer-plugin .ce-toolbar .btn {
+         padding: 3px 9px;
+         font-size: 12.5px;
+      }
+
+      .calculation-explorer-plugin .ce-toolbar .form-control {
+         width: auto;
+         display: inline-block;
+         height: 28px;
+         padding: 3px 8px;
+         font-size: 12.5px;
+      }
+
+      /* ---- the export menu ----------------------------------------------
+         Not Bootstrap's .dropdown: nothing in this plugin uses one, so there is
+         no evidence Arc's trimmed theme ships the CSS (or the JS) it needs --
+         the same reason .ce-tabs is hand-styled and .badge is repainted above.
+         .btn is fine, so the trigger is a real .btn and only the panel is new.
+
+         Absolutely positioned on purpose: the tree's max-height is computed once
+         by ceFill from its own top, so a panel that took layout space would push
+         the tree down without ceFill knowing, and Arc clips rather than scrolls
+         (2.8) -- the rows pushed off the bottom would be unreachable. */
+      /* Deliberately NOT position: relative. Measured in the running app: when the
+         toolbar wraps (the technical view at 1500px still does), the Share control
+         lands at the LEFT end of the second row, and a panel anchored right:0 to
+         the control itself then extends leftwards out of the plugin area and under
+         Arc's sidebar, which paints above it -- the panel was there and unusable.
+         Leaving this static makes .ce-toolbar the containing block (it is sticky,
+         so it is a positioned ancestor), which pins the panel to the toolbar's
+         right edge whatever row the control wraps onto. */
+      .calculation-explorer-plugin .ce-menu {
+         display: inline-block;
+      }
+
+      /* Right-anchored: the menu is the last item after the flex spacer, so it
+         opens leftwards into the page rather than off the edge of it. */
+      .calculation-explorer-plugin .ce-menu-panel {
+         position: absolute;
+         top: 100%;
+         right: 0;
+         margin-top: 4px;
+         min-width: 232px;
+         padding: 4px;
+         background-color: #fff;
+         border: 1px solid var(--ux-border);
+         border-radius: 4px;
+         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+         z-index: 20;
+         text-align: left;
+      }
+
+      /* Full-width rows, so the panel reads as a menu and not as four more
+         buttons. Must stay below `.ce-toolbar .btn` in this file: same
+         specificity, so only source order decides. */
+      .calculation-explorer-plugin .ce-menu-panel .btn {
+         display: block;
+         width: 100%;
+         text-align: left;
+         border: 0;
+         background-color: transparent;
+         padding: 5px 8px;
+         font-size: 12.5px;
+      }
+
+      .calculation-explorer-plugin .ce-menu-panel .btn:hover,
+      .calculation-explorer-plugin .ce-menu-panel .btn:focus {
+         background-color: var(--ux-info-bg);
+      }
+
+      /* One icon column, so the four labels line up. */
+      .calculation-explorer-plugin .ce-menu-panel .btn i.fa {
+         width: 16px;
+         margin-right: 6px;
+         color: var(--ux-text-2);
+      }
+
+      .calculation-explorer-plugin .ce-menu-caret {
+         margin-left: 4px;
+         color: var(--ux-text-2);
+      }
+
+      /* Rows in the filters panel. The export panel's rows are .btn, which
+         `.ce-menu-panel .btn` above already blocks out; these are a <label> and
+         a <select>, so they need the same treatment. Both must stay BELOW
+         `.ce-toolbar .form-control` in this file: identical specificity, so
+         only source order decides which width wins. */
+      .calculation-explorer-plugin .ce-menu-panel .ce-menu-row {
+         display: block;
+         width: 100%;
+         margin: 0;
+         padding: 5px 8px;
+         font-size: 12.5px;
+         font-weight: normal;
+         color: var(--ux-text);
+      }
+
+      .calculation-explorer-plugin .ce-menu-panel .ce-menu-row:hover {
+         background-color: var(--ux-info-bg);
+      }
+
+      .calculation-explorer-plugin .ce-menu-panel .form-control {
+         display: block;
+         width: 100%;
+         margin-top: 3px;
+      }
+
+      .calculation-explorer-plugin .ce-checkbox {
+         font-size: 12.5px;
+         color: var(--ux-text-2);
+         font-weight: normal;
+         margin: 0 4px 0 0;
+      }
+
+      /* ---------- business view ---------- */
+      .calculation-explorer-plugin .ce-modes {
+         display: inline-flex;
+         border: 1px solid var(--ux-border);
+         border-radius: 4px;
+         overflow: hidden;
+      }
+
+      .calculation-explorer-plugin .ce-modes button {
+         border: 0;
+         background-color: #fff;
+         padding: 4px 12px;
+         font-size: 12.5px;
+      }
+
+      /* a content switcher (UX guide): the chosen view in dark, not a second primary blue */
+      .calculation-explorer-plugin .ce-modes button.active {
+         background-color: var(--ux-text);
+         color: #fff;
+      }
+
+      .calculation-explorer-plugin .ce-crumbs {
+         padding: 5px 10px;
+         background-color: var(--ux-layer);
+         border: 1px solid var(--ux-border-subtle);
+         border-bottom: 0;
+         border-radius: 3px 3px 0 0;
+         font-size: 12.5px;
+      }
+
+      .calculation-explorer-plugin .ce-crumbs .ce-crumb-val {
+         color: var(--ux-text-2);
+         font-variant-numeric: tabular-nums;
+      }
+
+      .calculation-explorer-plugin .ce-crumbs i.fa-angle-right {
+         color: var(--ux-text-3);
+         margin: 0 6px;
+      }
+
+      .calculation-explorer-plugin .ce-btree {
+         border: 1px solid var(--ux-border-subtle);
+         border-radius: 0 0 3px 3px;
+         padding: 6px 0;
+         max-height: calc(100vh - 360px);
+         min-height: 200px;
+         overflow-y: auto;
+         overflow-x: auto;
+      }
+
+      .calculation-explorer-plugin .ce-bmain {
+         display: flex;
+         align-items: center;
+         gap: 10px;
+         padding: 7px 12px;
+         cursor: pointer;
+         border-radius: 3px;
+      }
+
+      .calculation-explorer-plugin .ce-bmain:hover {
+         background-color: var(--ux-info-bg);
+      }
+
+      .calculation-explorer-plugin .ce-bmain.ce-bopen {
+         background-color: var(--ux-info-bg);
+         font-weight: 600;
+      }
+
+      .calculation-explorer-plugin .ce-btype {
+         flex: 0 0 20px;
+         text-align: center;
+         font-size: 11px;
+         opacity: 0.75;
+      }
+
+      .calculation-explorer-plugin .ce-bcaret {
+         flex: 0 0 14px;
+         color: var(--ux-text-2);
+         font-size: 12px;
+         text-align: center;
+      }
+
+      .calculation-explorer-plugin .ce-blabel {
+         flex: 1 1 auto;
+         min-width: 0;
+         font-size: 14px;
+         overflow: hidden;
+         text-overflow: ellipsis;
+         white-space: nowrap;
+      }
+
+      .calculation-explorer-plugin .ce-blabel small {
+         color: var(--ux-text-2);
+         font-weight: 400;
+         font-size: 11.5px;
+      }
+
+      .calculation-explorer-plugin .ce-bbar {
+         flex: 0 0 130px;
+         height: 8px;
+         background-color: var(--ux-layer-hover);
+         border-radius: 4px;
+         overflow: hidden;
+      }
+
+      .calculation-explorer-plugin .ce-bbar i {
+         display: block;
+         height: 8px;
+         background-color: var(--ux-interactive);
+         border-radius: 4px;
+      }
+
+      .calculation-explorer-plugin .ce-bshare {
+         flex: 0 0 46px;
+         text-align: right;
+         color: var(--ux-text-2);
+         font-size: 12px;
+         font-variant-numeric: tabular-nums;
+      }
+
+      .calculation-explorer-plugin .ce-bval {
+         flex: 0 0 120px;
+         text-align: right;
+         font-size: 14px;
+         font-variant-numeric: tabular-nums;
+      }
+
+      .calculation-explorer-plugin .ce-bval.ce-zero {
+         color: var(--ux-text-3);
+      }
+
+      /* This is the whole point of the business view — "keep asking why" — so
+         it reads as a real button in the accent colour rather than a grey
+         outline that gets mistaken for a label. */
+      .calculation-explorer-plugin .ce-bwhy {
+         flex: 0 0 auto;
+         font-size: 11.5px;
+         font-weight: 600;
+         color: var(--ux-interactive);
+         background-color: var(--ux-info-bg);
+         border: 1px solid var(--ux-info-edge);
+         border-radius: 11px;
+         padding: 0 9px;
+         line-height: 18px;
+         white-space: nowrap;
+      }
+
+      .calculation-explorer-plugin .ce-bwhy i {
+         font-size: 10.5px;
+         margin-right: 3px;
+      }
+
+      .calculation-explorer-plugin .ce-bwhy:hover,
+      .calculation-explorer-plugin .ce-bwhy:focus {
+         background-color: var(--ux-info-bg);
+         border-color: var(--ux-interactive);
+         color: var(--ux-interactive);
+         text-decoration: none;
+      }
+
+      .calculation-explorer-plugin .ce-bwhy.ce-bwhy-on {
+         background-color: var(--ux-interactive);
+         border-color: var(--ux-interactive);
+         color: #fff;
+      }
+
+      .calculation-explorer-plugin .ce-bdetail {
+         margin: 4px 0 8px 36px;
+         padding: 8px 10px;
+         background-color: var(--ux-layer);
+         border: 1px solid var(--ux-border-subtle);
+         border-radius: 3px;
+         font-size: 12px;
+      }
+
+      /* "input" reads as a fact about the number; the green matches the stored
+         type colour used everywhere else for the same idea. */
+      .calculation-explorer-plugin .ce-chip-input {
+         display: inline-block;
+         margin-left: 6px;
+         padding: 0 6px;
+         border: 1px solid var(--ux-success-edge);
+         background-color: var(--ux-success-bg);
+         color: var(--ux-success);
+         border-radius: 9px;
+         font-size: 10px;
+         font-weight: 700;
+         letter-spacing: 0.04em;
+         text-transform: uppercase;
+         vertical-align: 1px;
+      }
+
+      .calculation-explorer-plugin .ce-input-note {
+         color: var(--ux-success);
+      }
+
+      .calculation-explorer-plugin .ce-warn-note {
+         color: var(--ux-warning);
+      }
+
+      .calculation-explorer-plugin .ce-rowcap {
+         margin: 6px 12px 2px;
+         padding: 5px 9px;
+         background-color: var(--ux-warning-bg);
+         border: 1px solid var(--ux-warning-edge);
+         border-radius: 3px;
+         font-size: 11.5px;
+         color: var(--ux-warning);
+      }
+
+      .calculation-explorer-plugin .ce-bzeros {
+         margin-left: 36px;
+         font-size: 11.5px;
+         color: var(--ux-text-3);
+         font-style: italic;
+      }
+
+      /* ---------- shared detail sections ---------- */
+      .calculation-explorer-plugin .ce-sec {
+         margin-bottom: 9px;
+      }
+
+      .calculation-explorer-plugin .ce-sec > h6 {
+         margin: 0 0 4px 0;
+         font-size: 10px;
+         font-weight: 700;
+         letter-spacing: 0.08em;
+         text-transform: uppercase;
+         color: var(--ux-text-2);
+      }
+
+      .calculation-explorer-plugin .ce-coordgrid {
+         display: flex;
+         flex-wrap: wrap;
+         gap: 4px 6px;
+      }
+
+      .calculation-explorer-plugin .ce-coord {
+         background-color: #fff;
+         border: 1px solid var(--ux-border-subtle);
+         border-radius: 3px;
+         padding: 1px 7px;
+         font-size: 11.5px;
+      }
+
+      .calculation-explorer-plugin .ce-coord b {
+         color: var(--ux-text-2);
+         font-weight: 500;
+      }
+
+      .calculation-explorer-plugin .ce-formula {
+         font-family: Menlo, Consolas, monospace;
+         font-size: 12.5px;
+         line-height: 2.1;
+         word-break: break-word;
+      }
+
+      .calculation-explorer-plugin .ce-formula .ce-target {
+         font-weight: 700;
+         color: var(--ux-purple);
+      }
+
+      .calculation-explorer-plugin .ce-ref {
+         display: inline-block;
+         border: 1px solid var(--ux-info-edge);
+         background-color: var(--ux-info-bg);
+         border-radius: 3px;
+         padding: 0 2px 0 6px;
+         white-space: nowrap;
+      }
+
+      .calculation-explorer-plugin .ce-ref.ce-ref-miss {
+         border-color: var(--ux-warning-edge);
+         background-color: var(--ux-warning-bg);
+      }
+
+      /* A chip that leads somewhere says so before it is clicked, and stops
+         saying it while a walk or a preview is in flight -- item 22's lesson,
+         which was a control that looked live throughout and punished the click. */
+      .calculation-explorer-plugin .ce-ref.ce-ref-live {
+         cursor: pointer;
+      }
+
+      .calculation-explorer-plugin .ce-ref.ce-ref-live:hover {
+         border-color: var(--ux-interactive);
+         box-shadow: 0 0 0 1px var(--ux-interactive);
+      }
+
+      /* A DB( ) lookup carries one argument per dimension of the cube it reads,
+         so it is far wider than an operand and has to be allowed to wrap: Arc
+         clips a plugin page rather than scrolling it (2.8), so a nowrap token
+         this wide would simply run off the right edge and be gone. */
+      .calculation-explorer-plugin .ce-ref.ce-ref-db {
+         white-space: normal;
+      }
+
+      /* The part the rule text could not tell you: the element TM1 actually
+         read, standing where a !dimension or an ATTRS( ) call was written. */
+      .calculation-explorer-plugin .ce-sub {
+         padding: 0 3px;
+         border-radius: 2px;
+         background-color: var(--ux-success-bg);
+         color: var(--ux-success);
+         font-weight: 600;
+      }
+
+      .calculation-explorer-plugin .ce-refval {
+         display: inline-block;
+         margin-left: 5px;
+         padding: 0 5px;
+         border-radius: 2px;
+         background-color: var(--ux-interactive);
+         color: #fff;
+         font-weight: 600;
+         font-variant-numeric: tabular-nums;
+      }
+
+      .calculation-explorer-plugin .ce-ref-miss .ce-refval {
+         background-color: var(--ux-warning-edge);
+      }
+
+      .calculation-explorer-plugin .ce-valrow {
+         display: flex;
+         gap: 10px;
+         font-size: 12px;
+         padding: 2px 0;
+         border-bottom: 1px dotted var(--ux-border-subtle);
+      }
+
+      .calculation-explorer-plugin .ce-valrow span:first-child {
+         flex: 1 1 auto;
+         min-width: 0;
+      }
+
+      .calculation-explorer-plugin .ce-valrow span:last-child {
+         flex: 0 0 130px;
+         text-align: right;
+         font-variant-numeric: tabular-nums;
+      }
+
+      .calculation-explorer-plugin .ce-valrow em {
+         color: var(--ux-text-2);
+         font-style: normal;
+         font-size: 11px;
+      }
+
+      .calculation-explorer-plugin .ce-legend-note {
+         font-size: 11px;
+         color: var(--ux-text-2);
+      }
+
+      .calculation-explorer-plugin .ce-approx {
+         font-style: italic;
+         color: var(--ux-warning);
+      }
+
+      .calculation-explorer-plugin .ce-chip {
+         display: inline-block;
+         border: 1px solid var(--ux-border-subtle);
+         border-radius: 12px;
+         padding: 1px 9px;
+         font-size: 11.5px;
+         margin: 0 4px 4px 0;
+      }
+
+      /* ---------- About. Last thing on the first tab, and measured at 41px:
+              margin-top 8 + border 1 + padding-top 5 + two 11.5px lines. It
+              carried .ce-sec and an <h6> until both were measured out again --
+              at 1500x850 the last line fell 13px below the fold (4j). ---------- */
+      .calculation-explorer-plugin .ce-about {
+         margin-top: 8px;
+         padding-top: 5px;
+         border-top: 1px solid var(--ux-border-subtle);
+      }
+
+      .calculation-explorer-plugin .ce-about p {
+         margin: 0;
+         font-size: 11.5px;
+         color: var(--ux-text-2);
+      }
+
+      /* The open bug, where a user will actually meet it. Colour and an icon
+         rather than a line of its own: this block has 9px of clearance at
+         1500x850 (4j), so a third 11.5px line would clip exactly as the
+         <h6> did. Amber against the block's grey, so it reads as a warning
+         without shouting. */
+      .calculation-explorer-plugin .ce-about .ce-about-warn {
+         color: var(--ux-warning);
+      }
+      /* ================================================================ UX kit
+       * UX-GUIDELINES.md at the repository root: tokens (§4) and components (§6),
+       * Carbon-aligned. Copy this block to another plugin with its own root
+       * class; do not re-derive it. Copied from tm1-12-readiness; the block after it puts
+       * this plugin's own classes on these tokens. */
+      .calculation-explorer-plugin {
+         --ux-text: #161616; --ux-text-2: #525252; --ux-text-3: #6f6f6f;
+         --ux-border: #c6c6c6; --ux-border-subtle: #e0e0e0;
+         --ux-layer: #f4f4f4; --ux-layer-hover: #e8e8e8; --ux-selected: #e0e0e0;
+         --ux-interactive: #0f62fe; --ux-interactive-hover: #0050e6; --ux-focus: #0f62fe;
+         --ux-success: #198038; --ux-success-bg: #defbe6;
+         --ux-warning: #8e6a00; --ux-warning-bg: #fcf4d6; --ux-warning-edge: #f1c21b;
+         --ux-error: #da1e28; --ux-error-bg: #fff1f1;
+         --ux-info: #0043ce; --ux-info-bg: #edf5ff; --ux-info-edge: #a6c8ff; --ux-success-edge: #a7f0ba;
+         --ux-purple: #8a3ffc; --ux-purple-bg: #f6f2ff; --ux-purple-edge: #d4bbff;
+         --ux-1: 2px; --ux-2: 4px; --ux-3: 8px; --ux-4: 12px; --ux-5: 16px; --ux-6: 24px; --ux-7: 32px;
+         --ux-radius: 2px; --ux-h: 32px;
+      }
+      .calculation-explorer-plugin .ux-helper { font-size: 12px; line-height: 16px; color: var(--ux-text-2); }
+      .calculation-explorer-plugin .ux-link { color: var(--ux-interactive); cursor: pointer; font-weight: normal; margin: 0; text-decoration: none; }
+      .calculation-explorer-plugin .ux-link:hover { text-decoration: underline; }
+      .calculation-explorer-plugin .ux-link:focus-within, .calculation-explorer-plugin .ux-link:focus { outline: 2px solid var(--ux-focus); outline-offset: 1px; }
+      .calculation-explorer-plugin .ux-visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+      /* buttons (§6.1) */
+      .calculation-explorer-plugin .ux-btn { display: inline-flex; align-items: center; gap: var(--ux-3); height: var(--ux-h); padding: 0 var(--ux-5);
+         border: 1px solid transparent; border-radius: var(--ux-radius); font-size: 14px; line-height: 1; cursor: pointer; white-space: nowrap;
+         transition: background-color 110ms ease, border-color 110ms ease; }
+      .calculation-explorer-plugin .ux-btn:focus { outline: none; box-shadow: inset 0 0 0 2px var(--ux-focus), inset 0 0 0 3px #fff; }
+      .calculation-explorer-plugin .ux-btn[disabled] { cursor: not-allowed; opacity: 1; background: #c6c6c6; border-color: #c6c6c6; color: #8d8d8d; }
+      .calculation-explorer-plugin .ux-btn-primary:not([disabled]) { background: var(--ux-interactive); color: #fff; }
+      .calculation-explorer-plugin .ux-btn-primary:not([disabled]):hover { background: var(--ux-interactive-hover); }
+      .calculation-explorer-plugin .ux-btn-secondary:not([disabled]) { background: #fff; border-color: var(--ux-border); color: var(--ux-text); }
+      .calculation-explorer-plugin .ux-btn-secondary:not([disabled]):hover { background: var(--ux-layer-hover); }
+      .calculation-explorer-plugin .ux-btn-ghost { background: transparent; color: var(--ux-interactive); padding: 0 var(--ux-3); }
+      .calculation-explorer-plugin .ux-btn-ghost:hover { background: var(--ux-layer-hover); }
+      .calculation-explorer-plugin .ux-btn-danger:not([disabled]) { background: var(--ux-error); color: #fff; }
+      /* field (§6.2) */
+      .calculation-explorer-plugin .ux-field { display: flex; flex-direction: column; gap: var(--ux-2); }
+      .calculation-explorer-plugin .ux-label { font-size: 12px; line-height: 16px; color: var(--ux-text-2); font-weight: normal; margin: 0; }
+      .calculation-explorer-plugin .ux-input { height: var(--ux-h); padding: 0 var(--ux-4); border: 1px solid var(--ux-border); border-radius: var(--ux-radius);
+         background: #fff; color: var(--ux-text); font-size: 14px; min-width: 200px; }
+      .calculation-explorer-plugin .ux-input:focus { outline: 2px solid var(--ux-focus); outline-offset: -2px; border-color: var(--ux-focus); }
+      /* action bar (§5) */
+      .calculation-explorer-plugin .ux-actionbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--ux-5); margin: var(--ux-4) 0; }
+      .calculation-explorer-plugin .ux-actionbar .ux-push { margin-left: auto; }
+      /* drop zone (§6.3) */
+      .calculation-explorer-plugin .ux-dropzone { display: flex; align-items: center; gap: var(--ux-4); padding: var(--ux-5); border: 1px dashed var(--ux-border);
+         border-radius: var(--ux-radius); background: var(--ux-layer); color: var(--ux-text); transition: background-color 110ms ease, border-color 110ms ease; }
+      .calculation-explorer-plugin .ux-dropzone-icon { font-size: 24px; color: var(--ux-text-2); width: 28px; text-align: center; }
+      .calculation-explorer-plugin .ux-dropzone-over { border: 1px solid var(--ux-interactive); background: var(--ux-info-bg); }
+      .calculation-explorer-plugin .ux-dropzone-done { padding: var(--ux-3) var(--ux-5); border-style: solid; border-color: var(--ux-border-subtle); background: #fff; }
+      .calculation-explorer-plugin .ux-dropzone-done .ux-dropzone-icon { font-size: 16px; color: var(--ux-success); }
+      /* notification and summary line (§6.4) */
+      .calculation-explorer-plugin .ux-note { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--ux-3); padding: var(--ux-3) var(--ux-4);
+         border-left: 3px solid; margin: 0 0 var(--ux-4); color: var(--ux-text); }
+      .calculation-explorer-plugin .ux-note > .fa { width: 14px; }
+      .calculation-explorer-plugin .ux-note-info { border-color: var(--ux-info); background: var(--ux-info-bg); } .calculation-explorer-plugin .ux-note-info > .fa { color: var(--ux-info); }
+      .calculation-explorer-plugin .ux-note-success { border-color: var(--ux-success); background: var(--ux-success-bg); } .calculation-explorer-plugin .ux-note-success > .fa { color: var(--ux-success); }
+      .calculation-explorer-plugin .ux-note-warning { border-color: var(--ux-warning-edge); background: var(--ux-warning-bg); } .calculation-explorer-plugin .ux-note-warning > .fa { color: var(--ux-warning); }
+      .calculation-explorer-plugin .ux-note-error { border-color: var(--ux-error); background: var(--ux-error-bg); } .calculation-explorer-plugin .ux-note-error > .fa { color: var(--ux-error); }
+      /* filter chips (§6.5) */
+      .calculation-explorer-plugin .ux-chips { display: flex; flex-wrap: wrap; gap: var(--ux-3); margin: 0 0 var(--ux-3); }
+      .calculation-explorer-plugin .ux-chip { display: inline-flex; align-items: center; gap: var(--ux-2); height: 24px; padding: 0 var(--ux-4); border-radius: 12px;
+         background: var(--ux-layer); color: var(--ux-text); font-size: 12px; text-decoration: none; border: 1px solid transparent; }
+      .calculation-explorer-plugin .ux-chip:hover { background: var(--ux-layer-hover); text-decoration: none; color: var(--ux-text); }
+      .calculation-explorer-plugin .ux-chip:focus { outline: 2px solid var(--ux-focus); outline-offset: 1px; }
+      .calculation-explorer-plugin .ux-chip-warning { border-color: var(--ux-warning-edge); }
+      .calculation-explorer-plugin .ux-chip-active, .calculation-explorer-plugin .ux-chip-active:hover { background: var(--ux-text); color: #fff; border-color: var(--ux-text); }
+      /* data table (§6.6) */
+      .calculation-explorer-plugin .ux-table-wrap { overflow: auto; border: 1px solid var(--ux-border-subtle); }
+      .calculation-explorer-plugin table.ux-table { width: 100%; border-collapse: separate; border-spacing: 0; margin: 0; font-size: 13px; color: var(--ux-text); }
+      .calculation-explorer-plugin table.ux-table th { position: sticky; top: 0; z-index: 1; background: var(--ux-layer); font-size: 12px; font-weight: 600;
+         text-align: left; padding: var(--ux-3) var(--ux-4); border-bottom: 1px solid var(--ux-border-subtle); white-space: nowrap; }
+      .calculation-explorer-plugin table.ux-table td { padding: var(--ux-3) var(--ux-4); border-bottom: 1px solid var(--ux-border-subtle); vertical-align: top; }
+      .calculation-explorer-plugin table.ux-table tbody tr:hover td { background: #f9f9f9; }
+      .calculation-explorer-plugin table.ux-table tr.ux-row-selected td { background: #f4f8ff; }
+      .calculation-explorer-plugin table.ux-table tr.ux-row-warning td:first-child { box-shadow: inset 3px 0 0 var(--ux-warning-edge); }
+      .calculation-explorer-plugin table.ux-table .ux-col-check { width: 40px; text-align: center; padding-left: var(--ux-3); padding-right: var(--ux-3); }
+      .calculation-explorer-plugin table.ux-table .ux-col-check input { width: 16px; height: 16px; margin: 2px 0 0; cursor: pointer; vertical-align: middle; }
+      .calculation-explorer-plugin table.ux-table .ux-col-check input[disabled] { cursor: not-allowed; }
+      .calculation-explorer-plugin table.ux-table .ux-code { font-family: Consolas, Menlo, monospace; font-size: 12px; overflow-wrap: break-word; }
+      .calculation-explorer-plugin .ux-path-file { overflow-wrap: anywhere; }
+      .calculation-explorer-plugin table.ux-table-fixed { table-layout: fixed; }
+      .calculation-explorer-plugin table.ux-table .ux-secondary { color: var(--ux-text-2); }
+      .calculation-explorer-plugin table.ux-table td.ux-empty { color: var(--ux-text-2); text-align: center; padding: var(--ux-6); }
+      /* status tag (§6.7) */
+      .calculation-explorer-plugin .ux-tag { display: inline-block; padding: 2px var(--ux-3); border-radius: 12px; font-size: 12px; line-height: 16px;
+         background: var(--ux-layer-hover); color: var(--ux-text); }
+      .calculation-explorer-plugin .ux-tag-success { background: var(--ux-success-bg); color: #0e6027; }
+      .calculation-explorer-plugin .ux-tag-warning { background: var(--ux-warning-bg); color: var(--ux-warning); }
+      .calculation-explorer-plugin .ux-tag-error { background: var(--ux-error-bg); color: #a2191f; }
+      .calculation-explorer-plugin .ux-tag-info { background: var(--ux-info-bg); color: var(--ux-info); }
+      /* dialog (§6.9): moved to <body> by saasMigPortal inside a wrapper that carries the root class, so
+         these rules and the --ux-* variables still apply. In place it sat under Arc's tree pane and
+         splitter whatever its z-index: the plugin lives in a lower stacking context (user, v0.8.2). */
+      .calculation-explorer-plugin.ux-portal { height: 0; padding: 0; overflow: visible; }
+      .calculation-explorer-plugin .ux-modal-backdrop { position: fixed; inset: 0; z-index: 10000; background: rgba(22, 22, 22, 0.5); display: flex; align-items: center; justify-content: center; }
+      .calculation-explorer-plugin .ux-modal { background: #fff; width: min(1000px, 94vw); max-height: 88vh; display: flex; flex-direction: column; border-radius: var(--ux-radius);
+         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); outline: none; }
+      .calculation-explorer-plugin .ux-modal-head { display: flex; align-items: flex-start; gap: var(--ux-4); padding: var(--ux-5) var(--ux-5) var(--ux-3); }
+      .calculation-explorer-plugin .ux-modal-head h3 { margin: 0; font-size: 20px; line-height: 28px; font-weight: 400; flex: 1; overflow-wrap: anywhere; }
+      .calculation-explorer-plugin .ux-modal-body { padding: 0 var(--ux-5) var(--ux-5); overflow: auto; flex: 1; }
+      .calculation-explorer-plugin .ux-modal-foot { display: flex; justify-content: flex-end; gap: var(--ux-3); padding: var(--ux-4) var(--ux-5); border-top: 1px solid var(--ux-border-subtle); flex-wrap: wrap; }
+      .calculation-explorer-plugin table.ux-facts { border-collapse: collapse; margin: 0 0 var(--ux-4); font-size: 13px; }
+      .calculation-explorer-plugin table.ux-facts th, .calculation-explorer-plugin table.ux-facts td { padding: var(--ux-2) var(--ux-5) var(--ux-2) 0; text-align: left; vertical-align: top; }
+      .calculation-explorer-plugin table.ux-facts th { font-weight: 600; font-size: 12px; color: var(--ux-text-2); }
+      .calculation-explorer-plugin .ux-facts .ux-differs { color: var(--ux-warning); font-weight: 600; }
+      .calculation-explorer-plugin table.ux-diff { width: 100%; border-collapse: collapse; font-family: Consolas, Menlo, monospace; font-size: 12px; border: 1px solid var(--ux-border-subtle); }
+      .calculation-explorer-plugin table.ux-diff td { padding: 1px var(--ux-3); white-space: pre-wrap; overflow-wrap: anywhere; vertical-align: top; }
+      .calculation-explorer-plugin table.ux-diff td.ux-ln { width: 1%; white-space: nowrap; text-align: right; color: var(--ux-text-3); user-select: none; }
+      .calculation-explorer-plugin table.ux-diff tr.ux-del td { background: var(--ux-error-bg); }
+      .calculation-explorer-plugin table.ux-diff tr.ux-add td { background: var(--ux-success-bg); }
+      .calculation-explorer-plugin table.ux-diff tr.ux-gap td { background: var(--ux-layer); color: var(--ux-text-2); font-family: inherit; text-align: center; }
+      /* row action (§6.1): a link-style button beside a tag, on the tag's line (user, v0.8.3: a bordered
+         button under a wrapped tag made the row twice as tall and read as a second, unrelated control) */
+      .calculation-explorer-plugin .ux-btn-link { display: inline-flex; align-items: center; gap: var(--ux-2); min-height: 24px; padding: 0 var(--ux-2); border: 0;
+         background: none; color: var(--ux-interactive); font-size: 12px; cursor: pointer; border-radius: var(--ux-radius); white-space: nowrap; }
+      .calculation-explorer-plugin .ux-btn-link:hover { text-decoration: underline; background: var(--ux-layer-hover); }
+      .calculation-explorer-plugin .ux-btn-link:focus { outline: 2px solid var(--ux-focus); outline-offset: 0; }
+      .calculation-explorer-plugin .ux-cell-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ux-1) var(--ux-2); }
+      .calculation-explorer-plugin .ux-tag > .fa { margin-right: var(--ux-2); }
+      /* status tags do not wrap inside: a tag and its action share a line from a ~880px-wide table (28%) */
+      .calculation-explorer-plugin table.ux-table td.ux-col-result .ux-tag { white-space: nowrap; }
+
+
+      /* ================================================================ the kit on this plugin's classes
+       * (user, 2026-10-04: apply the UX guidelines to Calculation Explorer). Colours, borders, corners,
+       * focus and notes come from the kit; SIZES DO NOT: every height and padding here is measured
+       * (probe-layout, STATUS), and the kit's 32px / 16px-a-side buttons would widen the trace
+       * toolbar and move the fill pads. UX-GUIDELINES.md records the deviation. */
+      /* links read as links; picker rows are list items (their selected row is white on blue) */
+      .calculation-explorer-plugin a[href]:not(.btn):not(.ce-tabs a):not(.list-group-item) { color: var(--ux-interactive); }
+      .calculation-explorer-plugin .btn { border-radius: var(--ux-radius); box-shadow: none; }
+      .calculation-explorer-plugin .btn:focus, .calculation-explorer-plugin .btn.focus { outline: none; box-shadow: inset 0 0 0 2px var(--ux-focus), inset 0 0 0 3px #fff; }
+      .calculation-explorer-plugin .btn .fa { color: inherit; }
+      .calculation-explorer-plugin .btn-primary { background-color: var(--ux-interactive); border-color: var(--ux-interactive); color: #fff; }
+      .calculation-explorer-plugin .btn-primary:hover { background-color: var(--ux-interactive-hover); border-color: var(--ux-interactive-hover); color: #fff; }
+      .calculation-explorer-plugin .btn-default { background-color: #fff; border-color: var(--ux-border); color: var(--ux-text); }
+      .calculation-explorer-plugin .btn-default:hover { background-color: var(--ux-layer-hover); color: var(--ux-text); }
+      /* Resolve on an unresolved row: a row action that wants attention, not a second primary */
+      .calculation-explorer-plugin .btn-warning { background-color: var(--ux-warning-bg); border-color: var(--ux-warning-edge); color: var(--ux-text); }
+      .calculation-explorer-plugin .btn-warning:hover { background-color: #f8e6a0; color: var(--ux-text); }
+      .calculation-explorer-plugin .btn[disabled], .calculation-explorer-plugin .btn.disabled { background-color: #c6c6c6; border-color: #c6c6c6; color: #8d8d8d; opacity: 1; }
+      .calculation-explorer-plugin .form-control { border-color: var(--ux-border); border-radius: var(--ux-radius); color: var(--ux-text); box-shadow: none; }
+      .calculation-explorer-plugin .form-control:focus { outline: 2px solid var(--ux-focus); outline-offset: -2px; border-color: var(--ux-focus); box-shadow: none; }
+      /* Bootstrap alerts as the kit's notes (§6.4): a 3px edge and an icon from the class */
+      .calculation-explorer-plugin .alert { position: relative; border: 0; border-left: 3px solid; border-radius: 0; padding: 8px 12px 8px 36px; color: var(--ux-text); }
+      .calculation-explorer-plugin .alert::before { position: absolute; left: 12px; top: 8px; font: normal normal normal 14px/20px FontAwesome; }
+      .calculation-explorer-plugin .alert-warning { border-color: var(--ux-warning-edge); background-color: var(--ux-warning-bg); }
+      .calculation-explorer-plugin .alert-warning::before { content: "\f071"; color: var(--ux-warning); }
+      .calculation-explorer-plugin .alert-info { border-color: var(--ux-info); background-color: var(--ux-info-bg); }
+      .calculation-explorer-plugin .alert-info::before { content: "\f05a"; color: var(--ux-info); }
+      .calculation-explorer-plugin .alert-danger { border-color: var(--ux-error); background-color: var(--ux-error-bg); }
+      .calculation-explorer-plugin .alert-danger::before { content: "\f06a"; color: var(--ux-error); }
+      .calculation-explorer-plugin .alert:has(> .fa:first-child) { padding-left: 12px; }
+      .calculation-explorer-plugin .alert:has(> .fa:first-child)::before { content: none; }
+   </style>
+
+   <div class="ce-head">
+      <h2><i class="fa fa-sitemap" aria-hidden="true"></i> <span translate="CALCEXPLORER_TITLE"></span></h2>
+      <!-- The strapline is orientation for a first visit, not something to keep
+           paying 40px for once a trace is on screen. -->
+      <p class="text-muted" ng-if="state.activeTab === 0" translate="CALCEXPLORER_SUBTITLE"></p>
+   </div>
+
+   <div class="alert alert-danger" ng-if="state.error" style="margin-top:10px">
+      <i class="fa fa-exclamation-triangle" aria-hidden="true"></i> {{state.error}}
+   </div>
+
+   <!-- ================= tabs ================= -->
+   <ul class="nav nav-tabs ce-tabs">
+      <li ng-class="{active: state.activeTab === 0}"><a href="" ng-click="state.activeTab = 0">
+         <i class="fa fa-table" aria-hidden="true"></i> <span translate="CALCEXPLORER_TABCELL"></span></a></li>
+      <li ng-class="{active: state.activeTab === 1}"><a href="" ng-click="state.activeTab = 1">
+         <i class="fa fa-sitemap" aria-hidden="true"></i> <span translate="CALCEXPLORER_TABTRACE"></span>
+         <span class="badge" ng-if="trace">{{trace.stats.nodeCount}}</span></a></li>
+      <li ng-class="{active: state.activeTab === 2}"><a href="" ng-click="state.activeTab = 2">
+         <i class="fa fa-bolt" aria-hidden="true"></i> <span translate="CALCEXPLORER_TABFEEDERS"></span></a></li>
+      <li ng-class="{active: state.activeTab === 3}"><a href="" ng-click="state.activeTab = 3">
+         <i class="fa fa-history" aria-hidden="true"></i> <span translate="CALCEXPLORER_TABHISTORY"></span>
+         <span class="badge" ng-if="history.length">{{history.length}}</span></a></li>
+
+      <!-- The trace indicator lives HERE, and not inside a tab block, for two
+           reasons that are not about pixels.
+
+           It survives a tab change: .ce-head and this <ul> are direct children
+           of the plugin root, outside all four tab blocks, and traceCoordinates
+           sets state.activeTab = 1 as soon as the walk resolves. A badge inside
+           a tab block was measured as inDom: false after a tab change -- ng-if
+           removes it -- so an in-tab indicator would be destroyed mid-walk.
+
+           And it needs no ceFill recompute: a transient *in-flow* badge above a
+           sized box changes the height above it without ticking that box's
+           watch expression (4k, trap 2), so it would cost its full height at
+           once and be absorbed only later, if ever.
+
+           Rejected by measurement, both recorded so nobody re-litigates them
+           from taste: a new always-present row is +28.66 px, and at the
+           emulated tight case a floor-bound grid absorbs none of it, leaving
+           0.21 px of fold clearance against the 9 px 4o recorded; inline in
+           .ce-head h2 is +2.07 px, which is real at that same case. The
+           fallback if this badge ever outgrows the strip is an absolute child
+           of the plugin root, which anchors to div.lm_content (position:
+           relative, while the plugin root is static) and was also 0.00 px,
+           with elementFromPoint confirming it paints above Arc's chrome. -->
+      <!-- The indicator used to live here, as an 11.5px li pinned to the right
+           of the strip. It is now .ce-walkbar at the foot of this file: same
+           state.walkNotice, same three phases, nothing about the poll or the
+           pre-flight changed -- only where it paints and how big it is. The
+           reasoning above still applies to anything that wants a place in this
+           strip, which is why it is kept. -->
+   </ul>
+
+   <!-- ================= tab 0 : pick a cell =================
+        **The scroll of last resort (§5d item 31).** Arc clips this page and
+        does not scroll it (§2.8), and tab 0 is the one tab with a fixed header
+        above unbounded content: instance/mode/depth/paging/settings, then a
+        picker, then -- in manual mode -- a cell-reference block and one row per
+        dimension. On a short pane the header alone can exceed the container, and
+        then no amount of shrinking the boxes below it helps: measured at
+        1500x650, the coordinate box's top was already at y=599 against a clip
+        line at 640. ce-fill on the box floors at its ce-fill-min and stops.
+
+        So the tab itself becomes the scroll box, and **only in the modes that
+        have no grid inside them**. That restriction is the point: in view mode
+        the grid is the main content and has its own ce-fill and its own
+        scrollbar, and nesting one inside another would both double the
+        scrollbars and leave the grid's max-height stale after an outer scroll
+        (§4k trap 2 -- ceFill reads its pad at link time). In manual and MDX mode
+        there is no grid, so there is exactly one scrollbar and nothing is
+        unreachable at any height.
+
+        The max-height ce-fill writes here is harmless in view mode: without
+        `overflow-y: auto` the children simply paint outside the box, which is
+        what they do today. -->
+   <div ng-if="state.activeTab === 0" style="padding-top:12px"
+        ng-class="{'ce-tab0-scroll': state.mode !== 'view'}"
+        ce-fill="state.mode" ce-fill-pad="10" ce-fill-min="180">
+
+      <!-- Instance, source and paging: all of it is about choosing a cell, so
+           none of it sits above the trace on the other tabs. -->
+      <div class="row" style="margin-bottom:6px">
+         <div class="col-md-3">
+            <label translate="CALCEXPLORER_INSTANCE"></label>
+            <select class="form-control input-sm" ng-model="state.instance" ng-change="onInstanceChange()"
+                    ng-options="name for name in state.instances"></select>
+         </div>
+         <div class="col-md-3">
+            <label translate="CALCEXPLORER_MODE"></label>
+            <select class="form-control input-sm" ng-model="state.mode">
+               <option value="view">{{ 'CALCEXPLORER_MODEVIEW' | translate }}</option>
+               <option value="mdx">{{ 'CALCEXPLORER_MODEMDX' | translate }}</option>
+               <option value="manual">{{ 'CALCEXPLORER_MODEMANUAL' | translate }}</option>
+            </select>
+         </div>
+         <div class="col-md-2">
+            <label translate="CALCEXPLORER_DEPTH"></label>
+            <input type="number" class="form-control input-sm" ng-model="state.depth" min="1" max="12"
+                   title="{{ 'CALCEXPLORER_DEPTHHELP' | translate }}">
+         </div>
+         <div class="col-md-2">
+            <label translate="CALCEXPLORER_ROWSPERPAGE"></label>
+            <input type="number" class="form-control input-sm" ng-model="state.rowsPerPage" min="5" max="500">
+         </div>
+         <div class="col-md-2">
+            <label>&nbsp;</label>
+            <div class="checkbox" style="margin-top:0">
+               <label class="ce-checkbox">
+                  <input type="checkbox" ng-model="state.hideControlCubes"> <span translate="CALCEXPLORER_HIDECONTROL"></span>
+               </label>
+               <!-- Arc's cell menu takes no plugins, so its Trace Calculation
+                    navigation is intercepted instead. Reversible right here. -->
+               <!-- One box per built-in page, so Arc's calculation trace can be
+                    kept while its feeder trace opens here, or the reverse. Both
+                    write through setTakeover(), never straight into a captured
+                    uiPrefs object: see the comment on livePrefs() in plugin.js. -->
+               <div class="ce-takeover">
+                  <span class="ce-takeover-label" translate="CALCEXPLORER_TAKEOVERGROUP"></span>
+                  <label class="ce-checkbox" title="{{ 'CALCEXPLORER_TAKEOVERCALCHELP' | translate }}">
+                     <input type="checkbox" ng-model="takeover.calculation" ng-change="setTakeover()">
+                     <span translate="CALCEXPLORER_TAKEOVERCALC"></span>
+                  </label>
+                  <label class="ce-checkbox" title="{{ 'CALCEXPLORER_TAKEOVERFEEDHELP' | translate }}">
+                     <input type="checkbox" ng-model="takeover.feeders" ng-change="setTakeover()">
+                     <span translate="CALCEXPLORER_TAKEOVERFEED"></span>
+                  </label>
+               </div>
+            </div>
+         </div>
+      </div>
+      <p class="text-muted" style="font-size:11px;margin:0 0 8px" translate="CALCEXPLORER_DEPTHNOTE"></p>
+
+      <div class="row" ng-if="state.mode === 'view'">
+         <div class="col-md-4">
+            <label translate="CALCEXPLORER_CUBE"></label>
+            <input type="text" class="form-control input-sm" ng-model="state.cubeFilter"
+                   placeholder="{{ 'CALCEXPLORER_FILTERCUBE' | translate }}">
+            <div class="ce-picker" style="margin-top:5px"
+                 ce-fill="visibleCubes().length" ce-fill-pad="16" ce-fill-min="88" ce-fill-max="150">
+               <div class="list-group" style="margin-bottom:0">
+                  <a href="" class="list-group-item" ng-repeat="name in visibleCubes()"
+                     ng-class="{active: name === state.cube}" ng-click="selectCube(name)">{{name}}</a>
+               </div>
+               <div class="text-muted" style="padding:6px 10px" ng-if="!visibleCubes().length && !state.loadingCubes"
+                    translate="CALCEXPLORER_NOCUBES"></div>
+            </div>
+         </div>
+         <div class="col-md-4">
+            <label translate="CALCEXPLORER_VIEW"></label>
+            <input type="text" class="form-control input-sm" ng-model="state.viewFilter"
+                   placeholder="{{ 'CALCEXPLORER_FILTERVIEW' | translate }}" ng-disabled="!state.cube">
+            <div class="ce-picker" style="margin-top:5px"
+                 ce-fill="visibleViews().length" ce-fill-pad="16" ce-fill-min="88" ce-fill-max="150">
+               <div class="list-group" style="margin-bottom:0">
+                  <a href="" class="list-group-item" ng-repeat="view in visibleViews()"
+                     ng-class="{active: view === state.view}" ng-click="selectView(view)">
+                     <i class="fa" ng-class="view.private ? 'fa-user' : 'fa-globe'" aria-hidden="true"></i>
+                     {{view.name}}
+                  </a>
+               </div>
+               <div class="text-muted" style="padding:6px 10px" ng-if="state.cube && !visibleViews().length && !state.loadingViews"
+                    translate="CALCEXPLORER_NOVIEWS"></div>
+               <div class="text-muted" style="padding:6px 10px" ng-if="!state.cube" translate="CALCEXPLORER_PICKCUBEFIRST"></div>
+            </div>
+         </div>
+         <div class="col-md-4">
+            <label>&nbsp;</label>
+            <div>
+               <button class="btn btn-default btn-sm" ng-click="loadGrid()"
+                       ng-disabled="!state.view || state.loadingGrid">
+                  <i class="fa fa-refresh" ng-class="{'fa-spin': state.loadingGrid}" aria-hidden="true"></i>
+                  <span translate="CALCEXPLORER_RELOAD"></span>
+               </button>
+            </div>
+            <p class="text-muted" style="margin-top:8px;font-size:12px" translate="CALCEXPLORER_VIEWHELP"></p>
+         </div>
+      </div>
+
+      <div class="row" ng-if="state.mode === 'mdx'">
+         <div class="col-md-9">
+            <label translate="CALCEXPLORER_MDX"></label>
+            <textarea class="form-control" rows="5" ng-model="state.mdx" spellcheck="false"
+                      style="font-family:Menlo,Consolas,monospace;font-size:12px"></textarea>
+         </div>
+         <div class="col-md-3">
+            <label>&nbsp;</label>
+            <div>
+               <button class="btn btn-primary btn-sm" ng-click="loadGrid()" ng-disabled="state.loadingGrid">
+                  <i class="fa fa-play" ng-class="{'fa-spin fa-refresh': state.loadingGrid}" aria-hidden="true"></i>
+                  <span translate="CALCEXPLORER_EXECUTE"></span>
+               </button>
+            </div>
+            <p class="text-muted" style="margin-top:8px;font-size:12px" translate="CALCEXPLORER_MDXHELP"></p>
+         </div>
+      </div>
+
+      <div class="row" ng-if="state.mode === 'manual'">
+         <div class="col-md-6">
+            <label translate="CALCEXPLORER_CUBE"></label>
+            <input type="text" class="form-control input-sm" ng-model="state.cubeFilter"
+                   placeholder="{{ 'CALCEXPLORER_FILTERCUBE' | translate }}">
+            <div class="ce-picker" style="margin-top:5px"
+                 ce-fill="visibleCubes().length" ce-fill-pad="16" ce-fill-min="88" ce-fill-max="150">
+               <div class="list-group" style="margin-bottom:0">
+                  <a href="" class="list-group-item" ng-repeat="name in visibleCubes()"
+                     ng-class="{active: name === state.cube}" ng-click="selectCube(name)">{{name}}</a>
+               </div>
+            </div>
+         </div>
+         <div class="col-md-6">
+            <label translate="CALCEXPLORER_CELLREF"></label>
+            <!-- A textarea, not an input: Arc's Cell Reference dialog shows a
+                 table of cell details, so what lands on the clipboard is
+                 several lines rather than a one-line DB() formula. -->
+            <textarea class="form-control" ng-model="manual.reference" rows="4"
+                      spellcheck="false" style="font-size:12px;font-family:Menlo,Consolas,monospace"
+                      placeholder="{{ 'CALCEXPLORER_CELLREFPLACEHOLDER' | translate }}"></textarea>
+            <button class="btn btn-default btn-sm" ng-click="applyCellReference()"
+                    ng-disabled="!manual.reference" style="margin-top:6px">
+               <i class="fa fa-sign-in" aria-hidden="true"></i>
+               <span translate="CALCEXPLORER_CELLREFAPPLY"></span>
+            </button>
+            <p class="text-muted" style="font-size:11.5px;margin:4px 0 10px"
+               translate="CALCEXPLORER_CELLREFHELP"></p>
+
+            <label translate="CALCEXPLORER_COORDINATES"></label>
+            <!-- **§5d item 34: this box is the fix, and the button below it is
+                 the other half.** One row per dimension, unbounded, on a page
+                 Arc clips and does not scroll (§2.8) -- so a cube with more
+                 than three dimensions pushed *Trace this cell* past the fold
+                 and took the last dimensions with it. Measured before the fix,
+                 on a 6-dimension cube at 1500x850: 2 of 6 rows below the clip
+                 line, the button 133.1 px below it, elementFromPoint at its
+                 centre returning null, and no scrollbar on any ancestor. It
+                 was the last tall box on the page without a ce-fill.
+
+                 ce-fill-pad reserves the space BELOW this box, which is what
+                 keeps the button on screen whatever the dimension count: the
+                 button, its margin and the note under it. -->
+            <div class="ce-coordwrap" ng-if="manual.rows.length"
+                 ce-fill="manual.rows.length" ce-fill-pad="76" ce-fill-min="112">
+            <table class="table table-condensed" ng-if="manual.rows.length">
+               <tbody>
+                  <tr ng-repeat="row in manual.rows">
+                     <td style="width:45%;vertical-align:middle;font-size:12.5px">
+                        {{row.dimension}}
+                        <!-- Arc's Cell Reference reports the hierarchy per member, and an
+                             alternate one is a coordinate the primary hierarchy cannot express. -->
+                        <small class="text-muted" ng-if="row.hierarchy && row.hierarchy !== row.dimension">:{{row.hierarchy}}</small>
+                     </td>
+                     <td><input type="text" class="form-control input-sm" ng-model="row.element"
+                                placeholder="{{ 'CALCEXPLORER_ELEMENT' | translate }}"></td>
+                  </tr>
+               </tbody>
+            </table>
+            </div>
+            <p class="text-muted" ng-if="!manual.rows.length" translate="CALCEXPLORER_PICKCUBEFIRST"></p>
+            <button class="btn btn-default btn-sm" ng-click="traceManual()"
+                    ng-disabled="!manual.rows.length || walkInFlight() || state.previewing">
+               <i class="fa fa-sitemap"
+                  ng-class="{'fa-spin fa-refresh': state.tracing || state.previewing}" aria-hidden="true"></i>
+               <span translate="CALCEXPLORER_TRACE"></span>
+            </button>
+         </div>
+      </div>
+
+      <!-- grid -->
+      <div class="row" ng-if="grid" style="margin-top:14px">
+         <div class="col-md-12">
+            <div ng-if="grid.titles.length" style="margin-bottom:6px">
+               <span class="ce-chip" ng-repeat="title in grid.titles">
+                  <i class="fa fa-thumb-tack" aria-hidden="true"></i> {{title.label}}
+               </span>
+            </div>
+
+            <div class="alert alert-warning" ng-if="grid.warning" style="padding:6px 10px;font-size:12px">
+               <i class="fa fa-info-circle" aria-hidden="true"></i> {{grid.warning}}
+            </div>
+
+            <div class="ce-gridwrap" ce-fill="grid.rows.length + '/' + grid.columns.length"
+                 ce-fill-pad="122" ce-fill-min="160">
+               <table class="table table-condensed table-hover ce-grid"
+                      ng-class="{'ce-grid-busy': walkInFlight()}">
+                  <thead>
+                     <tr>
+                        <th class="ce-rowhdr"></th>
+                        <th ng-repeat="column in grid.columns track by column.ordinal">{{column.label}}</th>
+                     </tr>
+                  </thead>
+                  <tbody>
+                     <tr ng-repeat="row in grid.rows track by row.tuple.ordinal">
+                        <th class="ce-rowhdr">{{row.label}}</th>
+                        <td ng-repeat="cell in row.cells track by cell.ordinal" ng-click="traceCell(cell)"
+                            ng-class="{'ce-rule-cell': cell.ruleDerived, 'ce-cons-cell': cell.consolidated,
+                                       'ce-empty': cell.value === null, 'ce-missing': !cell.present,
+                                       'ce-cell-tracing': state.tracingCell === cell.ordinal}"
+                            title="{{ (state.tracingCell === cell.ordinal ? 'CALCEXPLORER_WALKRUNNING' : 'CALCEXPLORER_CLICKTOTRACE') | translate }}"><i
+                               class="fa fa-refresh fa-spin ce-cell-spin"
+                               ng-if="state.tracingCell === cell.ordinal" aria-hidden="true"></i>{{cell.formatted}}</td>
+                     </tr>
+                  </tbody>
+               </table>
+            </div>
+
+            <div class="ce-legend">
+               <i class="ce-swatch"></i> <span translate="CALCEXPLORER_LEGENDRULE"></span>
+               &nbsp;&nbsp;<b>bold</b> <span translate="CALCEXPLORER_LEGENDCONS"></span>
+               &nbsp;&nbsp;<span translate="CALCEXPLORER_LEGENDCLICK"></span>
+            </div>
+
+            <div style="margin-top:8px" ng-if="grid.paged && grid.rowTotal > grid.rows.length">
+               <button class="btn btn-default btn-xs" ng-click="pageRows(-1)" ng-disabled="grid.rowOffset === 0">
+                  <i class="fa fa-chevron-left" aria-hidden="true"></i>
+               </button>
+               <span class="text-muted" style="font-size:12px">
+                  {{grid.rowOffset + 1}}&ndash;{{grid.rowOffset + grid.rows.length}} / {{grid.rowTotal}}
+               </span>
+               <button class="btn btn-default btn-xs" ng-click="pageRows(1)"
+                       ng-disabled="grid.rowOffset + grid.rows.length >= grid.rowTotal">
+                  <i class="fa fa-chevron-right" aria-hidden="true"></i>
+               </button>
+            </div>
+         </div>
+      </div>
+
+      <!-- ================= about ================= -->
+      <!-- Bottom of this tab, and deliberately not the header: Arc *clips* a
+           plugin page instead of scrolling it (2.8), and the header was cut
+           from 718px to ~225px in v1.1.0, so every pixel above the tree is
+           taken out of a trace. This tab is the one place not competing with
+           one. Two short lines for the same reason -- and note the grid's
+           ce-fill-pad above was raised to make room for exactly this.
+
+           The version is never retyped here: it is the one VERSION constant,
+           reaching the page through calcExplorerCore. The guide link is the
+           copy Arc serves out of the plugin folder, written the same way the
+           two detail.html includes are, so it always matches the install. -->
+      <!-- No <h6>, and not .ce-sec: both were here first and both were measured
+           out again. At a 1500x850 window the block's last line landed 13px
+           below the clipping container, because the grid refuses to shrink past
+           ce-fill-min="150" -- so the raised ce-fill-pad could not take effect
+           and everything under the grid was pushed past the fold, which on a
+           page Arc clips means unreachable (2.8). The heading, the .ce-sec
+           margin and a few pixels of the block's own spacing were what there
+           was to give. The first line reads as a title without needing one. -->
+      <div class="ce-about">
+         <p>
+            <b translate="CALCEXPLORER_TITLE"></b> v{{about.version}}
+            &middot; <span translate="CALCEXPLORER_ABOUTVERIFIED"></span> {{about.arcBuild}}
+            &middot; <a href="__/plugins/calculation-explorer/USER-GUIDE.html"
+                        target="_blank" rel="noopener"
+                        title="{{ 'CALCEXPLORER_ABOUTGUIDEHELP' | translate }}">
+               <i class="fa fa-external-link" aria-hidden="true"></i>
+               <span translate="CALCEXPLORER_ABOUTGUIDE"></span>
+            </a>
+            &middot; <a href="mailto:meissa@cubewise.com"
+                        title="{{ 'CALCEXPLORER_ABOUTCONTACTHELP' | translate }}">
+               <i class="fa fa-envelope-o" aria-hidden="true"></i>
+               <span translate="CALCEXPLORER_ABOUTCONTACT"></span>
+            </a>
+         </p>
+         <p>
+            <span translate="CALCEXPLORER_ABOUTREADS"></span>
+            &middot; <span class="ce-about-warn"><i class="fa fa-exclamation-triangle"
+                     aria-hidden="true"></i> <span translate="CALCEXPLORER_ABOUTCOST"></span></span>
+         </p>
+      </div>
+   </div>
+
+   <!-- ================= tab 1 : the trace ================= -->
+   <div ng-if="state.activeTab === 1" style="padding-top:12px">
+
+      <div ng-if="!trace && !preview && !state.previewing" class="text-muted"
+           translate="CALCEXPLORER_NOTRACE"></div>
+      <!-- A named trace request lands on this tab before its answer does, so
+           the gap has to say something. Without this the cell menu showed
+           "nothing traced yet" for the ~2 s the request takes, on the tab it
+           had just been sent to. -->
+      <div ng-if="!trace && !preview && state.previewing" class="text-muted">
+         <i class="fa fa-spinner fa-spin" aria-hidden="true"></i>
+         <span translate="CALCEXPLORER_OPENINGCELL"></span>
+      </div>
+
+      <!-- ---- Stage 2: the cell, before its tree -----------------------
+           §5a.7 measured the split this renders. The value and the rule
+           come back in under 60 ms and under 1 KB; the component tree for
+           that same cell cost 18.4 s, 133 MB of payload and 416 MB of
+           server memory TM1 did not give back. So the reader gets the
+           number and the rule that produced it here, and the tree is a
+           priced button rather than the automatic cost of clicking a cell.
+
+           Everything in this block is already-fetched scope data -- no
+           height claim is made about it here, and none is verified by the
+           node suite (§4k): it is measured by probe-layout. -->
+      <div ng-if="preview && !trace">
+         <div class="ce-cards">
+            <div class="ce-card"><span translate="CALCEXPLORER_CARDVALUE"></span><strong>{{fmt(preview.value)}}</strong></div>
+            <div class="ce-card"><span translate="CALCEXPLORER_PREVIEWTYPE"></span><strong>{{preview.typeMeta.label}}</strong></div>
+            <!-- Its own label, not the trace card's "Server time": this figure is
+                 measured with a client clock, and §4r forbids calling that the
+                 server's. What it honestly reports is the round trip. -->
+            <div class="ce-card"><span translate="CALCEXPLORER_PREVIEWELAPSED"></span><strong>{{preview.elapsedMs}} ms</strong></div>
+         </div>
+
+         <div class="ce-coordbar">
+            <a href="" class="ce-coordtoggle" ng-click="state.coordOpen = !state.coordOpen"
+               title="{{ (state.coordOpen ? 'CALCEXPLORER_COORDCOLLAPSE' : 'CALCEXPLORER_COORDEXPAND') | translate }}">
+               <i class="fa" ng-class="state.coordOpen ? 'fa-chevron-up' : 'fa-chevron-down'" aria-hidden="true"></i>
+            </a>
+            <p class="ce-coordline" ng-class="{'ce-coordline-shut': !state.coordOpen}"
+               title="{{state.coordOpen ? '' : coordinateText()}}">
+               <b>{{preview.cube}}</b> :: {{preview.coordinateLabel}}
+               <span class="text-muted" ng-if="preview.source">&nbsp;&mdash; {{preview.source}}</span>
+               <span class="text-muted">&nbsp;&mdash; {{preview.instance}}</span>
+            </p>
+            <button class="btn btn-default btn-xs" ng-click="copyCoordinates(false)"
+                    title="{{ 'CALCEXPLORER_COPYCELLHELP' | translate }}">
+               <i class="fa fa-clipboard" aria-hidden="true"></i>
+            </button>
+            <button class="btn btn-default btn-xs" ng-click="copyCoordinates(true)"
+                    title="{{ 'CALCEXPLORER_COPYCELLTABLEHELP' | translate }}">
+               <i class="fa fa-table" aria-hidden="true"></i>
+            </button>
+            <button class="btn btn-default btn-xs" ng-click="copyLink()"
+                    title="{{ 'CALCEXPLORER_COPYLINKHELP' | translate }}">
+               <i class="fa fa-link" aria-hidden="true"></i>
+            </button>
+         </div>
+
+         <!-- The rule, open rather than behind a toggle: it is the reason
+              this request is worth making, and a reader who came to ask
+              which rule produced the number is done here, having paid
+              nothing for the closure. -->
+         <div class="ce-sec" ng-if="preview.statementInfo.length">
+            <h6><span translate="CALCEXPLORER_SECTIONRULE"></span></h6>
+            <div class="ce-stmt" ng-repeat="info in preview.statementInfo" style="margin-left:0">
+               <div class="ce-where">
+                  <span ng-if="info.location">
+                     <i class="fa fa-file-code-o" aria-hidden="true"></i>
+                     <span translate="CALCEXPLORER_RULESLINE"></span> <b>{{info.location.line}}</b>
+                     <span ng-if="info.location.comment">&mdash; {{info.location.comment}}</span>
+                     <span ng-if="info.location.matches > 1">
+                        ({{info.location.matches}} <span translate="CALCEXPLORER_IDENTICAL"></span>)
+                     </span>
+                  </span>
+                  <span ng-if="!info.location" translate="CALCEXPLORER_NOTLOCATED"></span>
+               </div>
+               <pre>{{info.location.source || info.formatted}}</pre>
+            </div>
+            <p class="text-muted" ng-if="preview.statementsElsewhere > 0" style="font-size:12px">
+               <b>{{preview.statementsElsewhere}}</b>
+               <span translate="CALCEXPLORER_PREVIEWELSEWHERE"></span>
+            </p>
+         </div>
+
+         <p class="text-muted" style="font-size:12px"
+            ng-if="!preview.statementInfo.length && preview.typeMeta.input"
+            translate="CALCEXPLORER_PREVIEWNORULE"></p>
+         <p class="text-muted" style="font-size:12px"
+            ng-if="!preview.statementInfo.length && preview.type === 'Consolidation'"
+            translate="CALCEXPLORER_PREVIEWCONSOL"></p>
+
+         <!-- The priced second step. Disabled rather than hidden while a
+              walk is in flight, because §5a.6 measured a disabled button
+              occupying exactly the same box. -->
+         <div class="ce-sec">
+            <button class="btn btn-primary btn-sm" ng-click="buildTree()"
+                    ng-disabled="walkInFlight() || state.previewing"
+                    title="{{ 'CALCEXPLORER_BUILDTREEHELP' | translate }}">
+               <i class="fa fa-sitemap" aria-hidden="true"></i>
+               <span translate="CALCEXPLORER_BUILDTREE"></span>
+            </button>
+            <p class="text-muted" style="font-size:12px;margin-top:6px"
+               translate="CALCEXPLORER_PREVIEWCOST"></p>
+         </div>
+      </div>
+
+      <div ng-if="trace">
+         <div class="ce-cards">
+            <div class="ce-card"><span translate="CALCEXPLORER_CARDVALUE"></span><strong>{{fmt(trace.root.value)}}</strong></div>
+            <div class="ce-card"><span translate="CALCEXPLORER_CARDNODES"></span><strong>{{trace.stats.nodeCount}}</strong></div>
+            <!-- Beside Nodes on purpose, and a card of its own rather than a
+                 "3 (cut)" suffix on Max depth (5d item 26): the depth really
+                 IS 3, so a suffix would qualify a number that is already
+                 correct, while 96 against 115 is the comparison the reader
+                 needs. Measured on the 2.7 cell: 115 nodes, 96 of them
+                 frontier stubs -- 83% of the tree -- and until now no card
+                 said so. Hidden at 0, because a card reading "Frontier 0"
+                 on a complete tree is furniture.
+                 **`fetchableCount`, not `boundaryCount`.** The card names the
+                 rows that can actually be opened with the twisty below, which
+                 is `belowBound && !hasChildren && hasDeeperLevel(node)` -- the
+                 same three terms the twisty's own ng-if carries. On the 2.7
+                 cell the two numbers agree (all 96 are consolidations); on a
+                 consolidation of stored inputs traced at depth 1 they do not,
+                 and counting the bound there would have put a number on screen
+                 beside a row that draws nothing. -->
+            <div class="ce-card" ng-if="trace.stats.fetchableCount > 0"><span translate="CALCEXPLORER_CARDFRONTIER"></span><strong>{{trace.stats.fetchableCount}}</strong></div>
+            <div class="ce-card"><span translate="CALCEXPLORER_CARDDEPTH"></span><strong>{{trace.stats.maxDepth}}</strong></div>
+            <div class="ce-card"><span translate="CALCEXPLORER_CARDRULES"></span><strong>{{trace.stats.ruleCount}}</strong></div>
+            <div class="ce-card"><span translate="CALCEXPLORER_CARDCUBES"></span><strong>{{cubeCount()}}</strong></div>
+            <div class="ce-card"><span translate="CALCEXPLORER_CARDELAPSED"></span><strong>{{trace.elapsedMs}} ms</strong></div>
+         </div>
+
+         <!-- One line to save vertical space, but the coordinate is exactly what
+              people want to paste elsewhere, so it must be reachable: the chevron
+              wraps it in full for selecting, and the two buttons copy it as text
+              or as the table Arc's Cell Reference dialog produces. -->
+         <div class="ce-coordbar">
+            <a href="" class="ce-coordtoggle" ng-click="state.coordOpen = !state.coordOpen"
+               title="{{ (state.coordOpen ? 'CALCEXPLORER_COORDCOLLAPSE' : 'CALCEXPLORER_COORDEXPAND') | translate }}">
+               <i class="fa" ng-class="state.coordOpen ? 'fa-chevron-up' : 'fa-chevron-down'" aria-hidden="true"></i>
+            </a>
+            <p class="ce-coordline" ng-class="{'ce-coordline-shut': !state.coordOpen}"
+               title="{{state.coordOpen ? '' : coordinateText()}}">
+               <b>{{trace.cube}}</b> :: {{trace.coordinateLabel}}
+               <span class="text-muted" ng-if="trace.source">&nbsp;&mdash; {{trace.source}}</span>
+               <span class="text-muted">&nbsp;&mdash; {{trace.instance}}</span>
+            </p>
+            <button class="btn btn-default btn-xs" ng-click="copyCoordinates(false)"
+                    title="{{ 'CALCEXPLORER_COPYCELLHELP' | translate }}">
+               <i class="fa fa-clipboard" aria-hidden="true"></i>
+            </button>
+            <button class="btn btn-default btn-xs" ng-click="copyCoordinates(true)"
+                    title="{{ 'CALCEXPLORER_COPYCELLTABLEHELP' | translate }}">
+               <i class="fa fa-table" aria-hidden="true"></i>
+            </button>
+            <button class="btn btn-default btn-xs" ng-click="copyLink()"
+                    title="{{ 'CALCEXPLORER_COPYLINKHELP' | translate }}">
+               <i class="fa fa-link" aria-hidden="true"></i>
+            </button>
+         </div>
+
+         <div class="alert alert-warning" ng-if="trace.stats.truncatedCount" style="padding:6px 10px;font-size:12px">
+            <i class="fa fa-info-circle" aria-hidden="true"></i>
+            {{trace.stats.truncatedCount}} <span translate="CALCEXPLORER_TRUNCATED"></span>
+         </div>
+
+         <!-- The size limit really does get hit: depth 3 on a consolidated cell
+              of the test model returned 241,689 components. -->
+         <div class="alert alert-warning" ng-if="trace.stats.budgetHit" style="padding:6px 10px;font-size:12px">
+            <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+            <span translate="CALCEXPLORER_BUDGETHIT1"></span>
+            <b>{{trace.stats.droppedCount | number:0}}</b>
+            <span translate="CALCEXPLORER_BUDGETHIT2"></span>
+            <b>{{trace.stats.nodeBudget | number:0}}</b><span translate="CALCEXPLORER_BUDGETHIT3"></span>
+         </div>
+
+         <!-- 5d item 26. Two banners already existed for conditions that did not
+              fire on the demo cell (truncatedCount, budgetHit) and none for the
+              one that did: 96 of 115 rows. **The per-row honesty is not enough**,
+              and that is the measurement that decided this -- on arrival the tree
+              renders 3 rows and zero twisties, because only the root and its two
+              components are open, so the reader who does not already know about
+              the frontier meets "Nodes 115" and nothing else. The twisty only
+              appears once they have drilled to the bound, which is exactly the
+              reader who did not need telling.
+              It leads with what to do rather than with what is missing, and it
+              says nothing at 0: a banner that is always there is furniture.
+              alert-INFO, not warning -- a bounded request is the correct and
+              cheap default (4u), not a fault.
+              Gated on `fetchableCount`, like the card: the sentence tells the
+              reader to "open one with ⊞", so it may only appear when a row
+              would actually draw one. A stored input at the bound is at the
+              bound and has nothing under it -- saying so would send the reader
+              looking for a control that is not there. -->
+         <div class="alert alert-info" ng-if="trace.stats.fetchableCount > 0" style="padding:6px 10px;font-size:12px">
+            <i class="fa fa-info-circle" aria-hidden="true"></i>
+            {{frontierNote()}}
+         </div>
+
+         <div class="ce-toolbar">
+            <span class="ce-modes">
+               <button ng-class="{active: state.viewMode === 'business'}" ng-click="setViewMode('business')"
+                       title="{{ 'CALCEXPLORER_BUSINESSHELP' | translate }}">
+                  <i class="fa fa-users" aria-hidden="true"></i> <span translate="CALCEXPLORER_BUSINESSVIEW"></span>
+               </button>
+               <button ng-class="{active: state.viewMode === 'technical'}" ng-click="setViewMode('technical')">
+                  <i class="fa fa-code" aria-hidden="true"></i> <span translate="CALCEXPLORER_TECHNICALVIEW"></span>
+               </button>
+            </span>
+            <input type="text" class="form-control" ng-model="state.filterText" ng-change="refreshRows()"
+                   ng-if="state.viewMode === 'technical'"
+                   placeholder="{{ 'CALCEXPLORER_FILTERTREE' | translate }}" style="min-width:220px">
+            <label class="ce-checkbox" ng-if="state.viewMode === 'business'">
+               <input type="checkbox" ng-model="state.sortByContribution" ng-change="refreshRows()">
+               <span translate="CALCEXPLORER_SORTBYSIZE"></span></label>
+            <!-- **Relabelled, not moved** (5d item 26). Measured on the running
+                 build: changing this spinner left nodeCount 115, boundaryCount
+                 96 and the row count identical -- it does not re-trace, and
+                 there was no control here that did. But it is not dead either:
+                 it sets the depth of the next twisty fetch, which is a real
+                 control and one tab 0's "Trace depth" cannot express. So it
+                 keeps its place under the name of what it actually does, and
+                 the button beside it supplies the meaning it was being read
+                 as. -->
+            <label class="ce-checkbox" title="{{ 'CALCEXPLORER_FETCHDEPTHHELP' | translate }}">
+               <span translate="CALCEXPLORER_FETCHDEPTH"></span>
+               <input type="number" class="form-control ce-depth" ng-model="state.depth" min="1" max="12">
+            </label>
+            <!-- The tenth trigger to read the gate, and the first one that
+                 arrived WITH it rather than being found without it. A re-trace
+                 is a full walk, so it goes through previewCoordinates like
+                 every other named gesture (4y) and is disabled rather than
+                 silently dropped while one is in flight -- 4o, 5a.12 and
+                 v1.12.0's frontier twisty are three consecutive releases of
+                 exactly that defect. -->
+            <button class="btn btn-default btn-sm" ng-click="retrace()"
+                    ng-disabled="walkInFlight() || state.previewing"
+                    title="{{ 'CALCEXPLORER_RETRACEHELP' | translate }}">
+               <i class="fa fa-repeat" aria-hidden="true"></i>
+               <span translate="CALCEXPLORER_RETRACE"></span>
+            </button>
+            <!-- Business view only. The technical view's three filters -- this
+                 one, the cube select and rule nodes only -- moved into the
+                 Filters menu below, because that toolbar measured 1221px of
+                 1172 and wrapped to two rows. The business toolbar measured 776
+                 of 1172 -- 397px of headroom -- so grouping anything here would
+                 hide a control a reader uses and buy no pixels. It also ships
+                 ticked in this view, which is exactly the state that has to be
+                 visible: rows are being left out. -->
+            <label class="ce-checkbox" ng-if="state.viewMode === 'business'">
+               <input type="checkbox" ng-model="state.hideZero" ng-change="refreshRows()">
+               <span translate="CALCEXPLORER_HIDEZERO"></span></label>
+            <button class="btn btn-default btn-sm" ng-click="expandAll()" ng-if="state.viewMode === 'technical'"><i class="fa fa-expand" aria-hidden="true"></i></button>
+            <button class="btn btn-default btn-sm" ng-click="collapseAll()" ng-if="state.viewMode === 'technical'"><i class="fa fa-compress" aria-hidden="true"></i></button>
+            <button class="btn btn-default btn-sm" ng-click="resolveAll()" ng-disabled="walkInFlight()"
+                    ng-if="canResolveAll()"
+                    title="{{ 'CALCEXPLORER_RESOLVEALL' | translate }}">
+               <i class="fa" ng-class="state.resolving ? 'fa-refresh fa-spin' : 'fa-magic'" aria-hidden="true"></i>
+               <span translate="CALCEXPLORER_RESOLVEALL"></span>
+               <span class="badge">{{trace.stats.unresolvedCount}}</span>
+            </button>
+            <button class="btn btn-default btn-sm" ng-click="autoDrill()" ng-disabled="walkInFlight()">
+               <i class="fa fa-bolt" ng-class="{'fa-spin fa-refresh': state.autoDrilling}" aria-hidden="true"></i>
+               <span translate="CALCEXPLORER_AUTODRILL"></span>
+            </button>
+            <span style="flex:1 1 auto"></span>
+            <!-- The three technical-view filters behind one control, and the
+                 last 49px of backlog 11. Measured at 1500x900 before this
+                 change: the technical toolbar needed 1221px of 1172 and stood
+                 at 70px, two rows. The cube select (120), hide zero / empty
+                 (114) and rule nodes only (101), plus the two 6px gaps that go
+                 with them, come to 347; this trigger costs ~117 with a badge.
+
+                 Deliberately the SAME disclosure as the Share menu beside it,
+                 down to the class: .ce-menu-panel is anchored to the sticky
+                 .ce-toolbar and never to the trigger, which is the anchoring
+                 measured to survive a wrapped toolbar -- anchored to the
+                 button, a right:0 panel walked off under Arc's sidebar. That is
+                 also why this trigger sits after the spacer rather than where
+                 the select used to be: a right-anchored 232px panel spans the
+                 last 232px of the toolbar, which is the strip these two
+                 triggers occupy, so it opens under the thing that raised it.
+                 Only one panel is up at a time -- they share an edge.
+
+                 The badge counts filters NARROWING the tree, not ones differing
+                 from a default. In this view all three start off, so an
+                 unbadged trigger means nothing is being hidden -- the fact a
+                 reader of the tree needs from a closed panel. -->
+            <div class="ce-menu" ng-if="state.viewMode === 'technical'">
+               <button class="btn btn-default btn-sm" ng-click="toggleFilters()"
+                       aria-haspopup="true" aria-expanded="{{!!state.filtersOpen}}"
+                       title="{{ 'CALCEXPLORER_FILTERSHELP' | translate }}">
+                  <i class="fa fa-filter" aria-hidden="true"></i>
+                  <span translate="CALCEXPLORER_FILTERS"></span>
+                  <span class="badge" ng-if="filterCount()">{{filterCount()}}</span>
+                  <i class="fa ce-menu-caret" aria-hidden="true"
+                     ng-class="state.filtersOpen ? 'fa-caret-up' : 'fa-caret-down'"></i>
+               </button>
+               <div class="ce-menu-panel" ng-if="state.filtersOpen">
+                  <label class="ce-menu-row">
+                     <span translate="CALCEXPLORER_CUBE"></span>
+                     <select class="form-control" ng-model="state.treeCubeFilter" ng-change="refreshRows()">
+                        <option value="">{{ 'CALCEXPLORER_ALLCUBES' | translate }}</option>
+                        <option ng-repeat="name in trace.cubeList" value="{{name}}">{{name}} ({{trace.stats.cubes[name]}})</option>
+                     </select>
+                  </label>
+                  <label class="ce-menu-row ce-checkbox">
+                     <input type="checkbox" ng-model="state.hideZero" ng-change="refreshRows()">
+                     <span translate="CALCEXPLORER_HIDEZERO"></span>
+                  </label>
+                  <label class="ce-menu-row ce-checkbox">
+                     <input type="checkbox" ng-model="state.rulesOnly" ng-change="refreshRows()">
+                     <span translate="CALCEXPLORER_RULESONLY"></span>
+                  </label>
+               </div>
+            </div>
+            <!-- One control, not four. Four export buttons wrapped the toolbar
+                 onto a second row at 1500 px, and Arc clips a plugin page rather
+                 than scrolling it (2.8), so that row came straight out of the
+                 tree. Not a Bootstrap dropdown: nothing in this plugin uses one,
+                 so there is no evidence Arc's trimmed theme ships the CSS or the
+                 JS it needs. This is the same disclosure the coordinate bar and
+                 the Why? panel already are -- one flag, one ng-if, own CSS. The
+                 panel is positioned absolutely on purpose: an inline one would
+                 push the tree down while ceFill's max-height stayed stale. -->
+            <div class="ce-menu">
+               <button class="btn btn-primary btn-sm" ng-click="toggleShare()"
+                       aria-haspopup="true" aria-expanded="{{!!state.shareOpen}}"
+                       title="{{ 'CALCEXPLORER_SHAREHELP' | translate }}">
+                  <i class="fa fa-share-alt" aria-hidden="true"></i>
+                  <span translate="CALCEXPLORER_SHARE"></span>
+                  <i class="fa ce-menu-caret" aria-hidden="true"
+                     ng-class="state.shareOpen ? 'fa-caret-up' : 'fa-caret-down'"></i>
+               </button>
+               <div class="ce-menu-panel" ng-if="state.shareOpen">
+                  <button class="btn" ng-click="closeShare(); openHtml()">
+                     <i class="fa fa-external-link" aria-hidden="true"></i>
+                     <span translate="CALCEXPLORER_OPENHTML"></span>
+                  </button>
+                  <button class="btn" ng-click="closeShare(); exportHtml()">
+                     <i class="fa fa-download" aria-hidden="true"></i>
+                     <span translate="CALCEXPLORER_SAVEHTML"></span>
+                  </button>
+                  <button class="btn" ng-click="closeShare(); copyText()">
+                     <i class="fa fa-clipboard" aria-hidden="true"></i>
+                     <span translate="CALCEXPLORER_COPY"></span>
+                  </button>
+                  <button class="btn" ng-click="closeShare(); exportText()">
+                     <i class="fa fa-file-text-o" aria-hidden="true"></i>
+                     <span translate="CALCEXPLORER_SAVETEXT"></span>
+                  </button>
+               </div>
+            </div>
+         </div>
+
+         <!-- business view: one branch open at a time, delta labels only -->
+         <div ng-if="state.viewMode === 'business'">
+            <div class="ce-crumbs">
+               <span ng-repeat="crumb in breadcrumb">
+                  <a href="" ng-click="jumpTo(crumb.id)">{{crumb.label}}</a>
+                  <span class="ce-crumb-val">{{crumb.value}}</span>
+                  <i class="fa fa-angle-right" ng-if="!$last" aria-hidden="true"></i>
+               </span>
+            </div>
+            <div class="ce-btree" ce-fill="rows.length + '/' + breadcrumb.length"
+                 ce-fill-pad="26" ce-fill-min="220">
+               <div ng-repeat="node in rows track by node.id">
+                  <div class="ce-bmain" ng-style="indentStyle(node)"
+                       ng-class="{'ce-bopen': node.expanded && node.hasChildren}">
+                     <!-- `+` promises "a deeper level could be fetched here".
+                          hasDeeperLevel() is what makes that true: a stored
+                          input has nothing under it, so it gets the plain
+                          circle every other terminal row gets. -->
+                     <span class="ce-bcaret" ng-click="drill(node)">
+                        <i class="fa" aria-hidden="true"
+                           ng-class="node.busy ? 'fa-refresh fa-spin'
+                                   : (node.hasChildren ? (node.expanded ? 'fa-caret-down' : 'fa-caret-right')
+                                   : (hasDeeperLevel(node) && !node.deepened ? 'fa-plus-square-o' : 'fa-circle-o'))"></i>
+                     </span>
+                     <span class="ce-btype" ng-class="node.typeMeta.css" title="{{node.typeMeta.label}}">
+                        <i class="fa" ng-class="node.typeMeta.icon" aria-hidden="true"></i>
+                     </span>
+                     <span class="ce-blabel" ng-click="drill(node)">
+                        <span ng-class="{'ce-approx': node.business.approximate}"
+                              title="{{node.business.approximate ? ('CALCEXPLORER_APPROX' | translate) : ''}}">{{node.business.text}}</span>
+                        <!-- A stored leaf is where the trace stops; say it in words. -->
+                        <span class="ce-chip-input" ng-if="node.typeMeta.input"
+                              title="{{ 'CALCEXPLORER_INPUTCELL' | translate }}"
+                              translate="CALCEXPLORER_INPUTCHIP"></span>
+                        <small ng-if="node.business.cubeNote">
+                           &mdash; <span translate="CALCEXPLORER_FROMCUBE"></span> {{node.business.cubeNote}}
+                        </small>
+                     </span>
+                     <span class="ce-bbar" ng-if="node.absShare !== null"><i ng-style="barStyle(node)"></i></span>
+                     <span class="ce-bshare">{{node.share === null ? '' : (node.share * 100 | number:0) + '%'}}</span>
+                     <span class="ce-bval" ng-class="{'ce-zero': node.zero}">{{fmt(node.value)}}</span>
+                     <a href="" class="ce-bwhy" ng-class="{'ce-bwhy-on': why[node.id]}"
+                        ng-click="toggleWhy(node)"
+                        title="{{ 'CALCEXPLORER_WHYHELP' | translate }}">
+                        <i class="fa" aria-hidden="true"
+                           ng-class="why[node.id] ? 'fa-caret-up' : 'fa-question-circle'"></i>
+                        <span ng-if="!why[node.id]" translate="CALCEXPLORER_WHY"></span>
+                        <span ng-if="why[node.id]" translate="CALCEXPLORER_WHYHIDE"></span>
+                     </a>
+                  </div>
+
+                  <div class="ce-bdetail" ng-if="why[node.id]" ng-style="indentStyle(node)">
+                     <div ng-include="'__/plugins/calculation-explorer/detail.html'"></div>
+                  </div>
+
+                  <div class="ce-bzeros" ng-if="node.expanded && node.hiddenZeroCount" ng-style="indentStyle(node)">
+                     + {{node.hiddenZeroCount}} <span translate="CALCEXPLORER_NOVALUE"></span>
+                  </div>
+
+                  <div class="ce-bzeros" ng-if="node.budgetDropped" ng-style="indentStyle(node)">
+                     <i class="fa fa-scissors" aria-hidden="true"></i>
+                     {{node.budgetDropped | number:0}} <span translate="CALCEXPLORER_DROPPEDHERE"></span>
+                  </div>
+               </div>
+               <div class="text-muted" style="padding:8px 12px" ng-if="!rows.length" translate="CALCEXPLORER_NOMATCH"></div>
+               <div class="ce-rowcap" ng-if="rows.truncatedRows">
+                  <i class="fa fa-scissors" aria-hidden="true"></i>
+                  {{rows.truncatedRows | number:0}} <span translate="CALCEXPLORER_ROWCAP"></span>
+               </div>
+            </div>
+         </div>
+
+         <div class="ce-tree" ng-if="state.viewMode === 'technical'"
+              ce-fill="rows.length" ce-fill-pad="26" ce-fill-min="220">
+            <div class="ce-row" ng-repeat="node in rows track by node.id" ng-class="{'ce-focus': node.id === state.focusId}">
+               <div class="ce-line" ng-style="indentStyle(node)">
+                  <span class="ce-twisty" ng-click="toggle(node)" ng-if="node.hasChildren">
+                     <i class="fa" ng-class="node.expanded ? 'fa-caret-down' : 'fa-caret-right'" aria-hidden="true"></i>
+                  </span>
+                  <!-- A node at the bound has no children because the request did
+                       not ask (5a.12), so the terminal dot would be a lie. Its
+                       hasDeeperLevel is true - measured, all 96 frontier nodes of
+                       the 2.7 cell - so the row offers the fetch instead, and only
+                       a genuine leaf keeps the dot. The gate lives in traceDeeper,
+                       which is the same arrangement as the business caret: a caret
+                       gates in the function, not in the markup. -->
+                  <span class="ce-twisty ce-twisty-bound"
+                        ng-if="!node.hasChildren && node.belowBound && hasDeeperLevel(node)"
+                        ng-class="{'ce-twisty-off': walkInFlight()}"
+                        ng-click="traceDeeper(node)"
+                        title="{{ 'CALCEXPLORER_BOUNDARYROW' | translate }}">
+                     <i class="fa" ng-class="node.busy ? 'fa-refresh fa-spin' : 'fa-plus-square-o'"
+                        aria-hidden="true"></i>
+                  </span>
+                  <span class="ce-twisty"
+                        ng-if="!node.hasChildren && !(node.belowBound && hasDeeperLevel(node))">&middot;</span>
+                  <span class="ce-badge" ng-class="node.typeMeta.css"
+                        title="{{node.typeMeta.input ? ('CALCEXPLORER_INPUTCELL' | translate) : ''}}">{{node.typeMeta.label}}</span>
+                  <span class="ce-loc" ng-if="node.resolved">
+                     <span class="ce-hop">{{node.cube}}</span> :: {{node.coordinateLabel}}
+                  </span>
+                  <span class="ce-loc ce-unres" ng-if="!node.resolved">
+                     <span class="ce-approx">{{node.business.text}}</span>
+                     <span translate="CALCEXPLORER_APPROX"></span>
+                  </span>
+                  <span class="ce-val" ng-class="{'ce-zero': node.zero}">{{fmt(node.value)}}</span>
+                  <span class="ce-share">{{node.share === null ? '' : (node.share * 100 | number:1) + '%'}}</span>
+                  <span class="ce-actions">
+                     <button class="btn btn-default btn-xs" ng-if="hasDeeperLevel(node)" ng-click="traceDeeper(node)"
+                             ng-disabled="node.busy || walkInFlight()" title="{{ 'CALCEXPLORER_DEEPER' | translate }}">
+                        <i class="fa" ng-class="node.busy ? 'fa-refresh fa-spin' : 'fa-level-down'" aria-hidden="true"></i>
+                     </button>
+                     <button class="btn btn-warning btn-xs" ng-if="!node.resolved" ng-click="resolve(node)"
+                             ng-disabled="walkInFlight()"
+                             title="{{ 'CALCEXPLORER_RESOLVE' | translate }}">
+                        <i class="fa fa-magic" aria-hidden="true"></i>
+                     </button>
+                  </span>
+               </div>
+
+               <div class="ce-bar" ng-if="node.absShare !== null">
+                  <i ng-style="barStyle(node)"></i>
+               </div>
+
+               <div class="ce-detail" ng-if="node.expanded && (node.statementInfo.length || node.hasChildren)"
+                    ng-style="indentStyle(node)">
+                  <div class="ce-bdetail" style="margin-left:40px">
+                     <div ng-include="'__/plugins/calculation-explorer/detail.html'"></div>
+                  </div>
+               </div>
+            </div>
+
+            <div class="text-muted" style="padding:8px 12px" ng-if="!rows.length" translate="CALCEXPLORER_NOMATCH"></div>
+            <div class="ce-rowcap" ng-if="rows.truncatedRows">
+               <i class="fa fa-scissors" aria-hidden="true"></i>
+               {{rows.truncatedRows | number:0}} <span translate="CALCEXPLORER_ROWCAP"></span>
+            </div>
+         </div>
+      </div>
+   </div>
+
+   <!-- ================= tab 2 : feeders ================= -->
+   <div ng-if="state.activeTab === 2" style="padding-top:12px">
+      <div ng-if="!cell()" class="text-muted" translate="CALCEXPLORER_NOFEEDERCELL"></div>
+
+      <div ng-if="cell()">
+         <!-- Arc's own Trace Feeders hands a cell straight to this tab, so the
+              coordinate has to be stated here too: there is not always a trace
+              above it to carry it. -->
+         <div class="ce-coordbar">
+            <p class="ce-coordline">
+               <b>{{cell().cube}}</b> :: {{cell().coordinateLabel}}
+               <span class="text-muted" ng-if="cell().source">&nbsp;&mdash; {{cell().source}}</span>
+               <span class="text-muted">&nbsp;&mdash; {{cell().instance}}</span>
+            </p>
+            <button class="btn btn-default btn-xs" ng-click="copyCoordinates(false)"
+                    title="{{ 'CALCEXPLORER_COPYCELLHELP' | translate }}">
+               <i class="fa fa-clipboard" aria-hidden="true"></i>
+            </button>
+            <button class="btn btn-default btn-xs" ng-click="copyCoordinates(true)"
+                    title="{{ 'CALCEXPLORER_COPYCELLTABLEHELP' | translate }}">
+               <i class="fa fa-table" aria-hidden="true"></i>
+            </button>
+            <button class="btn btn-default btn-xs" ng-click="copyLink()"
+                    title="{{ 'CALCEXPLORER_COPYLINKHELP' | translate }}">
+               <i class="fa fa-link" aria-hidden="true"></i>
+            </button>
+         </div>
+         <p class="text-muted" translate="CALCEXPLORER_FEEDERSHELP"></p>
+         <button class="btn btn-default btn-sm" ng-click="loadFeeders()" ng-disabled="state.loadingFeeders">
+            <i class="fa fa-bolt" ng-class="{'fa-spin fa-refresh': state.loadingFeeders}" aria-hidden="true"></i>
+            <span translate="CALCEXPLORER_CHECKFEEDERS"></span>
+         </button>
+         <button class="btn btn-default btn-sm" ng-if="!trace && !preview" ng-click="traceManual()"
+                 ng-disabled="!manual.rows.length || walkInFlight() || state.previewing"
+                 style="margin-left:6px">
+            <i class="fa fa-sitemap"
+               ng-class="{'fa-spin fa-refresh': state.tracing || state.previewing}" aria-hidden="true"></i>
+            <span translate="CALCEXPLORER_TRACETHISCELL"></span>
+         </button>
+
+         <div ng-if="feeders" style="margin-top:12px">
+            <div class="alert alert-warning" ng-if="feeders.traceError" style="padding:6px 10px;font-size:12px">
+               {{feeders.traceError}}
+            </div>
+
+            <!-- 5d item 29: three empty headings and three apologies used to be
+                 the whole answer on a calculated cell, with the explanation left
+                 in the guide. The page has the cell type in scope, so it can say
+                 what an empty answer means instead of only that it is empty. -->
+            <div class="alert alert-info" ng-if="!feeders.traceError && !feeders.statements.length
+                 && !feeders.fedCells.length && !feeders.checked.length"
+                 style="padding:6px 10px;font-size:12px" translate="CALCEXPLORER_FEEDERSALLEMPTY"></div>
+
+            <h5><span translate="CALCEXPLORER_FEEDERSTATEMENTS"></span> ({{feeders.statements.length}})</h5>
+            <pre ng-if="feeders.statements.length" style="font-size:11.5px"><span ng-repeat="statement in feeders.statements">{{statement}}
+</span></pre>
+            <p class="text-muted" ng-if="!feeders.statements.length" translate="CALCEXPLORER_NOFEEDERSTATEMENTS"></p>
+
+            <!-- 5 item 10: Arc ticks every fed cell and lets it expand, and both
+                 halves come out of the payload this tab already has. `Fed` is a
+                 boolean per fed cell and arrives by default; the tuple is the
+                 expansion. Neither costs a request -- measured against the
+                 server on the Store Cost cell 2.2 names, two entries, both
+                 `Fed: true`. Three states, though, not two: a row whose `Fed`
+                 the server did not send reads grey and says so, because a mark
+                 the reader takes for a data fact may only be shown where the
+                 datum was read. -->
+            <h5><span translate="CALCEXPLORER_FEDCELLS"></span> ({{feeders.fedRows.length}})</h5>
+            <div class="alert alert-warning" ng-if="feeders.fedSummary.unfed"
+                 style="padding:6px 10px;font-size:12px">{{fedNote()}}</div>
+            <p class="text-muted" ng-if="feeders.fedSummary.unknown && feeders.fedRows.length"
+               translate="CALCEXPLORER_FEDUNKNOWNNOTE"></p>
+            <ul class="list-unstyled" style="font-family:Menlo,Consolas,monospace;font-size:11.5px">
+               <li ng-repeat="row in feeders.fedRows" class="ce-fedrow">
+                  <span class="ce-fedmark"
+                        ng-class="{'ce-fed-yes': row.fed === true, 'ce-fed-no': row.fed === false,
+                                   'ce-fed-unknown': row.fed === null}"
+                        title="{{ (row.fed === true ? 'CALCEXPLORER_FEDYES'
+                                 : row.fed === false ? 'CALCEXPLORER_FEDNO'
+                                 : 'CALCEXPLORER_FEDUNKNOWN') | translate }}"><i class="fa"
+                        ng-class="{'fa-check': row.fed === true, 'fa-times': row.fed === false,
+                                   'fa-question': row.fed === null}" aria-hidden="true"></i></span>
+                  <span ng-if="row.labelled" class="ce-fedlabel" ng-click="row.open = !row.open"
+                        title="{{ 'CALCEXPLORER_FEDEXPANDHELP' | translate }}">{{row.label}}</span>
+                  <!-- The un-expanded fallback answers `{ "Fed": true }` and nothing
+                       else, which this list used to render as that literal JSON. -->
+                  <span ng-if="!row.labelled" class="text-muted"
+                        translate="CALCEXPLORER_FEDCELLUNLABELLED"></span>
+                  <ul class="list-unstyled ce-fedmembers" ng-if="row.open">
+                     <li ng-repeat="member in row.members"><span class="text-muted"
+                        ng-if="member.dimension">{{member.dimension}} = </span>{{member.element}}</li>
+                  </ul>
+               </li>
+            </ul>
+            <p class="text-muted" ng-if="!feeders.fedRows.length" translate="CALCEXPLORER_NOFEDCELLS"></p>
+
+            <!-- **Rows here mean a defect, and no rows is the pass.** tm1.CheckFeeders
+                 is the underfeeding detector: it reports rule-derived cells holding a
+                 value that no feeder reaches. Every string on this section used to
+                 read as an absence ("the feeder check returned nothing"), which is
+                 wrong about the API and hides the one thing the section is for. -->
+            <h5><span translate="CALCEXPLORER_CHECKRESULT"></span> ({{feeders.checked.length}})</h5>
+            <p class="text-muted" ng-if="feeders.checked.length" translate="CALCEXPLORER_CHECKFOUND"></p>
+            <!-- Same row shape as the fed cells above, minus the tick: these are
+                 by definition the cells the check says nothing reaches, so a
+                 per-row mark would only repeat the heading. -->
+            <ul class="list-unstyled" style="font-family:Menlo,Consolas,monospace;font-size:11.5px">
+               <li ng-repeat="row in feeders.checkRows" class="ce-fedrow">
+                  <span ng-if="row.labelled" class="ce-fedlabel" ng-click="row.open = !row.open"
+                        title="{{ 'CALCEXPLORER_FEDEXPANDHELP' | translate }}">{{row.label}}</span>
+                  <span ng-if="!row.labelled" class="text-muted"
+                        translate="CALCEXPLORER_FEDCELLUNLABELLED"></span>
+                  <ul class="list-unstyled ce-fedmembers" ng-if="row.open">
+                     <li ng-repeat="member in row.members"><span class="text-muted"
+                        ng-if="member.dimension">{{member.dimension}} = </span>{{member.element}}</li>
+                  </ul>
+               </li>
+            </ul>
+            <p class="text-muted" ng-if="!feeders.checked.length" translate="CALCEXPLORER_NOCHECKRESULT"></p>
+         </div>
+      </div>
+   </div>
+
+   <!-- ================= tab 3 : history ================= -->
+   <div ng-if="state.activeTab === 3" style="padding-top:12px">
+      <div ng-if="!history.length" class="text-muted" translate="CALCEXPLORER_NOHISTORY"></div>
+      <div ng-if="history.length">
+         <button class="btn btn-default btn-xs" ng-click="clearHistory()" style="margin-bottom:8px">
+            <i class="fa fa-trash" aria-hidden="true"></i> <span translate="CALCEXPLORER_CLEARHISTORY"></span>
+         </button>
+         <table class="table table-condensed table-hover">
+            <thead>
+               <tr>
+                  <th translate="CALCEXPLORER_HISTINSTANCE"></th>
+                  <th translate="CALCEXPLORER_HISTCUBE"></th>
+                  <th translate="CALCEXPLORER_HISTCELL"></th>
+                  <th class="text-right" translate="CALCEXPLORER_HISTVALUE"></th>
+                  <th translate="CALCEXPLORER_HISTAT"></th>
+                  <th></th>
+               </tr>
+            </thead>
+            <tbody>
+               <tr ng-repeat="item in history">
+                  <td style="font-size:12px">{{item.instance}}</td>
+                  <td style="font-size:12px">{{item.cube}}</td>
+                  <td style="font-family:Menlo,Consolas,monospace;font-size:11.5px">{{item.label}}</td>
+                  <td class="text-right" style="font-size:12px">{{item.value}}</td>
+                  <td style="font-size:11.5px" class="text-muted">{{item.at}}</td>
+                  <td class="text-right">
+                     <button class="btn btn-default btn-xs" ng-click="replay(item)">
+                        <i class="fa fa-repeat" aria-hidden="true"></i> <span translate="CALCEXPLORER_REPLAY"></span>
+                     </button>
+                  </td>
+               </tr>
+            </tbody>
+         </table>
+      </div>
+   </div>
+
+   <!-- ================= the walk indicator =================
+        Outside every tab block on purpose: a walk started on one tab must stay
+        visible after the page switches to another, and 4r's whole point is that
+        the page reports what the SERVER is doing, not what this tab started. -->
+   <div class="ce-walkbar" role="status" aria-live="polite"
+        ng-if="state.walkNotice || otherWalks().length"
+        title="{{ 'CALCEXPLORER_WALKCLOCK' | translate }}">
+      <div class="ce-walkline" ng-if="state.walkNotice">
+         <i class="fa fa-spinner fa-spin ce-walkbar-spin" aria-hidden="true"></i>
+         <span ng-if="state.walkNotice.phase === 'walking'" translate="CALCEXPLORER_WALKING"></span>
+         <span ng-if="state.walkNotice.phase === 'receiving'" translate="CALCEXPLORER_WALKRECEIVING"></span>
+         <span ng-if="state.walkNotice.phase === 'earlier'" translate="CALCEXPLORER_WALKEARLIER"></span>
+         <span ng-if="state.walkNotice.phase === 'preview'" translate="CALCEXPLORER_WALKPREVIEW"></span>
+         <span class="ce-walking-cube" ng-if="state.walkNotice.cube">{{state.walkNotice.cube}}</span>
+         <!-- Seconds come from TM1's own ElapsedTime, so the preview has none to
+              show. null hides the pill; a real 0 from the server still prints,
+              because that is the server's answer rather than a missing one. -->
+         <span class="ce-walking-secs" ng-if="state.walkNotice.seconds !== null &&
+               state.walkNotice.seconds !== undefined">{{state.walkNotice.seconds}}s</span>
+         <!-- §5d item 37. myWalk() is null unless the poll has seen exactly ONE
+              walking trace of this user's: two tabs on one cell is a real shape,
+              and this button may not guess which of them to kill. They appear as
+              rows below instead. Admin-gated (§5e.2) until somebody measures
+              whether a non-admin may cancel their own. -->
+         <button type="button" class="btn btn-default btn-xs" ng-if="myWalk()"
+                 ng-click="cancelWalk(myWalk())" ng-disabled="state.cancelling !== null"
+                 title="{{ 'CALCEXPLORER_CANCELHELP' | translate }}">
+            <i class="fa" ng-class="state.cancelling === null ? 'fa-ban' : 'fa-refresh fa-spin'"
+               aria-hidden="true"></i>
+            <span ng-if="state.cancelling === null" translate="CALCEXPLORER_CANCEL"></span>
+            <span ng-if="state.cancelling !== null" translate="CALCEXPLORER_CANCELLING"></span>
+         </button>
+      </div>
+      <!-- Every walk an admin may stop that is not the single one above: other
+           people's, and this page's own when there are two of them. The seconds
+           are the last /Threads reading, not a live clock, and the cancel
+           re-reads before it acts -- so a stale row becomes "that trace had
+           already finished" rather than a cancel aimed at whatever holds that
+           id now. -->
+      <div class="ce-walkline" ng-repeat="walk in otherWalks()">
+         <i class="fa fa-user" aria-hidden="true"></i>
+         <!-- Both names are capped and clipped, so both carry their own title:
+              §5d item 27 is the same defect elsewhere on this page -- an
+              ellipsis over the only thing that tells two rows apart, with no way
+              to read the rest. A TM1 user here can be a CAM identity dozens of
+              characters long, and the tail is the part that identifies it. -->
+         <span class="ce-walkuser" title="{{walk.user}}">{{walk.user}}</span>
+         <span translate="CALCEXPLORER_WALKOTHERROW"></span>
+         <span class="ce-walking-cube" ng-if="walk.cube"
+               title="{{walk.cube}}">{{walk.cube}}</span>
+         <span class="ce-walking-secs" ng-if="walk.seconds !== null &&
+               walk.seconds !== undefined">{{walk.seconds}}s</span>
+         <button type="button" class="btn btn-default btn-xs" ng-click="cancelWalk(walk)"
+                 ng-disabled="state.cancelling !== null"
+                 title="{{ 'CALCEXPLORER_CANCELHELP' | translate }}">
+            <i class="fa" ng-class="state.cancelling === walk.id ? 'fa-refresh fa-spin' : 'fa-ban'"
+               aria-hidden="true"></i>
+            <span ng-if="state.cancelling !== walk.id" translate="CALCEXPLORER_CANCEL"></span>
+            <span ng-if="state.cancelling === walk.id" translate="CALCEXPLORER_CANCELLING"></span>
+         </button>
+      </div>
+   </div>
+
+</div>

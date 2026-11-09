@@ -1,0 +1,153 @@
+<!-- Shared by the business and technical views (ng-include, so `node` and the
+     controller's helpers come from the surrounding scope).
+
+     Three sections, in the order a reader needs them: which cell this is, how
+     its value was arrived at, and the values that went into it. The rule text
+     itself is last and collapsed, because it is the most technical part. -->
+<div>
+
+   <!-- ---------------- 1. which cell ---------------- -->
+   <div class="ce-sec">
+      <h6>
+         <span translate="CALCEXPLORER_SECTIONCELL"></span>
+         <span ng-if="node.cube">&middot; {{node.cube}}</span>
+         <span class="ce-chip-input" ng-if="node.typeMeta.input" translate="CALCEXPLORER_INPUTCHIP"></span>
+      </h6>
+      <div class="ce-coordgrid" ng-if="node.members.length">
+         <span class="ce-coord" ng-repeat="member in node.members">
+            <b>{{member.dimension || ('?' )}}<span ng-if="member.hierarchy && member.hierarchy !== member.dimension">:{{member.hierarchy}}</span> =</b>
+            {{member.name}}
+         </span>
+      </div>
+      <div class="ce-approx" ng-if="!node.members.length">
+         <i class="fa fa-exclamation-triangle" aria-hidden="true"></i>
+         <span translate="CALCEXPLORER_APPROX"></span>
+         <button class="btn btn-warning btn-xs" ng-click="resolve(node)" ng-disabled="walkInFlight()"
+                 style="margin-left:6px">
+            <i class="fa fa-magic" aria-hidden="true"></i> <span translate="CALCEXPLORER_RESOLVE"></span>
+         </button>
+      </div>
+   </div>
+
+   <!-- ---------------- 2. how it was calculated ---------------- -->
+   <div class="ce-sec" ng-if="calcFor(node)">
+      <h6 translate="CALCEXPLORER_SECTIONCALC"></h6>
+
+      <!-- a stored cell is where the trace stops: nothing calculated it -->
+      <div class="ce-formula ce-input-note" ng-if="calcFor(node).kind === 'input'">
+         <i class="fa fa-keyboard-o" aria-hidden="true"></i>
+         <span translate="CALCEXPLORER_INPUTCELL"></span>
+      </div>
+
+      <!-- a consolidation is stated, not parsed: it is the sum of its parts -->
+      <div class="ce-formula" ng-if="calcFor(node).kind === 'consolidation'">
+         <!-- "Sum of 0 components" was the flattest lie a bounded response could
+              put on screen, on a node the unbounded walk proves has twenty levels
+              under it. operandCount is kids.length, and at the bound there are no
+              kids because the request did not ask for them. -->
+         <span ng-if="!(node.belowBound && !node.children.length)">
+            <span translate="CALCEXPLORER_SUMOF"></span>
+            <b>{{calcFor(node).operandCount}}</b>
+            <span translate="CALCEXPLORER_COMPONENTS"></span>
+         </span>
+         <span ng-if="node.belowBound && !node.children.length"
+               translate="CALCEXPLORER_SUMOFBOUNDED"></span>
+      </div>
+
+      <!-- a rule: the formula with each operand's own value substituted in -->
+      <div class="ce-formula" ng-if="calcFor(node).kind === 'rule'">
+         <span class="ce-target">{{calcFor(node).area}}</span> =
+         <span ng-repeat="token in calcFor(node).tokens">
+            <span ng-if="token.text">{{token.text}}</span>
+            <!-- The chip leads somewhere: its own row in the tree when the
+                 component is in it, a trace of its own cell when it is not and
+                 the reference names the dimensions (§5d item 36 step 4). One
+                 title says why it reads what it reads AND what a click does. -->
+            <span class="ce-ref" ng-if="token.ref"
+                  ng-class="{'ce-ref-miss': !token.matched, 'ce-ref-db': token.db,
+                     'ce-ref-live': operandTarget(node, token) && !walkInFlight() && !state.previewing}"
+                  ng-click="operandClick(node, token)"
+                  title="{{operandHint(node, token)}}"
+               ><span ng-if="!token.parts">{{token.ref}}</span><span ng-if="token.parts" ng-repeat="part in token.parts" ng-class="{'ce-sub': part.sub}" title="{{part.from}}">{{part.sub || part.text}}</span
+               ><span class="ce-refval">{{token.matched ? fmt(token.value) : '?'}}</span>
+            </span>
+         </span>
+      </div>
+
+      <div class="ce-legend-note" ng-if="calcFor(node).kind === 'rule'" translate="CALCEXPLORER_DIVIDELEGEND"></div>
+
+      <!-- A DB() lookup's coordinates are read off the component TM1 returned
+           for it, never from this cell — so the legend says whose they are. -->
+      <div class="ce-legend-note" ng-if="calcFor(node).dbResolved" translate="CALCEXPLORER_DBLEGEND"></div>
+
+      <!-- Why an operand reads "?" — the reader can fix one of these two. -->
+      <div class="ce-legend-note ce-warn-note" ng-if="calcFor(node).droppedChildren">
+         <i class="fa fa-scissors" aria-hidden="true"></i>
+         <span translate="CALCEXPLORER_OPERANDDROPPED"></span>
+      </div>
+
+      <!-- TM1 reports every statement whose area covers the cell, not the one
+           that fired, so a cell with several candidates says so. -->
+      <div class="ce-legend-note" ng-if="calcFor(node).statementCount > 1">
+         <i class="fa fa-info-circle" aria-hidden="true"></i>
+         {{calcFor(node).statementCount}} <span translate="CALCEXPLORER_MANYSTATEMENTS"></span>
+      </div>
+
+      <!-- TM1 hands a node its components' statements as well as its own, and
+           not in that order (§4l). One naming a dimension this cube does not
+           have cannot be this cell's rule, so it is set aside — and said so,
+           because the count under Rule below will not match. -->
+      <div class="ce-legend-note" ng-if="calcFor(node).statementsElsewhere">
+         <i class="fa fa-info-circle" aria-hidden="true"></i>
+         {{calcFor(node).statementsElsewhere}} <span translate="CALCEXPLORER_STATEMENTSELSEWHERE"></span>
+      </div>
+
+      <div class="ce-formula" ng-if="calcFor(node).kind === 'unknown'" translate="CALCEXPLORER_NOFORMULA"></div>
+   </div>
+
+   <!-- ---------------- 3. the values that went in ----------------
+        Capped, and it says by how much: a consolidation has one row per child,
+        which on a wide one is hundreds of rows above the tree. What is cut is
+        not lost -- the tree below is those same children, with shares. -->
+   <div class="ce-sec" ng-if="calcFor(node).operands.length">
+      <h6 translate="CALCEXPLORER_SECTIONVALUES"></h6>
+      <div class="ce-valrow" ng-repeat="operand in calcFor(node).operands">
+         <span>
+            {{operand.label}}
+            <em ng-if="operand.cube">&mdash; <span translate="CALCEXPLORER_FROMCUBE"></span> {{operand.cube}}</em>
+         </span>
+         <span>{{fmt(operand.value)}}</span>
+      </div>
+      <div class="ce-legend-note" ng-if="calcFor(node).operandsHidden">
+         {{calcFor(node).operandsHidden | number:0}} <span translate="CALCEXPLORER_VALUESCAP"></span>
+      </div>
+   </div>
+
+   <!-- ---------------- 4. the rule text, collapsed ---------------- -->
+   <div class="ce-sec" ng-if="node.statementInfo.length">
+      <h6>
+         <span translate="CALCEXPLORER_SECTIONRULE"></span>
+         <a href="" ng-click="toggleRule(node)" style="font-weight:400;letter-spacing:0">
+            <span ng-if="!showRule[node.id]" translate="CALCEXPLORER_SHOWRULE"></span>
+            <span ng-if="showRule[node.id]" translate="CALCEXPLORER_HIDERULE"></span>
+         </a>
+      </h6>
+      <div ng-if="showRule[node.id]">
+         <div class="ce-stmt" ng-repeat="info in node.statementInfo" style="margin-left:0">
+            <div class="ce-where">
+               <span ng-if="info.location">
+                  <i class="fa fa-file-code-o" aria-hidden="true"></i>
+                  <span translate="CALCEXPLORER_RULESLINE"></span> <b>{{info.location.line}}</b>
+                  <span ng-if="info.location.comment">&mdash; {{info.location.comment}}</span>
+                  <span ng-if="info.location.matches > 1">
+                     ({{info.location.matches}} <span translate="CALCEXPLORER_IDENTICAL"></span>)
+                  </span>
+               </span>
+               <span ng-if="!info.location" translate="CALCEXPLORER_NOTLOCATED"></span>
+            </div>
+            <pre>{{info.location.source || info.formatted}}</pre>
+         </div>
+      </div>
+   </div>
+
+</div>

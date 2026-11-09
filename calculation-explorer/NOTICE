@@ -1,0 +1,24 @@
+Arc plugin: Calculation Explorer
+Copyright (c) 2026 Cubewise
+
+This plugin is released under the MIT License (see the LICENSE at the root of
+this repository), with the exceptions below. The MIT License covers Cubewise's
+own code, text and images; it does not grant any rights in the third-party
+material listed here.
+
+Trademarks
+  IBM, IBM Planning Analytics, Planning Analytics Workspace and TM1 are
+  trademarks of International Business Machines Corporation. Arc is a product
+  of Cubewise. Other names may be trademarks of their respective owners. Their
+  use here identifies the products the plugins work with and implies no
+  endorsement.
+
+Demo model
+  The pictures and examples use GO_New_Stores, the sample database that ships
+  with an IBM TM1 installation. Its names appear only to show the plugins at
+  work; the sample itself is not distributed here.
+
+No warranty
+  As the License says, the plugins are provided "as is". Read each plugin's
+  guide before letting it change a database: every change it writes is backed
+  up first, and the backup restores it.

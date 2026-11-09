@@ -1,0 +1,34 @@
+Arc plugin: TM1 12 Readiness
+Copyright (c) 2026 Cubewise
+
+This plugin is released under the MIT License (see the LICENSE at the root of
+this repository), with the exceptions below. The MIT License covers Cubewise's
+own code, text and images; it does not grant any rights in the third-party
+material listed here.
+
+Trademarks
+  IBM, IBM Planning Analytics, Planning Analytics Workspace and TM1 are
+  trademarks of International Business Machines Corporation. Arc is a product
+  of Cubewise. Other names may be trademarks of their respective owners. Their
+  use here identifies the products the plugins work with and implies no
+  endorsement.
+
+Screenshot of an IBM product
+  tm1-12-readiness/img/paw-download-migration-utility.png shows IBM Planning
+  Analytics Workspace, with Cubewise's annotations. The IBM screen it shows is
+  IBM's, and is not covered by the MIT License.
+
+Demo model
+  The pictures and examples use GO_New_Stores, the sample database that ships
+  with an IBM TM1 installation. Its names appear only to show the plugins at
+  work; the sample itself is not distributed here.
+
+Bedrock
+  TM1 12 Readiness compares a model's Bedrock processes with Bedrock 5, which it
+  reads from its own repository, github.com/cubewise-code/bedrock-5, under
+  Bedrock's licence. Bedrock's code is not included in this repository.
+
+No warranty
+  As the License says, the plugins are provided "as is". Read each plugin's
+  guide before letting it change a database: every change it writes is backed
+  up first, and the backup restores it.
