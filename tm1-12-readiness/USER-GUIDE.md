@@ -1,6 +1,6 @@
 # TM1 12 Readiness — user guide
 
-For TM1 12 Readiness **v1.0.2**, a plugin for Arc for TM1. It finds what a v11 model needs
+For TM1 12 Readiness **v1.0.3**, a plugin for Arc for TM1. It finds what a v11 model needs
 before IBM's Database Migration Utility moves it to TM1 12, fixes what can be fixed safely,
 and checks the TM1 12 database afterwards. The pictures are of the plugin on IBM's GO_New_Stores
 demo model. Created by Muhammad Eissa, Cubewise — [meissa@cubewise.com](mailto:meissa@cubewise.com).
@@ -420,4 +420,4 @@ trace, so one file never mixes two levels of detail.
 
 ---
 
-TM1 12 Readiness v1.0.2 — Created by Muhammad Eissa, Cubewise — [meissa@cubewise.com](mailto:meissa@cubewise.com).
+TM1 12 Readiness v1.0.3 — Created by Muhammad Eissa, Cubewise — [meissa@cubewise.com](mailto:meissa@cubewise.com).

@@ -37,6 +37,9 @@ arc.run(['$rootScope', 'calcExplorerCore', function ($rootScope, core) {
    var VERSION = core.VERSION;
    var AUTHOR = "Cubewise";
    var ICON = "fa-sitemap";
+   /* Where the Plugins Manager and Arc link to (user, 2026-11-09): the plugin's
+    * own folder in the repo that tracks its issues -- never a cubewise-code repo. */
+   var HOME_URL = "https://github.com/meissacw/arc_plugins/tree/main/calculation-explorer";
 
    /* `path` and `params` are read straight into the state Arc registers for a
     * page plugin -- read out of `$rootScope.plugin` in the running app:
@@ -60,6 +63,7 @@ arc.run(['$rootScope', 'calcExplorerCore', function ($rootScope, core) {
          "with rule-file line numbers and an interactive HTML export.",
       author: AUTHOR,
       version: VERSION,
+      url: HOME_URL,
       path: "/calculation-explorer/:instance?cube&view&elements&depth",
       params: {
          cube: { value: null, dynamic: true },
@@ -73,14 +77,16 @@ arc.run(['$rootScope', 'calcExplorerCore', function ($rootScope, core) {
       icon: ICON,
       description: "Open Calculation Explorer on this cube.",
       author: AUTHOR,
-      version: VERSION
+      version: VERSION,
+      url: HOME_URL
    });
 
    $rootScope.plugin("cubewiseCalculationExplorerMenu", NAME, "menu/views", {
       icon: ICON,
       description: "Open Calculation Explorer on this view, ready to trace a cell.",
       author: AUTHOR,
-      version: VERSION
+      version: VERSION,
+      url: HOME_URL
    });
 
 }]);
@@ -313,7 +319,7 @@ arc.factory("calcExplorerCore", [function () {
     * compares the two on purpose: warning when the running Arc differs from
     * ARC_BUILD is 5 item 17, and it is a feature with a wording decision in it,
     * not something to bolt on while passing. */
-   var VERSION = "1.19.1";
+   var VERSION = "1.19.2";
    var ARC_BUILD = "6.0.0";
 
    // ---------------------------------------------------------------

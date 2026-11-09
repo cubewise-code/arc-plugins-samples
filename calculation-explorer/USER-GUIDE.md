@@ -1,6 +1,6 @@
 # Calculation Explorer — user guide
 
-**v1.19.1** · Arc for TM1 6.0 · a plugin for answering *where did this number come from?* · Created by Muhammad Eissa, Cubewise · [meissa@cubewise.com](mailto:meissa@cubewise.com)
+**v1.19.2** · Arc for TM1 6.0 · a plugin for answering *where did this number come from?* · Created by Muhammad Eissa, Cubewise · [meissa@cubewise.com](mailto:meissa@cubewise.com)
 
 This guide is for the person **using** the plugin. If you are changing it, read `README.md` next to
 this file, then `PROJECT-PLAN.md` in the repository.
@@ -461,4 +461,4 @@ disagree, which has happened at least once.
 
 ---
 
-*Calculation Explorer v1.19.1. Tracing only: this plugin never writes to your model. Created by Muhammad Eissa, Cubewise — [meissa@cubewise.com](mailto:meissa@cubewise.com).*
+*Calculation Explorer v1.19.2. Tracing only: this plugin never writes to your model. Created by Muhammad Eissa, Cubewise — [meissa@cubewise.com](mailto:meissa@cubewise.com).*

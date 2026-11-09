@@ -31,7 +31,8 @@ arc.run(['$rootScope', 'saasMigrationCore', function ($rootScope, core) {
       path: "/tm1-12-readiness/:instance",
       description: "Find, suggest and apply the fixes a TM1 v11 model needs before IBM's migration to TM1 v12 (PA as a Service).",
       author: "Cubewise",
-      url: "https://github.com/meissacw/arc_plugins",
+      // the plugin's own folder, so the link opens on its README (user, 2026-11-09)
+      url: core.HOME_URL,
       version: core.VERSION
    });
    /* "Where used" on Arc's tree menu (v0.7.0). Arc 6.0.0's bundle offers
@@ -43,7 +44,8 @@ arc.run(['$rootScope', 'saasMigrationCore', function ($rootScope, core) {
          icon: "fa-sitemap",
          description: "Every process, chore, cube and rule that uses this " + m[0].toLowerCase() + ", and which of them break on TM1 12.",
          author: "Cubewise",
-         version: core.VERSION
+         version: core.VERSION,
+         url: core.HOME_URL
       });
    });
 }]);
@@ -415,7 +417,9 @@ arc.factory("tm1ReadinessProject", ['$q', '$rootScope', 'saasMigrationCore', fun
 
 arc.factory("saasMigrationCore", [function () {
 
-   var VERSION = "1.0.2";
+   var VERSION = "1.0.3";
+   // where Arc links to: this plugin's folder in the repo that tracks its issues
+   var HOME_URL = "https://github.com/meissacw/arc_plugins/tree/main/tm1-12-readiness";
 
    // ---------------------------------------------------------------------------
    // Rule catalogue
@@ -4747,6 +4751,7 @@ arc.factory("saasMigrationCore", [function () {
 
    return {
       VERSION: VERSION,
+      HOME_URL: HOME_URL,
       compileMessage: compileMessage,
       CFG_UNSUPPORTED: CFG_UNSUPPORTED,
       parseCfg: parseCfg,
