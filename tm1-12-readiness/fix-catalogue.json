@@ -1,0 +1,166 @@
+{
+  "verifiedWith": {
+    "plugin": "0.6.0",
+    "utility": "12.6.4",
+    "tm1v12": "12.6.4",
+    "tm1v11": "11.8.02700.4",
+    "model": "GO_New_Stores",
+    "date": "2026-10-03"
+  },
+  "rules": [
+    {
+      "id": "ti.removed:cubesetlogchanges",
+      "fix": "REMOVE",
+      "level": 5,
+      "evidence": "model",
+      "fixtures": [
+        "19 GO_New_Stores imports",
+        "canaries c01 c04 c07 c08"
+      ],
+      "l5": "cube data equal on 8 of 8 comparable cubes; logging itself is platform-managed (argued: IBM, transaction logging in TM1 v12)"
+    },
+    {
+      "id": "ti.removed:cubegetlogchanges",
+      "fix": "REMOVE",
+      "level": 5,
+      "evidence": "model",
+      "fixtures": [
+        "GO_New_Stores imports",
+        "canary c04"
+      ],
+      "l5": "removed with its dependency chain; a variable it set that is read in a condition is refused, not half-fixed (canary c05)"
+    },
+    {
+      "id": "ti.removed:refreshmdxhierarchy",
+      "fix": "REMOVE",
+      "level": 5,
+      "evidence": "model",
+      "fixtures": [
+        "GO_New_Stores imports",
+        "canaries c18 c19"
+      ],
+      "l5": "cube data and every dimension's element count equal; the refresh is the engine's on TM1 12 (argued: IBM documents no replacement)"
+    },
+    {
+      "id": "control.removed:}hierarchyproperties",
+      "fix": "REMOVE",
+      "level": 5,
+      "evidence": "model",
+      "fixtures": [
+        "19 GO_New_Stores imports",
+        "canary c16"
+      ],
+      "l5": "the cube is 404 on TM1 12 (measured); dimensions equal after the imports ran on both"
+    },
+    {
+      "id": "control.removed:}cubeproperties",
+      "fix": "REMOVE",
+      "level": 5,
+      "evidence": "model",
+      "fixtures": [
+        "6 GO_New_Stores imports"
+      ],
+      "l5": "the cube is 404 on TM1 12 (measured); cube data equal",
+      "followUp": "Set the cube's MeasuresDimension (and any other setting the write carried) once as a REST cube property on TM1 12."
+    },
+    {
+      "id": "ti.dataSourcePath",
+      "fix": "DATAFILES",
+      "level": 5,
+      "evidence": "model",
+      "fixtures": [
+        "28 GO_New_Stores imports"
+      ],
+      "l5": "28 files uploaded byte for byte; the same run statuses as v11, and import_SalesPlan, which aborts on v11 for a D:\\ file, completes",
+      "followUp": "Done on TM1 12 by the Data files tab."
+    },
+    {
+      "id": "ti.removed:cubesavedata",
+      "fix": "REMOVE",
+      "level": 4,
+      "evidence": "canary",
+      "fixtures": [
+        "canary c09"
+      ],
+      "l5": "persistence is the engine's on TM1 12 (argued: IBM)"
+    },
+    {
+      "id": "ti.removed:lockon",
+      "fix": "REMOVE",
+      "level": 4,
+      "evidence": "canary",
+      "fixtures": [
+        "canary c10"
+      ]
+    },
+    {
+      "id": "ti.removed:lockoff",
+      "fix": "REMOVE",
+      "level": 4,
+      "evidence": "canary",
+      "fixtures": [
+        "canary c10"
+      ]
+    },
+    {
+      "id": "ti.removed:batchupdatestart",
+      "fix": "REMOVE",
+      "level": 4,
+      "evidence": "canary",
+      "fixtures": [
+        "canary c11"
+      ]
+    },
+    {
+      "id": "ti.removed:batchupdatefinish",
+      "fix": "REMOVE",
+      "level": 4,
+      "evidence": "canary",
+      "fixtures": [
+        "canary c11"
+      ]
+    },
+    {
+      "id": "ti.removed:enablepersonalworkspace",
+      "fix": "REMOVE",
+      "level": 4,
+      "evidence": "canary",
+      "fixtures": [
+        "canary c13",
+        "found in }tp_initialize_session by the utility"
+      ]
+    },
+    {
+      "id": "ti.removed:executecommand",
+      "fix": "STUB",
+      "level": 4,
+      "evidence": "canary",
+      "fixtures": [
+        "canary c12"
+      ],
+      "followUp": "The process runs, but without the command: complete the ExecuteHttpRequest stub after cutover."
+    },
+    {
+      "id": "ti.splitName",
+      "fix": "REWRITE",
+      "level": 5,
+      "evidence": "canary",
+      "fixtures": [
+        "canary c14",
+        "found in }tp_incr_deploy_application_security by the utility"
+      ],
+      "l5": "the canary asserts the joined name's value at run time, and completed on v11 and TM1 12"
+    },
+    {
+      "id": "tm1Applications.delete",
+      "fix": "DELETE",
+      "level": 2,
+      "evidence": "model",
+      "fixtures": [
+        "168 GO_New_Stores }tp_ objects"
+      ],
+      "l5": "the utility reports no }tp_ process after the delete",
+      "followUp": "9 cubes refuse a cell read even to Admin: they are backed up without cells, behind an extra tick."
+    }
+  ]
+}
