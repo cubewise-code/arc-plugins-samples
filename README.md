@@ -13,7 +13,6 @@ In Arc, open **Tools > Plugins Manager**, pick this repository as the source, an
 | [process-feeders](process-feeders) | Runs CubeProcessFeeders on selected cubes | Tools |
 | [randomise-data](randomise-data) | Randomises the data of selected cubes | Tools |
 | [rest-api-sanity-check](rest-api-sanity-check) | Sample: runs TM1 REST API requests and checks the status codes | Tools |
-| [services](services) | Sample: lists the services available to plugins | Tools |
 | [template-page](template-page) | Sample: a starting point for writing your own page plugin | Tools |
 
 
