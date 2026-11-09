@@ -1,0 +1,136 @@
+<div class="pulseApiSanityCheck p-2" style="height: 100%; overflow-y: auto;">
+   <style>
+      .pulseApiSanityCheck td { vertical-align: middle; }
+      .pulseApiSanityCheck tr.done { cursor: pointer; }
+      .pulseApiSanityCheck .url { font-family: monospace; font-size: 0.85em; word-break: break-all; }
+      .pulseApiSanityCheck .context code { margin-right: 1rem; }
+   </style>
+
+   <div ng-if="page.loading" class="p-3">
+      <i class="fa fa-fw fa-refresh fa-spin"></i> {{ 'PULSESANITYLOADING' | translate }}
+   </div>
+
+   <div ng-if="!page.loading && page.loadError" class="alert alert-danger">
+      {{page.loadError}}
+      <button type="button" class="btn btn-sm btn-secondary ml-2" ng-click="init()">{{ 'PULSESANITYTRYAGAIN' | translate }}</button>
+   </div>
+
+   <div ng-if="!page.loading && !page.loadError">
+
+      <div ng-if="page.contextError" class="alert alert-warning py-2">
+         <i class="fa fa-fw fa-exclamation-triangle"></i>
+         {{page.contextError}} {{ 'PULSESANITYCONTEXTWARN' | translate }}
+      </div>
+      <div ng-if="!pulseSignedIn()" class="alert alert-warning py-2">
+         <i class="fa fa-fw fa-sign-in"></i> {{ 'PULSESANITYNOTSIGNEDIN' | translate }}
+         <a href="" class="alert-link ml-1" ng-click="signInToPulse()">{{ 'PULSESANITYSIGNIN' | translate }}</a>
+      </div>
+
+      <div class="context small text-muted mb-2">
+         <span>Pulse server: <code>{{ctx.serverName || '-'}}</code></span>
+         <span>Service: <code>{{ctx.serviceName || '-'}}</code></span>
+         <span>Pulse user: <code>{{ctx.pulseUser || '-'}}</code></span>
+         <span ng-if="ctx.pulseVersion">Pulse version: <code>{{ctx.pulseVersion}}</code></span>
+         <span>Process: <code>{{ctx.process || '-'}}</code></span>
+         <span>Chore: <code>{{ctx.chore || '-'}}</code></span>
+         <span>Cube: <code>{{ctx.ruleCube || '-'}}</code></span>
+      </div>
+
+      <div class="d-flex flex-wrap align-items-center mb-2">
+         <div class="btn-group mr-2 mb-1">
+            <button type="button" class="btn btn-secondary" ng-click="run()" ng-disabled="page.running || checkedCount() === 0">
+               <i class="fa fa-fw" ng-class="page.running ? 'fa-refresh fa-spin' : 'fa-bolt'"></i> Run
+            </button>
+            <button type="button" class="btn btn-secondary" ng-if="page.running" ng-click="stop()">
+               <i class="fa fa-fw fa-stop"></i> Stop
+            </button>
+            <button type="button" class="btn btn-secondary" ng-click="reset()" ng-disabled="page.running">
+               <i class="fa fa-fw fa-eraser"></i> Reset
+            </button>
+            <button type="button" class="btn btn-secondary" ng-click="init()" ng-disabled="page.running" title="Reload requests.json and the instance's Pulse details">
+               <i class="fa fa-fw fa-refresh"></i> Reload
+            </button>
+         </div>
+         <div class="btn-group mr-2 mb-1">
+            <button type="button" class="btn btn-secondary" ng-class="{'active': !page.filter}" ng-click="setFilter(null)">Total: {{requests.length}}</button>
+            <button type="button" class="btn btn-secondary" ng-class="{'active': page.filter === 'success'}" ng-click="setFilter('success')">
+               <i class="fa fa-fw fa-check-circle text-success"></i> {{counts.success}}
+            </button>
+            <button type="button" class="btn btn-secondary" ng-class="{'active': page.filter === 'warning'}" ng-click="setFilter('warning')">
+               <i class="fa fa-fw fa-exclamation-triangle text-warning"></i> {{counts.warning}}
+            </button>
+            <button type="button" class="btn btn-secondary" ng-class="{'active': page.filter === 'failed'}" ng-click="setFilter('failed')">
+               <i class="fa fa-fw fa-times-circle text-danger"></i> {{counts.failed}}
+            </button>
+            <button type="button" class="btn btn-secondary" ng-class="{'active': page.filter === 'skipped'}" ng-click="setFilter('skipped')">
+               <i class="fa fa-fw fa-minus-circle text-muted"></i> {{counts.skipped}}
+            </button>
+         </div>
+         <div class="input-group mr-2 mb-1" style="width: 260px; max-width: 100%;">
+            <input type="text" class="form-control" ng-model="page.search" placeholder="Search all columns" title="Every word must appear in the row: area, request, method, URL, expected, result, message or where Arc uses the call">
+            <div class="input-group-append" ng-if="page.search">
+               <button type="button" class="btn btn-secondary" ng-click="page.search = ''" title="Clear the search"><i class="fa fa-times"></i></button>
+            </div>
+         </div>
+         <span class="text-muted small mb-1 mr-2" ng-if="page.search || page.filter">Showing {{shownRequests().length}} of {{requests.length}}</span>
+         <span class="text-muted small mb-1" ng-if="page.totalMs > 0">Total time: {{page.totalMs}} ms</span>
+      </div>
+
+      <div class="progress mb-2" style="height: 12px;" ng-if="counts.total > 0">
+         <div class="progress-bar bg-success" ng-class="{'progress-bar-striped progress-bar-animated': page.running}" ng-style="{width: percent('success') + '%'}"></div>
+         <div class="progress-bar bg-warning" ng-style="{width: percent('warning') + '%'}"></div>
+         <div class="progress-bar bg-danger" ng-style="{width: percent('failed') + '%'}"></div>
+         <div class="progress-bar bg-secondary" ng-style="{width: percent('skipped') + '%'}"></div>
+      </div>
+
+      <table class="table table-hover table-sm">
+         <thead>
+            <tr>
+               <th class="text-center click" ng-click="toggleAll()" title="Select all / none">
+                  <i class="fa text-info" ng-class="allChecked() ? 'fa-check-square-o' : 'fa-square-o'"></i>
+               </th>
+               <th class="text-center">#</th>
+               <th>Area</th>
+               <th>Request</th>
+               <th class="text-center">Method</th>
+               <th>Pulse API</th>
+               <th class="text-center">Expected</th>
+               <th class="text-center">Result</th>
+               <th class="text-right">Time</th>
+            </tr>
+         </thead>
+         <tbody>
+            <tr ng-repeat="item in requests" ng-if="visible(item)" ng-class="{'done': item.state && item.state !== 'running'}" ng-click="showDetails(item)">
+               <td class="text-center click" ng-click="$event.stopPropagation(); item.checked = !item.checked">
+                  <i class="fa text-info" ng-class="item.checked ? 'fa-check-square-o' : 'fa-square-o'"></i>
+               </td>
+               <td class="text-center">{{item.index + 1}}</td>
+               <td class="text-nowrap">
+                  {{item.group}}
+                  <span ng-if="item.writes" class="badge badge-warning" title="Creates a test object in Pulse and removes it again">writes</span>
+               </td>
+               <td>
+                  {{item.name}}
+                  <div ng-if="item.message" class="small" ng-class="{'text-danger': item.state === 'failed', 'text-warning': item.state === 'warning', 'text-muted': item.state === 'skipped'}">{{item.message}}</div>
+               </td>
+               <td class="text-center"><span class="badge" ng-class="methodBadge[item.method]">{{item.method}}</span></td>
+               <td class="url" title="{{item.usedBy}}">{{item.url}}</td>
+               <td class="text-center">{{item.statusCodeExpected.join ? item.statusCodeExpected.join(', ') : item.statusCodeExpected}}</td>
+               <td class="text-center text-nowrap">
+                  <i ng-if="item.state === 'running'" class="fa fa-fw fa-refresh fa-spin"></i>
+                  <i ng-if="item.state === 'success'" class="fa fa-fw fa-check-circle text-success"></i>
+                  <i ng-if="item.state === 'warning'" class="fa fa-fw fa-exclamation-triangle text-warning"></i>
+                  <i ng-if="item.state === 'failed'" class="fa fa-fw fa-times-circle text-danger"></i>
+                  <i ng-if="item.state === 'skipped'" class="fa fa-fw fa-minus-circle text-muted"></i>
+                  {{item.statusResult}}
+               </td>
+               <td class="text-right text-nowrap">{{item.ms !== null && item.ms !== undefined ? item.ms + ' ms' : ''}}</td>
+            </tr>
+         </tbody>
+      </table>
+
+      <div class="small text-muted">
+         {{ 'PULSESANITYNOTCOVERED' | translate }}
+      </div>
+   </div>
+</div>
