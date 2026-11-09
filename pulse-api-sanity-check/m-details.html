@@ -1,0 +1,23 @@
+<div class="p-2">
+   <table class="table table-sm">
+      <tr><th style="width: 160px;">Request</th><td><span class="badge badge-secondary">{{item.method}}</span> <code style="word-break: break-all;">{{item.requestUrl || item.url}}</code></td></tr>
+      <tr><th>Used by in Arc</th><td>{{item.usedBy}}</td></tr>
+      <tr><th>Expected status</th><td>{{item.statusCodeExpected.join ? item.statusCodeExpected.join(', ') : item.statusCodeExpected}}</td></tr>
+      <tr><th>Result</th><td>{{item.state}} <span ng-if="item.statusResult !== null">(HTTP {{item.statusResult}})</span> <span ng-if="item.ms !== null">in {{item.ms}} ms</span></td></tr>
+      <tr ng-if="item.message"><th>Message</th><td>{{item.message}}</td></tr>
+   </table>
+
+   <uib-tabset>
+      <uib-tab heading="Response" ng-if="item.responseData !== undefined && item.responseData !== null && item.responseData !== ''">
+         <div class="pt-2" style="max-height: 450px; overflow: auto;">
+            <json-formatter ng-if="!responseIsText" json="item.responseData" open="1"></json-formatter>
+            <pre ng-if="responseIsText" style="white-space: pre-wrap;">{{responseText}}</pre>
+         </div>
+      </uib-tab>
+      <uib-tab heading="Request body" ng-if="item.requestBody !== undefined && item.requestBody !== null">
+         <div class="pt-2" style="max-height: 450px; overflow: auto;">
+            <json-formatter json="item.requestBody" open="1"></json-formatter>
+         </div>
+      </uib-tab>
+   </uib-tabset>
+</div>

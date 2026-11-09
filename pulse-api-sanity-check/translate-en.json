@@ -1,0 +1,8 @@
+{
+    "PULSESANITYLOADING": "Reading the requests and this instance's Pulse details...",
+    "PULSESANITYTRYAGAIN": "Try again",
+    "PULSESANITYCONTEXTWARN": "Requests that need the Pulse server or service name are skipped.",
+    "PULSESANITYNOTSIGNEDIN": "You are not signed in to Pulse in Arc, so most requests will answer 401.",
+    "PULSESANITYSIGNIN": "Sign in to Pulse",
+    "PULSESANITYNOTCOVERED": "Not run, because they change data or need a payload Arc builds itself: Pulse sign-in and sign-out (POST _pulse/login), change logging (POST _pulse/arclog), migration packages (_pulse/api/package/create/start-items, /save) and rollback (_pulse/api/package/rollback), PDF reports (_pulse/report/technical.pdf, validation.pdf), the flow diagram (_pulse/report/diagram/generate) and the notifications websocket."
+}
