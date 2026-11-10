@@ -29,6 +29,7 @@ Working examples in this repo:
 - Content in an editable data file, a control cube created on first use, a helper TI
   process, keyboard shortcuts: `academy`
 - Pulse API calls through Arc's proxy, a search box across all columns: `pulse-api-sanity-check`
+- Pulse workbook data and object relationships, an SVG diagram with Arc's icons: `workbook-flow-diagram`
 
 ## Plugin File Structure
 

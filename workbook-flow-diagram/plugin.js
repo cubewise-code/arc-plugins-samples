@@ -6,7 +6,7 @@ arc.run(["$rootScope", function ($rootScope) {
       description: "Draws a flow diagram that starts from an Excel workbook tracked by Pulse: the cubes its worksheets use, then the processes, dimensions, cubes and other objects related to those cubes, as Pulse documents them",
       author: "Cubewise",
       url: "https://github.com/cubewise-code/arc-plugins-samples/tree/master/workbook-flow-diagram",
-      version: "1.6.1"
+      version: "1.7.2"
    });
 
 }]);
@@ -105,6 +105,7 @@ arc.directive("workbookFlowDiagram", function () {
                checked: 0,             // workbooks whose worksheets were read, while the list loads
                totalInPulse: 0,        // workbooks Pulse has for this Pulse environment, all instances
                search: "",
+               mode: "all",            // "all": every workbook listed, "one": the workbook clicked
                depth: 1,
                showSheets: false,
                building: false,
@@ -115,12 +116,43 @@ arc.directive("workbookFlowDiagram", function () {
 
             // Rejection reason of a call Pulse refused for lack of a session; shown as the sign-in warning, not as an error
             var SIGN_IN_NEEDED = "pulse-sign-in-needed";
-            // Pulse lists only workbooks opened between two dates: ask from this date to list them all
+            // Pulse lists only workbooks opened between two dates: "All time" asks from this date
             var ALL_FROM = "2000-01-01";
+
+            // --- Period: which workbooks to list, by when they were opened ----------------
+            // Relative periods end today; "Specific dates" takes a from and a to day (both included).
+            $scope.periodOptions = [
+               { id: "7d", months: 0, days: 7, label: "WBFLOWP7D" },
+               { id: "1m", months: 1, label: "WBFLOWP1M" },
+               { id: "3m", months: 3, label: "WBFLOWP3M" },
+               { id: "12m", months: 12, label: "WBFLOWP12M" },
+               { id: "all", label: "WBFLOWPALL" },
+               { id: "custom", label: "WBFLOWPCUSTOM" }
+            ];
+            // Translate the labels once: a `translate` filter inside ng-options makes Angular see the options
+            // as changed on every digest ("10 $digest() iterations reached")
+            _.each($scope.periodOptions, function (o) { o.text = String($translate.instant(o.label)); });
+            // Arc's $translate.instant can return a trusted-value object: make it a plain string
+            var text = function (key) { return String($translate.instant(key)); };
+            var PERIOD_KEY = "workbookFlowDiagram.period";
+            var monthAgo = new Date();
+            monthAgo.setMonth(monthAgo.getMonth() - 1);
+            // Date objects, as <input type="date"> needs
+            $scope.period = { preset: "1m", from: monthAgo, to: new Date(), error: null };
+            // The period chosen last time, for this browser (a convenience: the page works without it)
+            try {
+               var saved = JSON.parse(window.localStorage.getItem(PERIOD_KEY) || "null");
+               if (saved && _.find($scope.periodOptions, { id: saved.preset })) {
+                  $scope.period.preset = saved.preset;
+                  if (saved.from) { $scope.period.from = new Date(saved.from + "T00:00:00"); }
+                  if (saved.to) { $scope.period.to = new Date(saved.to + "T00:00:00"); }
+               }
+            } catch (e) { /* no storage: keep the default period */ }
             // Workbook details read at the same time while the list is checked
             var PARALLEL = 6;
             $scope.workbooks = [];
-            $scope.selected = null;         // the workbook drawn
+            $scope.selected = null;         // the workbook drawn in "one" mode
+            $scope.lastOne = null;          // the workbook last drawn on its own, to go back to from "all"
             $scope.graph = null;            // { nodes, edges, width, height }
             $scope.hiddenTypes = {};
             $scope.typesPresent = [];
@@ -193,6 +225,52 @@ arc.directive("workbookFlowDiagram", function () {
 
             var tomorrow = function () { return isoDate(new Date(Date.now() + 24 * 3600 * 1000)); };
 
+            // The chosen period as Pulse's start and end. Pulse compares the opening time with the end day
+            // at midnight, so the end sent is the day after the last day wanted.
+            var periodRange = function () {
+               var p = $scope.period;
+               var option = _.find($scope.periodOptions, { id: p.preset }) || $scope.periodOptions[1];
+               if (option.id === "all") { return { start: ALL_FROM, end: tomorrow(), last: isoDate(new Date()) }; }
+               if (option.id === "custom") {
+                  if (!(p.from instanceof Date) || isNaN(p.from) || !(p.to instanceof Date) || isNaN(p.to)) {
+                     return { error: text("WBFLOWPNEEDDATES") };
+                  }
+                  if (p.from > p.to) { return { error: text("WBFLOWPORDER") }; }
+                  return { start: isoDate(p.from), end: nextDay(isoDate(p.to)), last: isoDate(p.to) };
+               }
+               var start = new Date();
+               if (option.months) { start.setMonth(start.getMonth() - option.months); }
+               if (option.days) { start.setDate(start.getDate() - option.days); }
+               return { start: isoDate(start), end: tomorrow(), last: isoDate(new Date()) };
+            };
+
+            // Shown under the selector: the days the list covers
+            $scope.periodText = function () {
+               var r = periodRange();
+               if (r.error) { return ""; }
+               return $scope.period.preset === "all" ? text("WBFLOWPALLTEXT") : r.start + " → " + r.last;
+            };
+
+            // A new period from the selector or the date fields: remember it, and list again
+            $scope.applyPeriod = function () {
+               var r = periodRange();
+               $scope.period.error = r.error || null;
+               if (r.error) { return; }
+               try {
+                  window.localStorage.setItem(PERIOD_KEY, JSON.stringify({
+                     preset: $scope.period.preset,
+                     from: isoDate($scope.period.from),
+                     to: isoDate($scope.period.to)
+                  }));
+               } catch (e) { /* no storage: the period is kept for this page only */ }
+               $scope.loadWorkbooks();
+            };
+
+            $scope.onPresetChange = function () {
+               // Specific dates: wait for Apply, so the list is not loaded at every key press in the date fields
+               if ($scope.period.preset !== "custom") { $scope.applyPeriod(); }
+            };
+
             // Does this worksheet read this instance? A worksheet with no TM1 server recorded counts as this instance.
             // Pulse records "Unknown" for a worksheet it could not tie to a TM1 server (seen on Pulse 8.0.1 for a sheet with no cube).
             var isThisInstance = function (tm1Server) {
@@ -200,14 +278,29 @@ arc.directive("workbookFlowDiagram", function () {
                   sameName(tm1Server, $scope.page.serviceName) || sameName(tm1Server, $scope.instance);
             };
 
-            // Pulse's detail of one workbook. Its worksheets do not depend on dates: ask for today only, which keeps the usage part small.
+            // The day after a yyyy-MM-dd day, as yyyy-MM-dd
+            var nextDay = function (day) {
+               var d = new Date(day + "T12:00:00");
+               d.setDate(d.getDate() + 1);
+               return isoDate(d);
+            };
+
+            // Pulse's detail of one workbook. Its worksheets do not depend on dates, but Pulse 8.0.1 answers
+            // "Unable to get excel workbook" when the period holds no opening of the workbook. So ask for the
+            // day it was last opened (from the list) and the day after: one opening, and a small usage part.
+            var detailRange = function (workbook) {
+               var day = String(workbook.lastOpened || "").substring(0, 10);
+               if (/^\d{4}-\d{2}-\d{2}$/.test(day)) { return { start: day, end: nextDay(day) }; }
+               return { start: ALL_FROM, end: tomorrow() };
+            };
+
             var loadDetail = function (workbook) {
                if (details[workbook.path]) { return $q.when(details[workbook.path]); }
-               var today = isoDate(new Date());
+               var range = detailRange(workbook);
                var url = "_pulse/api/workbook?servername=" + encodeURIComponent($scope.page.serverName) +
                   "&path=" + encodeURIComponent(workbook.path) +
                   "&logVersion=" + encodeURIComponent(workbook.logVersion) +
-                  "&start=" + today + "&end=" + today;
+                  "&start=" + range.start + "&end=" + range.end;
                return pulseGet(url).then(function (detail) {
                   details[workbook.path] = detail;
                   return detail;
@@ -225,15 +318,25 @@ arc.directive("workbookFlowDiagram", function () {
 
             // --- Workbook list -----------------------------------------------------
 
-            // Every workbook Pulse has (no period), then only those whose worksheets read this instance
-            $scope.loadWorkbooks = function () {
+            // The workbooks Pulse saw opened in the chosen period, then only those whose worksheets read this instance.
+            // `fresh` (the reload button, a new sign-in) also forgets the worksheets and data sources already read;
+            // a new period keeps them, since a workbook's worksheets do not depend on the period.
+            $scope.loadWorkbooks = function (fresh) {
                var run = ++listRun;
                $scope.page.error = null;
                $scope.workbooks = [];
                $scope.page.checked = 0;
                $scope.page.totalInPulse = 0;
-               details = {};
-               dataSources = null;
+               if (fresh) {
+                  details = {};
+                  dataSources = null;
+               }
+               var range = periodRange();
+               $scope.period.error = range.error || null;
+               if (range.error) {
+                  $scope.page.loading = false;
+                  return $q.when();
+               }
                // Not signed in to Pulse in Arc: show the sign-in warning instead of calling Pulse
                if (!$pulse.isLoggedIn()) {
                   $scope.page.loading = false;
@@ -245,7 +348,7 @@ arc.directive("workbookFlowDiagram", function () {
                return $pulse.serviceFromInstance($scope.instance).then(function (service) {
                   $scope.page.serverName = service.serverName;
                   $scope.page.serviceName = service.serviceName;
-                  return pulseGet("_pulse/api/workbooks?start=" + ALL_FROM + "&end=" + tomorrow());
+                  return pulseGet("_pulse/api/workbooks?start=" + range.start + "&end=" + range.end);
                }, function (error) {
                   return $q.reject((error && error.message) || String(error));
                }).then(function (data) {
@@ -308,8 +411,18 @@ arc.directive("workbookFlowDiagram", function () {
                   $scope.page.error = String(reason);
                   _logger.error("Workbook list failed", reason);
                })["finally"](function () {
-                  if (run === listRun) { $scope.page.loading = false; }
+                  if (run !== listRun) { return; }
+                  $scope.page.loading = false;
+                  afterListLoad();
                });
+            };
+
+            // When Pulse last recorded the workbook's sheets: the add-in records them when the workbook is
+            // opened, so a sheet added or renamed since then is missing until the next opening (seen on Pulse 8.0.1).
+            // Pulse's "2026-11-09T16:45:01.000+0100" shown as "2026-11-09 16:45".
+            $scope.recordedAt = function (workbook) {
+               var m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(String((workbook && workbook.lastOpened) || ""));
+               return m ? m[1] + " " + m[2] : null;
             };
 
             $scope.visibleWorkbook = function (w) {
@@ -366,46 +479,88 @@ arc.directive("workbookFlowDiagram", function () {
                return _.compact(_.map(String(value || "").split(/\s*[;\n]\s*/), _.trim));
             };
 
+            // One workbook: draw it from the workbook. Clicking a workbook in the list always shows that one.
             $scope.draw = function (workbook) {
-               if ($scope.page.building) { return; }
-               stopped = false;
+               if ($scope.page.building || !workbook) { return; }
+               $scope.page.mode = "one";
                $scope.selected = workbook;
+               buildDiagram([workbook]);
+            };
+
+            // All workbooks: every workbook in the list (as filtered by the search), side by side, at Levels 1 by default
+            $scope.drawAll = function (keepLevels) {
+               if ($scope.page.building) { return; }
+               var shown = _.filter($scope.workbooks, $scope.visibleWorkbook);
+               if (!keepLevels) { $scope.page.depth = 1; }
+               $scope.page.mode = "all";
+               $scope.selected = null;
+               if (!shown.length) {
+                  $scope.graph = null;
+                  model = null;
+                  return;
+               }
+               buildDiagram(shown);
+            };
+
+            $scope.setMode = function (mode) {
+               if ($scope.page.building || mode === $scope.page.mode) { return; }
+               if (mode === "all") { $scope.drawAll(); return; }
+               // One workbook: the one last drawn on its own, else the first in the list
+               var one = ($scope.lastOne && _.find($scope.workbooks, { path: $scope.lastOne.path })) ||
+                  _.find($scope.workbooks, $scope.visibleWorkbook);
+               if (one) { $scope.draw(one); } else { $scope.page.mode = "one"; $scope.graph = null; }
+            };
+
+            // Draw one or more workbooks: each workbook -> its worksheets' cubes -> related objects -> data sources
+            var buildDiagram = function (workbooks) {
+               stopped = false;
+               if ($scope.page.mode === "one") { $scope.lastOne = workbooks[0]; }
                $scope.focus = null;
                $scope.graph = null;
                $scope.page.building = true;
                $scope.page.buildError = null;
                $scope.page.warnings = [];
                $scope.page.allLevels = false;
-               model = { nodes: {}, edges: {}, root: null };
+               model = { nodes: {}, edges: {}, roots: [] };
+               var otherServers = {};
+               var cubes = {};
 
                // Usually read already while the list loaded
-               loadDetail(workbook).then(function (detail) {
-                  var root = addNode("workbook", workbook.name, { path: workbook.path });
-                  model.root = root.key;
-                  var sheets = worksheetsOf(detail);
-                  var otherServers = {};
-                  var cubes = {};
+               $q.all(_.map(workbooks, function (workbook) {
+                  return loadDetail(workbook).then(function (detail) { return { workbook: workbook, detail: detail }; });
+               })).then(function (loaded) {
+                  _.each(loaded, function (item) {
+                     var workbook = item.workbook;
+                     // Keyed by path: two workbooks can have the same file name in different folders
+                     var root = addNode("workbook", workbook.path, {
+                        label: workbook.name,
+                        path: workbook.path,
+                        recordedAt: $scope.recordedAt(workbook)
+                     });
+                     model.roots.push(root.key);
 
-                  _.each(sheets, function (sheet) {
-                     var names = sheetCubes(sheet);
-                     if (!names.length) { return; }
-                     var tm1Server = pick(sheet, ["TM1ServerName", "tm1ServerName"]);
-                     // A worksheet can read cubes on another TM1 instance: Pulse relationships are per instance
-                     if (!isThisInstance(tm1Server)) {
-                        otherServers[tm1Server] = true;
-                        return;
-                     }
-                     var sheetName = pick(sheet, ["name", "Name"]) || "?";
-                     var sheetNode = null;
-                     if ($scope.page.showSheets) {
-                        sheetNode = addNode("worksheet", workbook.name + " / " + sheetName, { label: sheetName });
-                        addEdge(root, sheetNode, "workbook");
-                     }
-                     _.each(names, function (cube) {
-                        var cubeNode = addNode("cube", cube);
-                        cubeNode.sheets = _.union(cubeNode.sheets || [], [sheetName]);
-                        addEdge(sheetNode || root, cubeNode, "workbook");
-                        cubes[cubeNode.key] = cube;
+                     _.each(worksheetsOf(item.detail), function (sheet) {
+                        var names = sheetCubes(sheet);
+                        if (!names.length) { return; }
+                        var tm1Server = pick(sheet, ["TM1ServerName", "tm1ServerName"]);
+                        // A worksheet can read cubes on another TM1 instance: Pulse relationships are per instance
+                        if (!isThisInstance(tm1Server)) {
+                           otherServers[tm1Server] = true;
+                           return;
+                        }
+                        var sheetName = pick(sheet, ["name", "Name"]) || "?";
+                        var sheetNode = null;
+                        if ($scope.page.showSheets) {
+                           sheetNode = addNode("worksheet", workbook.path + " / " + sheetName, { label: sheetName });
+                           addEdge(root, sheetNode, "workbook");
+                        }
+                        _.each(names, function (cube) {
+                           var cubeNode = addNode("cube", cube);
+                           var sheetLabel = workbooks.length > 1 ? workbook.name + " / " + sheetName : sheetName;
+                           cubeNode.sheets = _.union(cubeNode.sheets || [], [sheetLabel]);
+                           addEdge(sheetNode || root, cubeNode, "workbook");
+                           cubes[cubeNode.key] = cube;
+                        });
                      });
                   });
 
@@ -533,7 +688,7 @@ arc.directive("workbookFlowDiagram", function () {
 
             // Columns by distance from the workbook (edges followed both ways), rows sorted by type then name
             var layout = function () {
-               if (!model || !model.root) { $scope.graph = null; return; }
+               if (!model || !model.roots || !model.roots.length) { $scope.graph = null; return; }
                var shown = _.filter(_.values(model.nodes), function (n) {
                   return n.type === "workbook" || n.type === "cube" || !$scope.hiddenTypes[n.type];
                });
@@ -546,8 +701,9 @@ arc.directive("workbookFlowDiagram", function () {
                   (neighbours[e.to] = neighbours[e.to] || []).push(e.from);
                });
                var level = {};
-               level[model.root] = 0;
-               var queue = [model.root];
+               // Every workbook drawn starts in the first column
+               _.each(model.roots, function (r) { level[r] = 0; });
+               var queue = model.roots.slice();
                while (queue.length) {
                   var k = queue.shift();
                   _.each(neighbours[k] || [], function (n) {
@@ -828,7 +984,7 @@ arc.directive("workbookFlowDiagram", function () {
                var blob = new Blob([text], { type: "image/svg+xml" });
                var link = document.createElement("a");
                link.href = URL.createObjectURL(blob);
-               link.download = fileName($scope.selected.name).replace(/\.[^.]+$/, "") + " - flow.svg";
+               link.download = ($scope.selected ? fileName($scope.selected.name).replace(/\.[^.]+$/, "") : String($translate.instant("WBFLOWALLFILE"))) + " - flow.svg";
                document.body.appendChild(link);
                link.click();
                document.body.removeChild(link);
@@ -845,9 +1001,29 @@ arc.directive("workbookFlowDiagram", function () {
                $pulse.loginRequired();
             };
 
+            // Draw again with the current settings (levels, worksheets), keeping the levels chosen
             $scope.redraw = function () {
-               if ($scope.selected) { $scope.draw($scope.selected); }
+               if ($scope.page.mode === "all") { $scope.drawAll(true); }
+               else if ($scope.selected) { $scope.draw($scope.selected); }
             };
+
+            // After the list loads again (new period, reload, sign-in): keep the diagram in step with it
+            var afterListLoad = function () {
+               if (!$scope.pulseSignedIn()) { return; }
+               if ($scope.page.mode === "all") { $scope.drawAll(true); return; }
+               if ($scope.selected) {
+                  var again = _.find($scope.workbooks, { path: $scope.selected.path });
+                  if (again) { $scope.draw(again); } else { $scope.selected = null; $scope.graph = null; model = null; }
+               }
+            };
+
+            // All workbooks follow the search box: draw again once the typing stops
+            var searchTimer = null;
+            $scope.$watch("page.search", function (now, before) {
+               if (now === before || $scope.page.mode !== "all") { return; }
+               if (searchTimer) { $timeout.cancel(searchTimer); }
+               searchTimer = $timeout(function () { $scope.drawAll(true); }, 600);
+            });
 
             // How many levels of cube relationships to follow from the workbook's cubes
             $scope.minLevels = 1;
@@ -862,19 +1038,14 @@ arc.directive("workbookFlowDiagram", function () {
 
             // --- Start and events ----------------------------------------------------------
 
-            $scope.loadWorkbooks();
+            $scope.loadWorkbooks(true);
 
-            // Signed in (or out) of Pulse in Arc: reload the list, and redraw the workbook that was shown
+            // Signed in (or out) of Pulse in Arc: reload the list; the diagram follows (afterListLoad)
             $scope.$on("pulse-login-change", function () {
                $scope.page.needsSignIn = false;
-               $scope.loadWorkbooks().then(function () {
-                  if ($scope.selected && $scope.pulseSignedIn()) {
-                     var again = _.find($scope.workbooks, { path: $scope.selected.path });
-                     if (again) { $scope.draw(again); }
-                  }
-               });
+               $scope.loadWorkbooks(true);
             });
-            $scope.$on("login-reload", function () { $scope.loadWorkbooks(); });
+            $scope.$on("login-reload", function () { $scope.loadWorkbooks(true); });
 
             $scope.$on("close-tab", function (event, args) {
                if (args.page == "workbookFlowDiagram" && args.instance == $scope.instance) {

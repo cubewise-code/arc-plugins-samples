@@ -201,10 +201,23 @@ Pulse's own pages and its MCP tools use (see `resources/js/api/*.api.js` inside
 | GET | `api/pulse/alert?servername={server}` | `{repeatInterval, pulseServerAlerts}` |
 | GET | `api/systemsummaryreport/?serviceName={service}&servername={server}` | `{reportSettings}` |
 
-Single-item variants (not run): `api/websheet`, `api/workbook`, `api/canvaslog`
+Single-item variants (not run): `api/websheet`, `api/canvaslog`
 (`servername`, `path`, `start`, `end`); `api/elements/{service}/{dimension}?servername=`;
 `api/dashboard[?profileName=]`. CSV downloads exist for most lists (e.g.
 `api/sessions/usersessions.csv`, `api/processhistory/processeshistory.csv`).
+
+### Excel workbooks (verified November 2026, Pulse 8.0.1, in `workbook-flow-diagram`)
+
+| Method | URL | Notes |
+|---|---|---|
+| GET | `api/workbooks?start=&end=` | Every environment's workbooks opened in the period: `[{serverName, path, openCount, lastOpened, lastOpenedBy, sheets, tm1Sheets, logVersion...}]`. Without dates Pulse uses its report window. Any range is accepted through Arc (`start=2000-01-01` lists them all); the 31-day `MaxReportDaySpan` limit applies only to Pulse's MCP tools. It does not say which TM1 instance a workbook reads |
+| GET | `api/workbook?servername={server}&path={path}&logVersion={logVersion}&start=&end=` | `{worksheets, usage, openByDay, saveByDay...}`. Each worksheet has `name`, `sheetType` (e.g. `Slice`), `cubeName` and `TM1ServerName`; a sheet Pulse cannot tie to a server has `TM1ServerName: "Unknown"` and no `cubeName`. Pass the list's `logVersion` (2 for current add-ins) |
+
+**`api/workbook` fails when the period holds no opening of the workbook.** It answers 200 with
+`{"Failed": true, "Message": "Unable to get excel workbook..."}`, whether the period is one day or
+several, although the worksheets themselves do not depend on the dates. Ask for the day the workbook
+was last opened (the list's `lastOpened`, first 10 characters) through the day after. "Today only"
+works on the day a workbook is opened and breaks the next day.
 
 ## From Arc source, not run
 
