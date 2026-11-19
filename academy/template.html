@@ -1,0 +1,378 @@
+<div class="academy">
+   <style>
+      /* Arc's tab panel has a fixed height and clips what overflows: the page scrolls itself */
+      .academy { padding: 16px 20px 40px; outline: none; height: 100%; overflow-y: auto; }
+      .academy .academy-stats .badge { font-size: 0.95em; padding: 6px 10px; margin-left: 6px; }
+      .academy .academy-unit { margin-bottom: 18px; }
+      .academy .academy-unit-title { font-weight: 600; font-size: 1.25em; margin-bottom: 4px; }
+      .academy .academy-objective { margin-bottom: 4px; max-width: 640px; }
+      .academy .academy-sources { margin-bottom: 10px; max-width: 760px; }
+      .academy .academy-path { display: flex; flex-wrap: wrap; gap: 14px; }
+      .academy .academy-node { display: flex; flex-direction: column; align-items: center; width: 96px; text-align: center; }
+      .academy .academy-node .btn { width: 58px; height: 58px; border-radius: 50%; font-size: 1.4em; padding: 0; }
+      .academy .academy-node small { margin-top: 6px; line-height: 1.2; }
+      .academy .academy-node.next .btn { animation: academy-pulse 1.6s ease-in-out infinite; }
+      /* Hovering a lesson to start: its play icon takes the product colour */
+      .academy .academy-node .btn-secondary .fa { transition: color 0.15s ease-in-out; }
+      .academy .academy-node .btn-secondary:hover .fa,
+      .academy .academy-node .btn-secondary:focus-visible .fa { color: var(--academy-accent); }
+      @keyframes academy-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+      .academy .academy-lesson { max-width: 720px; margin: 0 auto; }
+      .academy .academy-lesson .progress { height: 14px; border-radius: 7px; flex: 1; }
+      .academy .academy-q { font-size: 1.35em; font-weight: 600; margin: 26px 0 20px; }
+      .academy .academy-option { display: block; width: 100%; text-align: left; margin-bottom: 10px; padding: 12px 16px; font-size: 1.05em; white-space: normal; }
+      .academy .academy-tf .btn { width: 48%; padding: 18px; font-size: 1.15em; }
+      .academy .academy-blank { display: inline-block; min-width: 90px; border-bottom: 2px solid; padding: 0 6px; text-align: center; }
+      .academy .academy-chips { min-height: 56px; border-bottom: 2px dashed; padding: 8px 0; margin-bottom: 16px; }
+      .academy .academy-chip { margin: 4px; white-space: normal; }
+      .academy .academy-chip.invisible-chip { visibility: hidden; }
+      .academy .academy-match .btn { display: block; width: 100%; margin-bottom: 10px; white-space: normal; min-height: 48px; }
+      .academy .academy-match .btn.matched { opacity: 0.5; }
+      .academy .academy-shake { animation: academy-shake 0.35s; }
+      @keyframes academy-shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+      .academy .academy-feedback { border-radius: 8px; padding: 14px 18px; margin-top: 20px; }
+      .academy .academy-footer { margin-top: 22px; display: flex; justify-content: flex-end; }
+      .academy .academy-footer .btn { min-width: 160px; padding: 10px 20px; font-weight: 600; text-transform: uppercase; }
+      .academy .academy-finish { text-align: center; padding-top: 30px; }
+      .academy .academy-finish .academy-trophy { font-size: 4em; }
+      .academy .academy-finish .academy-tiles { display: flex; justify-content: center; gap: 14px; margin: 24px 0; flex-wrap: wrap; }
+      .academy .academy-finish .card { min-width: 130px; }
+      .academy .academy-pop { animation: academy-pop 0.5s ease-out; }
+      @keyframes academy-pop { 0% { transform: scale(0.3); opacity: 0; } 70% { transform: scale(1.15); } 100% { transform: scale(1); opacity: 1; } }
+      .academy .academy-board td { vertical-align: middle; }
+      /* Selected buttons and progress take the product colour of the course (color in lessons.json) */
+      .academy { --academy-accent: #007bff; --academy-accent-text: #fff; }
+      .academy .btn-primary,
+      .academy .btn-primary:not(:disabled):not(.disabled):active,
+      .academy .btn-primary:disabled { background-color: var(--academy-accent); border-color: var(--academy-accent); color: var(--academy-accent-text); }
+      .academy .btn-primary:not(:disabled):hover,
+      .academy .btn-primary:focus { background-color: var(--academy-accent); border-color: var(--academy-accent); color: var(--academy-accent-text); filter: brightness(0.92); box-shadow: none; }
+      .academy .btn-primary .badge-light { background-color: rgba(255, 255, 255, 0.85); color: #212529; }
+      .academy .academy-accent-bg { background-color: var(--academy-accent); }
+      .academy .academy-products { display: flex; flex-wrap: wrap; gap: 8px; }
+      .academy .academy-products .btn { min-width: 130px; padding: 10px 16px; font-weight: 600; }
+      .academy .academy-products .btn-outline-secondary { color: inherit; }
+      /* Answer buttons take the page's text colour (Arc's outline-secondary is too faint),
+         and stay readable once disabled while the feedback shows */
+      .academy .academy-option.btn-outline-secondary,
+      .academy .academy-chip.btn-outline-secondary,
+      .academy .academy-tf .btn-outline-secondary,
+      .academy .academy-match .btn-outline-secondary { color: inherit; }
+      .academy .btn:disabled { opacity: 0.8; }
+      /* Arc's dark theme (body.theme-dark) draws body text #888 on #252525: lift it in Academy */
+      .theme-dark .academy,
+      .theme-dark .academy .card,
+      .theme-dark .academy .table { color: #d0d0d0; }
+      .theme-dark .academy .academy-q,
+      .theme-dark .academy .card h5 { color: #fff; }
+      .theme-dark .academy .btn-outline-secondary:not(:disabled):hover { color: #fff; }
+      /* Your row: a bar in the theme's success colour and bold text. A filled row (table-success)
+         is unreadable in Arc's dark theme, where the text stays grey on bright green. */
+      .academy .academy-board tr.academy-me td { font-weight: 600; }
+      .academy .academy-board tr.academy-me td:first-child { box-shadow: inset 4px 0 0 var(--success, #28a745); }
+   </style>
+
+   <!-- Loading -->
+   <div ng-if="view.name == 'loading'" class="text-center" style="padding-top: 80px;">
+      <i class="fa fa-spinner fa-spin fa-2x"></i>
+      <p class="mt-2 text-muted">Loading your lessons...</p>
+   </div>
+
+   <!-- Error -->
+   <div ng-if="view.name == 'error'" class="alert alert-danger" style="margin-top: 20px;">
+      <h5><i class="fa fa-exclamation-triangle"></i> Academy could not start</h5>
+      <p>{{status.error}}</p>
+      <button type="button" class="btn btn-secondary btn-sm" ng-click="reload()"><i class="fa fa-refresh"></i> Try again</button>
+   </div>
+
+   <!-- Home: course path and leaderboard -->
+   <div ng-if="view.name == 'home'">
+      <div class="d-flex align-items-center flex-wrap mb-3">
+         <h3 class="mb-0 mr-auto"><i class="fa fa-graduation-cap"></i> Academy</h3>
+         <div class="academy-stats">
+            <span class="badge badge-warning" title="Day streak: do one lesson a day to keep it going">
+               <i class="fa fa-fire"></i> {{currentStreak()}} day{{currentStreak() == 1 ? '' : 's'}}
+            </span>
+            <span class="badge badge-info" title="Experience points"><i class="fa fa-star"></i> {{progress.xp}} XP</span>
+            <span class="badge badge-success" title="Lessons completed"><i class="fa fa-check"></i> {{progress.lessons}}</span>
+            <span class="badge badge-secondary" ng-if="myRank" title="Your place on the leaderboard"><i class="fa fa-trophy"></i> #{{myRank}}</span>
+         </div>
+      </div>
+
+      <div class="alert alert-warning py-2" ng-if="status.storage == 'local'">
+         <i class="fa fa-info-circle"></i> Your progress is saved in this browser only, and the leaderboard is off.
+         <small class="d-block text-muted">{{status.storageMessage}} Ask your TM1 administrator to open Academy once to set it up.</small>
+      </div>
+
+      <!-- One lesson course per product: buttons switch between them -->
+      <div class="academy-products mb-3" role="group" aria-label="Product" ng-if="courses.length > 1">
+         <button type="button" class="btn" ng-repeat="c in courses"
+            ng-class="c.id == course().id ? 'btn-primary' : 'btn-outline-secondary'" ng-click="selectCourse(c)"
+            aria-pressed="{{c.id == course().id}}" title="{{c.description}}">
+            <i class="fa {{c.icon}}"></i> {{c.title}}
+            <span class="badge ml-1" ng-class="courseProgress(c).done == courseProgress(c).total ? 'badge-success' : 'badge-light'"
+               title="Lessons done">{{courseProgress(c).done}}/{{courseProgress(c).total}}</span>
+         </button>
+      </div>
+
+      <div class="row">
+         <div class="col-lg-8">
+            <!-- Today's lesson -->
+            <div class="card mb-3">
+               <div class="card-body d-flex align-items-center flex-wrap">
+                  <div class="mr-auto pr-3">
+                     <div ng-if="nextLesson()">
+                        <div class="text-muted small text-uppercase">
+                           {{doneToday() ? 'Daily goal done, keep going?' : "Today's lesson"}}
+                        </div>
+                        <h5 class="mb-1">{{nextLesson().title}}</h5>
+                        <div class="small text-muted">{{nextLesson().unit.title}} · {{nextLesson().exercises.length}} quick exercises · about 2 minutes</div>
+                     </div>
+                     <div ng-if="!nextLesson()">
+                        <h5 class="mb-1"><i class="fa fa-trophy"></i> You finished {{course().title}}!</h5>
+                        <div class="small text-muted">Replay any lesson to practise and earn more XP.</div>
+                     </div>
+                  </div>
+                  <button type="button" class="btn btn-primary btn-lg" ng-if="nextLesson()" ng-click="startLesson(nextLesson())">
+                     <i class="fa fa-play"></i> {{doneToday() ? 'Next lesson' : 'Start'}}
+                  </button>
+               </div>
+               <div class="card-footer py-2">
+                  <div class="d-flex align-items-center">
+                     <small class="text-muted mr-2">{{course().title}}</small>
+                     <div class="progress flex-fill" style="height: 8px;">
+                        <div class="progress-bar academy-accent-bg" ng-style="{width: courseProgress(course()).pct + '%'}"></div>
+                     </div>
+                     <small class="text-muted ml-2">{{courseProgress(course()).done}} / {{courseProgress(course()).total}}</small>
+                  </div>
+               </div>
+            </div>
+
+            <!-- Search -->
+            <div class="input-group mb-1 academy-search">
+               <div class="input-group-prepend">
+                  <span class="input-group-text"><i class="fa fa-search"></i></span>
+               </div>
+               <input type="text" class="form-control" ng-model="search.text" placeholder="Search {{course().title}} lessons"
+                  ng-keydown="$event.keyCode == 27 && clearSearch()" aria-label="Search lessons">
+               <div class="input-group-append" ng-if="searching()">
+                  <button type="button" class="btn btn-outline-secondary" ng-click="clearSearch()" title="Clear the search">
+                     <i class="fa fa-times"></i>
+                  </button>
+               </div>
+            </div>
+            <div class="small text-muted mb-3" ng-if="searching()">
+               {{matchCount()}} lesson{{matchCount() == 1 ? '' : 's'}} found
+            </div>
+            <div class="mb-3" ng-if="!searching()"></div>
+            <div class="alert alert-secondary" ng-if="searching() && !matchCount()">
+               No lesson matches "{{search.text}}". Try another word.
+            </div>
+
+            <!-- Path -->
+            <div class="academy-unit" ng-repeat="unit in course().units" ng-if="unitLessons(unit).length">
+               <div class="academy-unit-title">
+                  <i class="fa {{unit.icon}}"></i> {{unit.title}}
+                  <i class="fa fa-check-circle text-success" ng-if="unitDone(unit)" title="Unit complete"></i>
+               </div>
+               <div class="academy-objective small text-muted" ng-if="unit.objective"><i class="fa fa-bullseye" title="What you will learn"></i> {{unit.objective}}</div>
+               <div class="academy-sources small" ng-if="unit.sources.length">
+                  <i class="fa fa-book text-muted" title="Where this content comes from"></i>
+                  <span ng-repeat="s in unit.sources"><a ng-href="{{s.link}}" target="_blank" rel="noopener">{{s.title}}</a><span ng-if="!$last" class="text-muted"> · </span></span>
+               </div>
+               <div class="academy-path">
+                  <div class="academy-node" ng-repeat="l in unitLessons(unit)" ng-class="{next: l === nextLesson()}">
+                     <button type="button" class="btn"
+                        ng-class="isDone(l) ? 'btn-success' : (l === nextLesson() ? 'btn-primary' : 'btn-secondary')"
+                        ng-click="startLesson(l)"
+                        title="{{isDone(l) ? 'Done: replay to practise' : (l === nextLesson() ? 'Suggested next lesson' : 'Start')}}">
+                        <i class="fa" ng-class="isDone(l) ? 'fa-check' : (l === nextLesson() ? 'fa-star' : 'fa-play')"></i>
+                     </button>
+                     <small>{{l.title}}</small>
+                  </div>
+               </div>
+            </div>
+         </div>
+
+         <!-- Leaderboard -->
+         <div class="col-lg-4">
+            <div class="card">
+               <div class="card-header py-2"><i class="fa fa-trophy"></i> Leaderboard</div>
+               <div class="card-body p-0">
+                  <div class="p-3 small text-muted" ng-if="status.storage == 'local'">The leaderboard needs the {{meta.cube}} cube.</div>
+                  <div class="p-3 small text-muted" ng-if="status.storage == 'cube' && !leaderboard.length">No one has scored yet. Be the first!</div>
+                  <table class="table table-sm mb-0 academy-board" ng-if="leaderboard.length">
+                     <tbody>
+                        <tr ng-repeat="row in leaderboard" ng-class="{'academy-me': row.me}">
+                           <td class="pl-3" style="width: 34px;">
+                              <span ng-if="$index == 0">🥇</span><span ng-if="$index == 1">🥈</span><span ng-if="$index == 2">🥉</span>
+                              <span ng-if="$index > 2" class="text-muted">{{$index + 1}}</span>
+                           </td>
+                           <td>{{row.name}} <span class="badge badge-success ml-1" ng-if="row.me">you</span></td>
+                           <td class="text-right"><small ng-if="row.streak"><i class="fa fa-fire"></i> {{row.streak}}</small></td>
+                           <td class="text-right pr-3"><strong>{{row.xp}}</strong> <small class="text-muted">XP</small></td>
+                        </tr>
+                     </tbody>
+                  </table>
+               </div>
+               <div class="card-footer py-2 small text-muted" ng-if="status.saving"><i class="fa fa-spinner fa-spin"></i> Saving...</div>
+            </div>
+         </div>
+      </div>
+   </div>
+
+   <!-- Lesson -->
+   <div ng-if="view.name == 'lesson' && lesson" class="academy-lesson">
+
+      <div class="d-flex align-items-center" ng-if="lesson.state != 'finished'">
+         <button type="button" class="btn btn-link text-muted pl-0" ng-click="quitLesson()" title="Quit the lesson">
+            <i class="fa fa-times fa-lg"></i>
+         </button>
+         <div class="progress">
+            <div class="progress-bar academy-accent-bg" ng-style="{width: progressPct() + '%'}"></div>
+         </div>
+         <span class="ml-3 text-muted small"><i class="fa fa-star"></i> {{lesson.xp}} XP</span>
+      </div>
+
+      <!-- Intro -->
+      <div ng-if="lesson.state == 'intro'" class="text-center" style="padding-top: 40px;">
+         <div class="text-muted small text-uppercase">{{lesson.lesson.unit.title}}</div>
+         <h3 class="mt-1">{{lesson.lesson.title}}</h3>
+         <div class="card my-4 mx-auto" style="max-width: 560px;" ng-if="lesson.lesson.tip">
+            <div class="card-body"><i class="fa fa-lightbulb-o fa-lg text-warning"></i> {{lesson.lesson.tip}}</div>
+         </div>
+         <p ng-if="lesson.lesson.link"><a ng-href="{{lesson.lesson.link}}" target="_blank" rel="noopener"><i class="fa fa-book"></i> Read more in the manual</a></p>
+         <p class="text-muted" ng-if="lesson.practice">Practice round: you already finished this lesson.</p>
+         <button type="button" class="btn btn-primary btn-lg" ng-click="beginExercises()" style="min-width: 200px;">Let's go</button>
+      </div>
+
+      <!-- Question and feedback -->
+      <div ng-if="(lesson.state == 'question' || lesson.state == 'feedback') && lesson.current">
+         <div ng-switch="lesson.current.ex.type">
+
+            <!-- Multiple choice -->
+            <div ng-switch-when="choice">
+               <div class="academy-q">{{lesson.current.ex.q}}</div>
+               <button type="button" class="btn academy-option" ng-repeat="opt in lesson.current.ex.options track by $index"
+                  ng-class="lesson.current.choice.value === $index ? 'btn-primary' : 'btn-outline-secondary'"
+                  ng-disabled="lesson.state != 'question'" ng-click="choose($index)">
+                  <span class="badge badge-light mr-2">{{$index + 1}}</span> {{opt}}
+               </button>
+            </div>
+
+            <!-- True or false -->
+            <div ng-switch-when="truefalse">
+               <div class="text-muted small text-uppercase mt-4">True or false?</div>
+               <div class="academy-q mt-1">{{lesson.current.ex.q}}</div>
+               <div class="academy-tf d-flex justify-content-between">
+                  <button type="button" class="btn" ng-class="lesson.current.choice.value === true ? 'btn-primary' : 'btn-outline-secondary'"
+                     ng-disabled="lesson.state != 'question'" ng-click="choose(true)"><i class="fa fa-check"></i> True</button>
+                  <button type="button" class="btn" ng-class="lesson.current.choice.value === false ? 'btn-primary' : 'btn-outline-secondary'"
+                     ng-disabled="lesson.state != 'question'" ng-click="choose(false)"><i class="fa fa-times"></i> False</button>
+               </div>
+            </div>
+
+            <!-- Fill the blank -->
+            <div ng-switch-when="fill">
+               <div class="text-muted small text-uppercase mt-4">Fill in the blank</div>
+               <div class="academy-q mt-1">
+                  {{fillSentence(lesson.current).before}}<span class="academy-blank" ng-class="{'text-primary': fillSentence(lesson.current).filled}">{{fillSentence(lesson.current).word}}</span>{{fillSentence(lesson.current).after}}
+               </div>
+               <button type="button" class="btn academy-chip" ng-repeat="opt in lesson.current.ex.options track by $index"
+                  ng-class="lesson.current.choice.value === $index ? 'btn-primary' : 'btn-outline-secondary'"
+                  ng-disabled="lesson.state != 'question'" ng-click="choose($index)">{{opt}}</button>
+            </div>
+
+            <!-- Put in order -->
+            <div ng-switch-when="order">
+               <div class="academy-q">{{lesson.current.ex.q}}</div>
+               <div class="academy-chips">
+                  <button type="button" class="btn btn-primary academy-chip" ng-repeat="piece in lesson.current.answer"
+                     ng-disabled="lesson.state != 'question'" ng-click="orderUnpick(piece)">
+                     <span class="badge badge-light mr-1">{{$index + 1}}</span> {{piece.text}}
+                  </button>
+                  <span class="text-muted small" ng-if="!lesson.current.answer.length">Tap the steps below in the right order</span>
+               </div>
+               <!-- Used steps keep their place while picking; the pool closes once every step is placed -->
+               <div ng-if="lesson.current.answer.length < lesson.current.ex.items.length">
+                  <button type="button" class="btn btn-outline-secondary academy-chip" ng-repeat="piece in lesson.current.pool"
+                     ng-class="{'invisible-chip': piece.used}" ng-disabled="lesson.state != 'question'" ng-click="orderPick(piece)">{{piece.text}}</button>
+               </div>
+            </div>
+
+            <!-- Match the pairs -->
+            <div ng-switch-when="match">
+               <div class="academy-q">{{lesson.current.ex.q || 'Match the pairs'}}</div>
+               <div class="row academy-match">
+                  <div class="col-6">
+                     <button type="button" class="btn" ng-repeat="e in lesson.current.left"
+                        ng-class="[e.matched ? 'btn-success matched' : (lesson.current.pick === e ? 'btn-primary' : 'btn-outline-secondary'), lesson.current.wrong.left === e ? 'btn-danger academy-shake' : '']"
+                        ng-disabled="e.matched || lesson.state != 'question'" ng-click="matchPick('left', e)">{{e.text}}</button>
+                  </div>
+                  <div class="col-6">
+                     <button type="button" class="btn" ng-repeat="e in lesson.current.right"
+                        ng-class="[e.matched ? 'btn-success matched' : 'btn-outline-secondary', lesson.current.wrong.right === e ? 'btn-danger academy-shake' : '']"
+                        ng-disabled="e.matched || lesson.state != 'question'" ng-click="matchPick('right', e)">{{e.text}}</button>
+                  </div>
+               </div>
+               <div class="small text-muted" ng-if="lesson.state == 'question'">Pick an item on the left, then its match on the right.</div>
+            </div>
+         </div>
+
+         <!-- Feedback -->
+         <div class="academy-feedback academy-pop" ng-if="lesson.state == 'feedback'"
+            ng-class="lesson.feedback.right ? 'alert-success' : (lesson.feedback.retry ? 'alert-danger' : 'alert-warning')">
+            <h5 class="mb-1">
+               <i class="fa" ng-class="lesson.feedback.right ? 'fa-check-circle' : (lesson.feedback.retry ? 'fa-times-circle' : 'fa-exclamation-circle')"></i>
+               {{lesson.feedback.right ? lesson.feedback.praise : (lesson.feedback.retry ? 'Not quite' : 'Almost!')}}
+            </h5>
+            <div ng-if="lesson.feedback.answer"><strong>Correct answer:</strong> {{lesson.feedback.answer}}</div>
+            <div ng-if="lesson.feedback.explain" class="mt-1">{{lesson.feedback.explain}}</div>
+            <div ng-if="lesson.feedback.retry" class="small mt-1 text-muted">This one comes back at the end of the lesson.</div>
+            <div ng-if="!lesson.feedback.right && !lesson.feedback.retry" class="small mt-1 text-muted">All matched, but with a slip: no XP for this one.</div>
+         </div>
+
+         <div class="academy-footer">
+            <button type="button" class="btn btn-success" ng-if="lesson.state == 'question' && lesson.current.ex.type != 'match'"
+               ng-disabled="!canCheck()" ng-click="check()">Check</button>
+            <button type="button" class="btn" ng-if="lesson.state == 'feedback'"
+               ng-class="lesson.feedback.right ? 'btn-success' : (lesson.feedback.retry ? 'btn-danger' : 'btn-warning')" ng-click="goOn()">Continue</button>
+         </div>
+      </div>
+
+      <!-- Lesson finished -->
+      <div ng-if="lesson.state == 'finished'" class="academy-finish">
+         <div class="academy-trophy academy-pop">{{lesson.perfect ? '🏆' : '🎉'}}</div>
+         <h2 class="mt-2">{{lesson.perfect ? 'Perfect lesson!' : 'Lesson complete!'}}</h2>
+         <p class="text-muted">{{lesson.lesson.title}}
+            <span ng-if="lesson.lesson.link"> · <a ng-href="{{lesson.lesson.link}}" target="_blank" rel="noopener">Read more in the manual</a></span>
+         </p>
+         <div class="academy-tiles">
+            <div class="card academy-pop">
+               <div class="card-body">
+                  <div class="text-muted small text-uppercase">XP earned</div>
+                  <h3 class="mb-0"><i class="fa fa-star text-info"></i> +{{lesson.xp}}</h3>
+                  <small class="text-muted" ng-if="lesson.bonus">incl. +{{lesson.bonus}} bonus</small>
+               </div>
+            </div>
+            <div class="card academy-pop">
+               <div class="card-body">
+                  <div class="text-muted small text-uppercase">Streak</div>
+                  <h3 class="mb-0"><i class="fa fa-fire text-warning"></i> {{lesson.streakAfter}}</h3>
+                  <small class="text-muted">{{lesson.streakUp ? 'Streak extended!' : 'day' + (lesson.streakAfter == 1 ? '' : 's')}}</small>
+               </div>
+            </div>
+            <div class="card academy-pop">
+               <div class="card-body">
+                  <div class="text-muted small text-uppercase">Accuracy</div>
+                  <h3 class="mb-0"><i class="fa fa-bullseye text-success"></i> {{lesson.total ? ((100 * lesson.total / (lesson.total + lesson.mistakes)) | number:0) : 100}}%</h3>
+                  <small class="text-muted">{{lesson.mistakes}} mistake{{lesson.mistakes == 1 ? '' : 's'}}</small>
+               </div>
+            </div>
+         </div>
+         <p class="text-muted" ng-if="status.saving"><i class="fa fa-spinner fa-spin"></i> Saving your progress...</p>
+         <p class="text-muted" ng-if="!lesson.practice">See you tomorrow for the next one, or keep going now.</p>
+         <button type="button" class="btn btn-success btn-lg" ng-click="backHome()" style="min-width: 200px;">Continue</button>
+      </div>
+   </div>
+</div>

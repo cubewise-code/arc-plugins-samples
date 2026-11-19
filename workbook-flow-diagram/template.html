@@ -1,0 +1,258 @@
+<div class="workbookFlowDiagram p-2 d-flex flex-column" style="height: 100%; overflow: hidden;">
+   <style>
+      .workbookFlowDiagram .wbflow-body { flex: 1 1 auto; min-height: 0; display: flex; }
+      .workbookFlowDiagram .wbflow-list { width: 300px; min-width: 220px; display: flex; flex-direction: column; margin-right: .5rem; }
+      /* Specific dates: the list widens so the period, both days and Apply fit on one row */
+      .workbookFlowDiagram .wbflow-list.wide { width: 470px; }
+      .workbookFlowDiagram .wbflow-period select { flex: 1 1 auto; min-width: 0; }
+      .workbookFlowDiagram .wbflow-list.wide .wbflow-period select { flex: 0 0 auto; width: auto; }
+      .workbookFlowDiagram .wbflow-period .wbflow-date { flex: 1 1 0; min-width: 0; padding-left: .3rem; padding-right: .2rem; }
+      /* Selected option: Arc's corner tick (fa-mark) needs a positioned button */
+      .workbookFlowDiagram .wbflow-main .btn { position: relative; }
+      .workbookFlowDiagram .wbflow-items { flex: 1 1 auto; overflow-y: auto; }
+      .workbookFlowDiagram .wbflow-items .list-group-item { padding: .35rem .6rem; cursor: pointer; }
+      .workbookFlowDiagram .wbflow-items .path { font-size: .75em; word-break: break-all; }
+      .workbookFlowDiagram .wbflow-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+      .workbookFlowDiagram .wbflow-canvas { flex: 1 1 auto; min-height: 200px; position: relative; overflow: hidden;
+         border: 1px solid rgba(128,128,128,.35); border-radius: 4px; cursor: grab; }
+      .workbookFlowDiagram .wbflow-canvas:active { cursor: grabbing; }
+      .workbookFlowDiagram .wbflow-canvas svg { width: 100%; height: 100%; display: block; user-select: none; }
+      .workbookFlowDiagram .wbflow-node { cursor: pointer; transition: opacity .15s; }
+      .workbookFlowDiagram .wbflow-node.dim, .workbookFlowDiagram .wbflow-edge.dim { opacity: .15; }
+      .workbookFlowDiagram .wbflow-edge { transition: opacity .15s; }
+      .workbookFlowDiagram .wbflow-focus { position: absolute; right: .5rem; top: .5rem; width: 280px; max-height: calc(100% - 1rem);
+         overflow-y: auto; font-size: .85em; cursor: default; }
+      .workbookFlowDiagram .wbflow-swatch { display: inline-block; width: .8em; height: .8em; border-radius: 2px; margin-right: .3em; vertical-align: -1px; }
+      .workbookFlowDiagram .wbflow-legend .btn { padding: .15rem .5rem; font-size: .8rem; }
+      .workbookFlowDiagram .wbflow-legend .btn { color: #fff; font-weight: 600; border-width: 1px; }
+      .workbookFlowDiagram .wbflow-legend .btn:hover { filter: brightness(1.08); }
+      .workbookFlowDiagram .wbflow-legend .off { background-color: transparent; font-weight: normal; opacity: .75; text-decoration: line-through; }
+      .workbookFlowDiagram .wbflow-legend .always { cursor: default; }
+      /* Arc's object icons keep their own colour: show them on a white badge, as on the diagram nodes */
+      .workbookFlowDiagram .wbflow-legend .badge-icon { display: inline-block; background: #fff; border-radius: 3px; padding: 0 1px; margin-right: .3em; line-height: 1.3; }
+   </style>
+
+   <div ng-if="!pulseSignedIn()" class="alert alert-warning py-2 mb-2 d-flex align-items-center">
+      <i class="fa fa-fw fa-exclamation-triangle mr-1"></i>
+      <span class="flex-grow-1">{{ (page.needsSignIn ? 'WBFLOWSESSIONEXPIRED' : 'WBFLOWNOTSIGNEDIN') | translate }}</span>
+      <button type="button" class="btn btn-sm btn-warning ml-2 text-nowrap" ng-click="signInToPulse()" title="{{ 'WBFLOWSIGNINTIP' | translate }}">
+         <i class="fa fa-fw fa-sign-in"></i> {{ 'WBFLOWSIGNIN' | translate }}
+      </button>
+   </div>
+
+   <div class="wbflow-body">
+
+      <!-- Workbooks Pulse tracked -->
+      <div class="wbflow-list" ng-class="{'wide': period.preset === 'custom'}">
+         <!-- Period: workbooks opened in the last 7 days / month / 3 months / 12 months, all time, or between two days -->
+         <!-- One row: the period, and for specific dates the first day, the last day and Apply -->
+         <div class="wbflow-period d-flex align-items-center mb-1">
+            <i class="fa fa-fw fa-calendar text-muted mr-1"></i>
+            <select class="form-control form-control-sm" ng-model="period.preset" ng-change="onPresetChange()"
+                    ng-disabled="page.loading" title="{{ 'WBFLOWPERIODTIP' | translate }}"
+                    ng-options="o.id as o.text for o in periodOptions"></select>
+            <input type="date" class="form-control form-control-sm ml-1 wbflow-date" ng-if="period.preset === 'custom'"
+                   ng-model="period.from" title="{{ 'WBFLOWPFROMTIP' | translate }}">
+            <span class="mx-1 text-muted" ng-if="period.preset === 'custom'">→</span>
+            <input type="date" class="form-control form-control-sm wbflow-date" ng-if="period.preset === 'custom'"
+                   ng-model="period.to" title="{{ 'WBFLOWPTOTIP' | translate }}">
+            <button type="button" class="btn btn-sm btn-primary ml-1" ng-if="period.preset === 'custom'"
+                    ng-click="applyPeriod()" ng-disabled="page.loading" title="{{ 'WBFLOWPAPPLYTIP' | translate }}">{{ 'WBFLOWPAPPLY' | translate }}</button>
+         </div>
+         <div class="small text-danger mb-1" ng-if="period.error">{{period.error}}</div>
+         <div class="small text-muted mb-1" ng-if="!period.error && period.preset !== 'custom'">{{ 'WBFLOWPOPENED' | translate }} {{periodText()}}</div>
+         <div class="input-group input-group-sm mb-1">
+            <input type="text" class="form-control" ng-model="page.search" placeholder="{{ 'WBFLOWSEARCH' | translate }}" title="{{ 'WBFLOWSEARCHTIP' | translate }}">
+            <div class="input-group-append">
+               <button type="button" class="btn btn-secondary" ng-if="page.search" ng-click="page.search = ''" title="{{ 'WBFLOWCLEARSEARCH' | translate }}"><i class="fa fa-times"></i></button>
+               <button type="button" class="btn btn-secondary" ng-click="loadWorkbooks(true)" ng-disabled="page.loading" title="{{ 'WBFLOWRELOAD' | translate }}">
+                  <i class="fa fa-fw fa-refresh" ng-class="{'fa-spin': page.loading}"></i>
+               </button>
+            </div>
+         </div>
+         <div class="small text-muted mb-1" ng-if="page.serverName">
+            Pulse: <code>{{page.serverName}}</code> / <code>{{page.serviceName}}</code>
+            <span ng-if="!page.loading && page.totalInPulse > 0" class="d-block">
+               {{workbooks.length}} {{ 'WBFLOWCOUNTOF' | translate }} {{page.totalInPulse}} {{ 'WBFLOWCOUNTUSEPERIOD' | translate }}
+            </span>
+         </div>
+
+         <div ng-if="page.error" class="alert alert-danger py-2 small">
+            {{page.error}}
+            <button type="button" class="btn btn-sm btn-secondary ml-1" ng-click="loadWorkbooks(true)" title="{{ 'WBFLOWRELOAD' | translate }}">{{ 'WBFLOWTRYAGAIN' | translate }}</button>
+         </div>
+         <div ng-if="page.loading" class="small p-2">
+            <i class="fa fa-fw fa-refresh fa-spin"></i>
+            <span ng-if="!page.totalInPulse">{{ 'WBFLOWLOADING' | translate }}</span>
+            <span ng-if="page.totalInPulse">{{ 'WBFLOWCHECKING' | translate }} {{page.checked}} / {{page.totalInPulse}}</span>
+            <div class="progress mt-1" style="height: 4px;" ng-if="page.totalInPulse">
+               <div class="progress-bar" ng-style="{width: (page.checked / page.totalInPulse * 100) + '%'}"></div>
+            </div>
+         </div>
+         <div ng-if="!page.loading && !page.error && !workbooks.length && pulseSignedIn()" class="small text-muted p-2">
+            {{ (page.totalInPulse ? 'WBFLOWNONEFORINSTANCE' : 'WBFLOWNOWORKBOOKS') | translate }}
+            <span ng-if="period.preset !== 'all'">{{ 'WBFLOWTRYLONGER' | translate }}</span>
+         </div>
+         <div ng-if="!page.loading && !pulseSignedIn()" class="small text-muted p-2">
+            {{ 'WBFLOWLISTNEEDSSIGNIN' | translate }}
+            <a href="" ng-click="signInToPulse()" title="{{ 'WBFLOWSIGNINTIP' | translate }}">{{ 'WBFLOWSIGNIN' | translate }}</a>
+         </div>
+
+         <div class="wbflow-items list-group">
+            <a href="" class="list-group-item list-group-item-action" ng-repeat="w in workbooks" ng-if="visibleWorkbook(w)"
+               ng-class="{'active': selected === w}" ng-click="draw(w)" title="{{ 'WBFLOWDRAWTIP' | translate }} {{w.path}}">
+               <div class="text-truncate"><i class="fa fa-fw" ng-class="selected === w ? 'fa-file-excel-o' : 'Excel'"></i> {{w.name}}</div>
+               <div class="path" ng-class="{'text-muted': selected !== w}">{{w.path}}</div>
+               <div class="small text-truncate" title="{{ 'WBFLOWCUBESTIP' | translate }} {{w.cubes.join(', ')}}">
+                  <i class="fa fa-fw" ng-class="selected === w ? 'fa-cube' : 'cubes'"></i> {{w.cubes.join(', ')}}
+               </div>
+               <div class="small" ng-class="{'text-muted': selected !== w}">
+                  <span ng-if="w.openCount !== undefined">{{w.openCount}} opens</span>
+                  <span ng-if="w.tm1Sheets !== undefined"> · {{w.tm1Sheets}}/{{w.sheets}} TM1 sheets</span>
+                  <span ng-if="w.lastOpenedBy"> · {{w.lastOpenedBy}}</span>
+               </div>
+               <div class="small font-italic" ng-class="{'text-muted': selected !== w}" ng-if="recordedAt(w)" title="{{ 'WBFLOWRECORDEDTIP' | translate }}">
+                  <i class="fa fa-fw fa-info-circle"></i> {{ 'WBFLOWRECORDED' | translate }} {{recordedAt(w)}}
+               </div>
+            </a>
+         </div>
+      </div>
+
+      <!-- Diagram -->
+      <div class="wbflow-main">
+         <div class="d-flex flex-wrap align-items-center mb-1">
+            <!-- What to draw: every workbook in the list, or the one clicked -->
+            <div class="btn-group btn-group-sm mr-2 mb-1">
+               <button type="button" class="btn btn-secondary" ng-class="{'active': page.mode === 'all'}" ng-click="setMode('all')"
+                       ng-disabled="page.building" title="{{ 'WBFLOWALLTIP' | translate }}">
+                  <i class="fa fa-fw fa-files-o"></i> {{ 'WBFLOWALL' | translate }}
+                  <i class="fa fa-check fa-mark" ng-if="page.mode === 'all'"></i>
+               </button>
+               <button type="button" class="btn btn-secondary" ng-class="{'active': page.mode === 'one'}" ng-click="setMode('one')"
+                       ng-disabled="page.building" title="{{ 'WBFLOWONETIP' | translate }}">
+                  <i class="fa fa-fw fa-file-excel-o"></i> {{ 'WBFLOWONE' | translate }}
+                  <i class="fa fa-check fa-mark" ng-if="page.mode === 'one'"></i>
+               </button>
+            </div>
+            <div class="btn-group btn-group-sm mr-2 mb-1">
+               <button type="button" class="btn btn-secondary" ng-click="changeLevels(-1)" ng-disabled="page.depth <= minLevels || page.building" title="{{ 'WBFLOWLESSTIP' | translate }}">{{ 'WBFLOWLESS' | translate }}</button>
+               <span class="btn btn-secondary disabled" style="opacity: 1; cursor: default;" title="{{ 'WBFLOWLEVELSTIP' | translate }}">{{ 'WBFLOWLEVELS' | translate }} {{page.depth}}</span>
+               <button type="button" class="btn btn-secondary" ng-click="changeLevels(1)" ng-disabled="page.depth >= maxLevels || page.building || page.allLevels" title="{{ (page.allLevels ? 'WBFLOWALLLEVELS' : 'WBFLOWMORETIP') | translate }}">{{ 'WBFLOWMORE' | translate }}</button>
+            </div>
+            <button type="button" class="btn btn-sm btn-secondary mr-2 mb-1" ng-class="{'active': page.showSheets}"
+                    ng-click="page.showSheets = !page.showSheets; redraw()"
+                    title="{{ (page.showSheets ? 'WBFLOWSHEETSHIDETIP' : 'WBFLOWSHEETSSHOWTIP') | translate }}">
+               <i class="fa fa-fw fa-table"></i> {{ 'WBFLOWSHOWSHEETS' | translate }}
+               <i class="fa fa-check fa-mark" ng-if="page.showSheets"></i>
+            </button>
+            <div class="btn-group btn-group-sm mr-2 mb-1">
+               <button type="button" class="btn btn-secondary" ng-click="zoom(1.25)" ng-disabled="!graph" title="{{ 'WBFLOWZOOMIN' | translate }}"><i class="fa fa-fw fa-search-plus"></i></button>
+               <button type="button" class="btn btn-secondary" ng-click="zoom(0.8)" ng-disabled="!graph" title="{{ 'WBFLOWZOOMOUT' | translate }}"><i class="fa fa-fw fa-search-minus"></i></button>
+               <button type="button" class="btn btn-secondary" ng-click="fit()" ng-disabled="!graph" title="{{ 'WBFLOWFIT' | translate }}"><i class="fa fa-fw fa-arrows-alt"></i></button>
+            </div>
+            <button type="button" class="btn btn-sm btn-secondary mr-2 mb-1" ng-click="downloadSvg()" ng-disabled="!graph" title="{{ 'WBFLOWSVGTIP' | translate }}">
+               <i class="fa fa-fw fa-download"></i> SVG
+            </button>
+            <span class="small text-muted mb-1" ng-if="graph">
+               {{graph.nodes.length}} {{ 'WBFLOWOBJECTS' | translate }}, {{graph.edges.length}} {{ 'WBFLOWLINKS' | translate }}
+               <span ng-if="graph.hiddenCount > 0">({{graph.hiddenCount}} {{ 'WBFLOWHIDDEN' | translate }})</span>
+            </span>
+         </div>
+
+         <div class="wbflow-legend mb-1" ng-if="graph && typesPresent.length">
+            <span class="small text-muted mr-1">{{ 'WBFLOWSHOWTYPES' | translate }}</span>
+            <!-- A shown type is filled with its colour, as on the diagram; a hidden type is an outline, struck through. Cubes are always shown. -->
+            <button type="button" class="btn btn-sm mr-1 mb-1" ng-repeat="t in typesPresent"
+                    ng-class="{'off': hiddenTypes[t], 'always': t === 'cube'}"
+                    ng-style="hiddenTypes[t] ? {'border-color': typeColor(t), 'color': typeColor(t)} : {'background-color': typeColor(t), 'border-color': typeColor(t)}"
+                    ng-attr-title="{{t === 'cube' ? ('WBFLOWCUBESALWAYS' | translate) : ((hiddenTypes[t] ? 'WBFLOWSHOWTYPE' : 'WBFLOWHIDETYPE') | translate)}}"
+                    ng-click="toggleType(t)">
+               <span class="badge-icon" ng-if="typeIconClass(t)"><i class="{{typeIconClass(t)}}" ng-style="{'color': typeColor(t)}"></i></span><span ng-if="!typeIconClass(t)" class="wbflow-swatch" ng-style="{'background-color': typeColor(t)}"></span>{{typeLabel(t)}} ({{typeCount(t)}})
+            </button>
+         </div>
+
+         <div ng-repeat="w in page.warnings" class="alert alert-warning py-1 px-2 mb-1 small"><i class="fa fa-fw fa-exclamation-triangle"></i> {{w}}</div>
+         <div ng-if="page.buildError" class="alert alert-danger py-2 mb-1">
+            {{page.buildError}}
+            <button type="button" class="btn btn-sm btn-secondary ml-1" ng-click="redraw()" title="{{ 'WBFLOWREDRAWTIP' | translate }}">{{ 'WBFLOWTRYAGAIN' | translate }}</button>
+         </div>
+
+         <div class="wbflow-canvas" ng-click="clearFocus()">
+            <div ng-if="!graph && !page.building && !page.loading" class="p-4 text-muted text-center">
+               <i class="fa fa-3x fa-sitemap mb-2"></i><br>{{ (page.mode === 'all' ? 'WBFLOWNOTHINGALL' : 'WBFLOWPICK') | translate }}
+            </div>
+            <div ng-if="page.building" class="p-4 text-center"><i class="fa fa-fw fa-refresh fa-spin"></i> {{ 'WBFLOWBUILDING' | translate }}</div>
+
+            <svg ng-if="graph && !page.building" xmlns="http://www.w3.org/2000/svg">
+               <defs>
+                  <marker id="wbflow-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                     <path d="M0,0 L10,5 L0,10 z" fill="currentColor" fill-opacity="0.7"></path>
+                  </marker>
+               </defs>
+               <g class="wbflow-root" ng-attr-transform="{{transform()}}">
+                  <path ng-repeat="e in graph.edges track by e.key" class="wbflow-edge" ng-class="{'dim': !isEdgeLinked(e)}"
+                        ng-attr-d="{{e.d}}" fill="none" stroke="currentColor"
+                        ng-attr-stroke-opacity="{{focus && isEdgeLinked(e) ? 0.9 : 0.45}}"
+                        ng-attr-stroke-width="{{focus && isEdgeLinked(e) ? 2.2 : 1.3}}"
+                        ng-attr-stroke-dasharray="{{e.kind === 'workbook' ? '5,4' : (e.kind === 'datasource' ? '2,3' : 'none')}}"
+                        marker-end="url(#wbflow-arrow)"></path>
+                  <g ng-repeat="n in graph.nodes track by n.key" class="wbflow-node" ng-class="{'dim': !isLinked(n)}"
+                     ng-attr-transform="translate({{n.x}},{{n.y}})" ng-click="select(n, $event)" ng-dblclick="openObject(n, $event)">
+                     <title>{{n.typeText}}: {{n.label || n.name}}{{n.sheets ? ' (sheets: ' + n.sheets.join(', ') + ')' : ''}}&#10;{{ (canOpen(n) ? 'WBFLOWNODETIPOPEN' : 'WBFLOWNODETIP') | translate }}</title>
+                     <rect width="210" height="36" rx="6" ry="6" ng-attr-fill="{{n.color}}"
+                           ng-attr-stroke="{{focus && focus.key === n.key ? '#ffc107' : 'none'}}" stroke-width="3"></rect>
+                     <!-- Object icon: Arc's glyph in Arc's colour on a white badge -->
+                     <rect ng-if="n.icon" x="5" y="5" width="26" height="26" rx="5" ry="5" fill="#ffffff"></rect>
+                     <text ng-if="n.icon" class="wbflow-icon" x="18" y="24" text-anchor="middle" font-size="15"
+                           ng-attr-font-family="{{n.icon.font}}" ng-attr-fill="{{n.color}}">{{n.icon.glyph}}</text>
+                     <text ng-attr-x="{{n.icon ? 38 : 10}}" y="14" fill="#ffffff" fill-opacity="0.85" font-size="9" style="text-transform: uppercase; letter-spacing: .05em;">{{n.typeText}}</text>
+                     <text ng-attr-x="{{n.icon ? 38 : 10}}" y="29" fill="#ffffff" font-size="12.5" font-weight="600">{{n.text}}</text>
+                  </g>
+               </g>
+            </svg>
+
+            <!-- What the clicked object is linked to -->
+            <div class="wbflow-focus card shadow-sm" ng-if="focus" ng-click="$event.stopPropagation()">
+               <div class="card-header py-1 px-2 d-flex align-items-center">
+                  <i class="{{nodeIconClass(focus)}} mr-1"></i>
+                  <strong class="text-truncate flex-grow-1" title="{{focus.label || focus.name}}">{{focus.label || focus.name}}</strong>
+                  <a href="" class="ml-1" ng-click="closeFocus()" title="{{ 'WBFLOWCLOSETIP' | translate }}"><i class="fa fa-times"></i></a>
+               </div>
+               <div class="card-body py-2 px-2">
+                  <div class="text-muted mb-1">{{focus.typeText}}</div>
+                  <!-- Data source: what TM1 says the process reads (never the ODBC password) -->
+                  <table class="table table-sm table-borderless mb-2" ng-if="focus.dataSource" style="font-size: inherit;">
+                     <tr><th class="p-0 pr-2">{{ 'WBFLOWDSTYPE' | translate }}</th><td class="p-0">{{focus.dataSource.type}}</td></tr>
+                     <tr><th class="p-0 pr-2">{{ 'WBFLOWDSNAME' | translate }}</th><td class="p-0" style="word-break: break-all;">{{focus.dataSource.name || '-'}}</td></tr>
+                     <tr ng-if="focus.dataSource.view"><th class="p-0 pr-2">{{ 'WBFLOWDSVIEW' | translate }}</th><td class="p-0">{{focus.dataSource.view}}</td></tr>
+                     <tr ng-if="focus.dataSource.subset"><th class="p-0 pr-2">{{ 'WBFLOWDSSUBSET' | translate }}</th><td class="p-0">{{focus.dataSource.subset}}</td></tr>
+                     <tr ng-if="focus.dataSource.userName"><th class="p-0 pr-2">{{ 'WBFLOWDSUSER' | translate }}</th><td class="p-0">{{focus.dataSource.userName}}</td></tr>
+                  </table>
+                  <div ng-if="focus.dataSource.query" class="mb-2">
+                     <strong>{{ 'WBFLOWDSQUERY' | translate }}</strong>
+                     <pre class="small mb-0 p-1 border rounded" style="max-height: 160px; overflow: auto; white-space: pre-wrap;">{{focus.dataSource.query}}</pre>
+                  </div>
+                  <div ng-if="focus.path" class="mb-2" style="word-break: break-all;"><code>{{focus.path}}</code></div>
+                  <div ng-if="focus.recordedAt" class="mb-2 small text-muted">
+                     <i class="fa fa-fw fa-info-circle"></i> {{ 'WBFLOWRECORDED' | translate }} {{focus.recordedAt}}.
+                     {{ 'WBFLOWRECORDEDTIP' | translate }}
+                  </div>
+                  <div ng-if="focus.sheets" class="mb-2"><strong>{{ 'WBFLOWSHEETS' | translate }}</strong> {{focus.sheets.join(', ')}}</div>
+                  <div ng-if="focus.incoming.length" class="mb-2">
+                     <strong>{{ 'WBFLOWFROM' | translate }}</strong>
+                     <div ng-repeat="o in focus.incoming track by $index"><a href="" ng-click="select(o)" title="{{ 'WBFLOWGOTOTIP' | translate }}"><i class="{{nodeIconClass(o)}}"></i> {{o.label || o.name}}</a></div>
+                  </div>
+                  <div ng-if="focus.outgoing.length" class="mb-2">
+                     <strong>{{ 'WBFLOWTO' | translate }}</strong>
+                     <div ng-repeat="o in focus.outgoing track by $index"><a href="" ng-click="select(o)" title="{{ 'WBFLOWGOTOTIP' | translate }}"><i class="{{nodeIconClass(o)}}"></i> {{o.label || o.name}}</a></div>
+                  </div>
+                  <button type="button" class="btn btn-sm btn-primary" ng-if="canOpen(focus)" ng-click="openObject(focus)" title="{{ 'WBFLOWOPENTIP' | translate }}">
+                     <i class="fa fa-fw fa-external-link"></i> {{ 'WBFLOWOPEN' | translate }}
+                  </button>
+               </div>
+            </div>
+         </div>
+         <div class="small text-muted mt-1">{{ 'WBFLOWHELP' | translate }}</div>
+      </div>
+   </div>
+</div>

@@ -1,0 +1,607 @@
+[
+   {
+      "group": "Connection",
+      "name": "CSRF token / login page",
+      "method": "GET",
+      "url": "_pulse/login",
+      "headers": {
+         "X-CSRF-Token": "Fetch"
+      },
+      "statusCodeExpected": 200,
+      "usedBy": "$pulse.getCsrfToken, login and logout"
+   },
+   {
+      "group": "Connection",
+      "name": "System status / version",
+      "method": "GET",
+      "url": "_pulse/api/system/status/check",
+      "statusCodeExpected": 200,
+      "capture": {
+         "pulseVersion": "version"
+      },
+      "usedBy": "$pulse.getSystemInfo (feature support by Pulse version)"
+   },
+   {
+      "group": "Connection",
+      "name": "Logged-in account",
+      "method": "GET",
+      "url": "_pulse/api/system/account",
+      "statusCodeExpected": 200,
+      "capture": {
+         "pulseUser": "name"
+      },
+      "usedBy": "$pulse.setPulseLoggedInUserName"
+   },
+   {
+      "group": "Connection",
+      "name": "Pulse settings (environments and connections)",
+      "method": "GET",
+      "url": "_pulse/api/setting/?include-connection-url=true",
+      "statusCodeExpected": 200,
+      "usedBy": "$pulse.settings, usepulseinstances"
+   },
+   {
+      "group": "Monitoring",
+      "name": "Instance state",
+      "method": "GET",
+      "url": "_pulse/api/state/after",
+      "statusCodeExpected": 200,
+      "usedBy": "$pulse.state polling, instance status icons, dashboard widgets"
+   },
+   {
+      "group": "Change tracking",
+      "name": "Latest changes (all environments)",
+      "method": "GET",
+      "url": "_pulse/api/changes/all?max=10",
+      "statusCodeExpected": 200,
+      "usedBy": "$pulse change poller"
+   },
+   {
+      "group": "Change tracking",
+      "name": "Changes for this instance (last 30 days)",
+      "method": "GET",
+      "url": "_pulse/api/changes?service={serviceName}&start={monthAgo}&end={today}&types=All&servername={serverName}&max=100",
+      "statusCodeExpected": 200,
+      "capture": {
+         "commitId": [
+            "commits[0].id",
+            "[0].id"
+         ],
+         "commitPath": [
+            "commits[0].filesInCommit[0].path",
+            "[0].filesInCommit[0].path"
+         ],
+         "commitAuthor": [
+            "commits[0].userName",
+            "[0].userName"
+         ]
+      },
+      "usedBy": "Change Tracking page"
+   },
+   {
+      "group": "Change tracking",
+      "name": "One change (commit)",
+      "method": "GET",
+      "url": "_pulse/api/change?service={serviceName}&id={commitId}&servername={serverName}",
+      "statusCodeExpected": 200,
+      "usedBy": "Change page"
+   },
+   {
+      "group": "Change tracking",
+      "name": "Diff of one file in a change",
+      "method": "GET",
+      "url": "_pulse/api/diff?service={serviceName}&id={commitId}&path={commitPath}&servername={serverName}",
+      "statusCodeExpected": 200,
+      "usedBy": "Change diff, Compare, Blame report"
+   },
+   {
+      "group": "Change tracking",
+      "name": "Changes by author",
+      "method": "GET",
+      "url": "_pulse/api/changesbyauthor?service={serviceName}&author={commitAuthor}&start={monthAgo}&end={today}&servername={serverName}",
+      "statusCodeExpected": 200,
+      "usedBy": "Changes by author page"
+   },
+   {
+      "group": "Change tracking",
+      "name": "Changes by file (file of the latest change)",
+      "method": "GET",
+      "url": "_pulse/api/changesbyfile?service={serviceName}&path={commitPath}&start={monthAgo}&end={today}&servername={serverName}",
+      "statusCodeExpected": 200,
+      "usedBy": "Changes by file page, Blame report, process and rules toolbars"
+   },
+   {
+      "group": "Search",
+      "name": "Search the model",
+      "method": "GET",
+      "url": "_pulse/api/search?service={serviceName}&query={searchText}::pro%2Crux%2Ccho%2Ccubx%2Cdimx%2Cdimd&servername={serverName}&max=100",
+      "statusCodeExpected": 200,
+      "usedBy": "Search Model page"
+   },
+   {
+      "group": "Process history",
+      "name": "Process history statistics",
+      "method": "GET",
+      "url": "_pulse/api/processhistory?servername={serverName}&service={serviceName}",
+      "statusCodeExpected": 200,
+      "usedBy": "$pulse.getHistoryStats"
+   },
+   {
+      "group": "Process history",
+      "name": "Process history search (all, last 30 days)",
+      "method": "GET",
+      "url": "_pulse/api/processhistorysearch?servername={serverName}&service={serviceName}&dayfrom={monthAgo}&dayto={today}&timefrom=&timeto=",
+      "statusCodeExpected": 200,
+      "usedBy": "$pulse.getHistoryAll"
+   },
+   {
+      "group": "Process history",
+      "name": "Process history search (sample process)",
+      "method": "GET",
+      "url": "_pulse/api/processhistorysearch?servername={serverName}&service={serviceName}&dayfrom={monthAgo}&dayto={today}&timefrom=&timeto=&chore=false&name={process}",
+      "statusCodeExpected": 200,
+      "usedBy": "$pulse.getHistoryForProcess"
+   },
+   {
+      "group": "Process history",
+      "name": "Chore history search (sample chore)",
+      "method": "GET",
+      "url": "_pulse/api/processhistorysearch?servername={serverName}&service={serviceName}&dayfrom={monthAgo}&dayto={today}&timefrom=&timeto=&chore=true&name={chore}",
+      "statusCodeExpected": 200,
+      "usedBy": "$pulse.getHistoryForChore"
+   },
+   {
+      "group": "Code validation",
+      "name": "Validate the sample process",
+      "method": "POST",
+      "url": "_pulse/api/validation/{serverName}/process/{process}",
+      "bodyFromTm1": "Processes('{process}')",
+      "statusCodeExpected": 200,
+      "usedBy": "$pulse.getPulseValidationForProcess"
+   },
+   {
+      "group": "Code validation",
+      "name": "Validate the sample cube rules",
+      "method": "POST",
+      "url": "_pulse/api/validation/{serverName}/rule/{ruleCube}",
+      "bodyFromTm1": "Cubes('{ruleCube}')?$select=Name,Rules",
+      "statusCodeExpected": 200,
+      "usedBy": "$pulse.getPulseValidationForRule"
+   },
+   {
+      "group": "Object locking",
+      "name": "Locks on this instance",
+      "method": "GET",
+      "url": "_pulse/api/object-locking/locks?server-name={serverName}&service-name={serviceName}",
+      "statusCodeExpected": 200,
+      "usedBy": "$pulse.getLockStatusForInstance"
+   },
+   {
+      "group": "Object locking",
+      "name": "Lock status of the sample process",
+      "method": "GET",
+      "url": "_pulse/api/object-locking/locks?server-name={serverName}&service-name={serviceName}&object-type=process&object-path={process}",
+      "statusCodeExpected": [
+         200,
+         204,
+         404
+      ],
+      "usedBy": "$pulse.getLockStatus (no lock can answer 204 or 404 depending on the Pulse version)"
+   },
+   {
+      "group": "Test Hub",
+      "name": "List test categories",
+      "method": "GET",
+      "url": "_pulse/api/arc/test/category/list?server-name={serverName}&service-name={serviceName}",
+      "statusCodeExpected": 200,
+      "usedBy": "Test Centre, categories"
+   },
+   {
+      "group": "Test Hub",
+      "name": "List unit tests",
+      "method": "GET",
+      "url": "_pulse/api/arc/test/unit/list?server-name={serverName}&service-name={serviceName}&page=0&size=10",
+      "statusCodeExpected": 200,
+      "usedBy": "Test Centre, unit tests"
+   },
+   {
+      "group": "Test Hub",
+      "name": "List test collections",
+      "method": "GET",
+      "url": "_pulse/api/arc/test/package/list?server-name={serverName}&service-name={serviceName}&page=0&size=10",
+      "statusCodeExpected": 200,
+      "usedBy": "Test Centre, collections"
+   },
+   {
+      "group": "Test Hub",
+      "name": "List test results",
+      "method": "GET",
+      "url": "_pulse/api/arc/test/result/list?server-name={serverName}&service-name={serviceName}&page=0&size=10",
+      "statusCodeExpected": 200,
+      "usedBy": "Test Centre, results"
+   },
+   {
+      "group": "Test Hub",
+      "name": "List coverage results",
+      "method": "GET",
+      "url": "_pulse/api/arc/test/coverage/list?server-name={serverName}&service-name={serviceName}&page=0&size=10",
+      "statusCodeExpected": 200,
+      "usedBy": "Test Centre, coverage"
+   },
+   {
+      "group": "Pulse data: storage",
+      "name": "OpenSearch and database status (signed in)",
+      "method": "GET",
+      "url": "_pulse/api/system/status",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Administration > Status. storageStatus lists OpenSearch health, every index with its document count, and the H2 database. Signed out, it comes back empty."
+   },
+   {
+      "group": "Pulse data: storage",
+      "name": "Pulse configuration state",
+      "method": "GET",
+      "url": "_pulse/api/system/state",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Administration (MCP get_system_state)"
+   },
+   {
+      "group": "Pulse data: storage",
+      "name": "Pulse application log (latest lines)",
+      "method": "GET",
+      "url": "_pulse/api/system/logs/application",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Administration > Logs (MCP get_log_lines)"
+   },
+   {
+      "group": "Pulse data: monitoring",
+      "name": "Server performance (last 30 days)",
+      "method": "GET",
+      "url": "_pulse/api/performance/server?server-name={serverName}&start={monthAgo}&end={today}",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Monitoring > Server (MCP get_performance_server)"
+   },
+   {
+      "group": "Pulse data: monitoring",
+      "name": "Instance performance (last 30 days)",
+      "method": "GET",
+      "url": "_pulse/api/performance/instance?server-name={serverName}&service={serviceName}&start={monthAgo}&end={today}",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Monitoring > Instance (MCP get_performance_instance)"
+   },
+   {
+      "group": "Pulse data: monitoring",
+      "name": "Instance state at this moment",
+      "method": "GET",
+      "url": "_pulse/api/state/nearest?servername={serverName}&date={nowMs}",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Monitoring, state at a point in time (MCP get_server_state)"
+   },
+   {
+      "group": "Pulse data: monitoring",
+      "name": "Session run-time map",
+      "method": "GET",
+      "url": "_pulse/api/session/runtime?server-name={serverName}&start={monthAgo}&end={today}",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Monitoring > Sessions"
+   },
+   {
+      "group": "Pulse data: monitoring",
+      "name": "Session wait-time map",
+      "method": "GET",
+      "url": "_pulse/api/session/waittime?server-name={serverName}&start={monthAgo}&end={today}",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Monitoring > Sessions"
+   },
+   {
+      "group": "Pulse data: monitoring",
+      "name": "Cancel requests",
+      "method": "GET",
+      "url": "_pulse/api/cancel/requests?server-name={serverName}&start={monthAgo}&end={today}",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Monitoring (MCP list_cancel_requests)"
+   },
+   {
+      "group": "Pulse data: monitoring",
+      "name": "Disconnect requests",
+      "method": "GET",
+      "url": "_pulse/api/disconnect/requests?server-name={serverName}&start={monthAgo}&end={today}",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Monitoring (MCP list_disconnect_requests)"
+   },
+   {
+      "group": "Pulse data: monitoring",
+      "name": "Service requests",
+      "method": "GET",
+      "url": "_pulse/api/service/requests?server-name={serverName}&start={monthAgo}&end={today}",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Monitoring (MCP list_service_requests)"
+   },
+   {
+      "group": "Pulse data: history",
+      "name": "Cube statistics history",
+      "method": "GET",
+      "url": "_pulse/api/cubestats/{serverName}/{serviceName}/{ruleCube}?start=0&max=50",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse cube page (MCP get_cube_stats_history). The path needs the server, service and cube; Pulse's own JS client documents it without the server."
+   },
+   {
+      "group": "Pulse data: history",
+      "name": "Rule statistics history",
+      "method": "GET",
+      "url": "_pulse/api/rulestats/{serverName}/{serviceName}/{ruleCube}?start=0&max=50",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse rule statistics (MCP get_rule_statistics). Same path shape as cube statistics."
+   },
+   {
+      "group": "Pulse data: history",
+      "name": "Process and chore history by day",
+      "method": "GET",
+      "url": "_pulse/api/processhistory?servername={serverName}&service={serviceName}&start={monthAgo}&end={today}",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Process History (MCP get_process_history)"
+   },
+   {
+      "group": "Pulse data: history",
+      "name": "Process history Gantt (today)",
+      "method": "GET",
+      "url": "_pulse/api/processhistorygantt?servername={serverName}&service={serviceName}&day={today}",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Process History > Gantt"
+   },
+   {
+      "group": "Pulse data: history",
+      "name": "Source file as Pulse stores it",
+      "method": "GET",
+      "url": "_pulse/api/raw?servername={serverName}&service={serviceName}&file={commitPath}",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse raw file view (MCP get_raw_file). Uses the file of the latest change."
+   },
+   {
+      "group": "Pulse data: history",
+      "name": "Dimension sizes and source-control level",
+      "method": "GET",
+      "url": "_pulse/api/source/level?servername={serverName}&service={serviceName}",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Settings > Source control"
+   },
+   {
+      "group": "Pulse data: history",
+      "name": "Instance documentation (objects)",
+      "method": "GET",
+      "url": "_pulse/api/instance?servername={serverName}&service={serviceName}",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse documentation (MCP get_instance_objects)"
+   },
+   {
+      "group": "Pulse data: usage",
+      "name": "Sessions for this instance (last 30 days)",
+      "method": "GET",
+      "url": "_pulse/api/sessions?server-name={serverName}&service={serviceName}&start={monthAgo}&end={today}",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Monitoring > Sessions (MCP get_user_sessions)"
+   },
+   {
+      "group": "Pulse data: usage",
+      "name": "System sessions, all instances (last 30 days)",
+      "method": "GET",
+      "url": "_pulse/api/system/sessions?start={monthAgo}&end={today}",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse License > Sessions (MCP get_system_sessions)"
+   },
+   {
+      "group": "Pulse data: usage",
+      "name": "System sessions of the TM1 user",
+      "method": "GET",
+      "url": "_pulse/api/system/session/user?username={tm1User}&start={monthAgo}&end={today}",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse License > Sessions by user (MCP get_system_session_user)"
+   },
+   {
+      "group": "Pulse data: usage",
+      "name": "Activity of the TM1 user",
+      "method": "GET",
+      "url": "_pulse/api/user?id={tm1User}&servername={serverName}&start={monthAgo}&end={today}",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse user page (MCP get_user_activity)"
+   },
+   {
+      "group": "Pulse data: usage",
+      "name": "Websheet usage",
+      "method": "GET",
+      "url": "_pulse/api/websheets?start={monthAgo}&end={today}",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Web > Websheets (MCP list_websheets)"
+   },
+   {
+      "group": "Pulse data: usage",
+      "name": "Open websheets",
+      "method": "GET",
+      "url": "_pulse/api/websheets/open",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Web > Websheets (MCP list_websheets_open)"
+   },
+   {
+      "group": "Pulse data: usage",
+      "name": "Workbook usage",
+      "method": "GET",
+      "url": "_pulse/api/workbooks?start={monthAgo}&end={today}",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Web > Workbooks (MCP list_workbooks)"
+   },
+   {
+      "group": "Pulse data: usage",
+      "name": "Open workbooks",
+      "method": "GET",
+      "url": "_pulse/api/workbooks/open",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Web > Workbooks (MCP list_workbooks_open)"
+   },
+   {
+      "group": "Pulse data: usage",
+      "name": "Canvas page usage",
+      "method": "GET",
+      "url": "_pulse/api/canvaslogs?start={monthAgo}&end={today}",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Web > Canvas (MCP list_canvas_logs)"
+   },
+   {
+      "group": "Pulse data: usage",
+      "name": "Open Canvas pages",
+      "method": "GET",
+      "url": "_pulse/api/canvaslogs/open",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Web > Canvas (MCP list_canvas_open_pages)"
+   },
+   {
+      "group": "Pulse data: alerts",
+      "name": "System alert definitions",
+      "method": "GET",
+      "url": "_pulse/api/system/alert/list-simple?servername={serverName}",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Settings > Alerts (MCP list_system_alerts)"
+   },
+   {
+      "group": "Pulse data: alerts",
+      "name": "Pulse server alerts",
+      "method": "GET",
+      "url": "_pulse/api/pulse/alert?servername={serverName}",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Settings > Pulse alerts"
+   },
+   {
+      "group": "Pulse data: alerts",
+      "name": "System summary report settings",
+      "method": "GET",
+      "url": "_pulse/api/systemsummaryreport/?serviceName={serviceName}&servername={serverName}",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Reports > System summary (MCP get_system_summary_report)"
+   },
+   {
+      "group": "Object locking (writes)",
+      "name": "Lock a test object",
+      "writes": true,
+      "method": "POST",
+      "url": "_pulse/api/object-locking/locks?server-name={serverName}&service-name={serviceName}",
+      "body": {
+         "serverName": "{serverName}",
+         "serviceName": "{serviceName}",
+         "TM1ObjectType": "process",
+         "TM1ObjectPath": "{testName}",
+         "TM1Username": "{tm1User}"
+      },
+      "statusCodeExpected": 201,
+      "sets": "lockCreated",
+      "usedBy": "$pulse.lockObject"
+   },
+   {
+      "group": "Object locking (writes)",
+      "name": "Read the test lock",
+      "writes": true,
+      "method": "GET",
+      "url": "_pulse/api/object-locking/locks?server-name={serverName}&service-name={serviceName}&object-type=process&object-path={testName}",
+      "needs": "lockCreated",
+      "statusCodeExpected": 200,
+      "usedBy": "$pulse.getLockStatus"
+   },
+   {
+      "group": "Object locking (writes)",
+      "name": "Unlock the test object",
+      "writes": true,
+      "method": "DELETE",
+      "url": "_pulse/api/object-locking/locks?server-name={serverName}&service-name={serviceName}",
+      "body": {
+         "serverName": "{serverName}",
+         "serviceName": "{serviceName}",
+         "TM1ObjectType": "process",
+         "TM1ObjectPath": "{testName}"
+      },
+      "needs": "lockCreated",
+      "statusCodeExpected": 200,
+      "usedBy": "$pulse.unlockObject"
+   },
+   {
+      "group": "Test Hub (writes)",
+      "name": "Create a test category",
+      "writes": true,
+      "method": "POST",
+      "url": "_pulse/api/arc/test/category/create?server-name={serverName}&service-name={serviceName}",
+      "body": {
+         "id": "{testId}",
+         "label": "{testName}-{testId}",
+         "color": ""
+      },
+      "statusCodeExpected": 204,
+      "sets": "categoryCreated",
+      "usedBy": "$unitTesting.saveCategory (new)"
+   },
+   {
+      "group": "Test Hub (writes)",
+      "name": "Read the test category",
+      "writes": true,
+      "method": "GET",
+      "url": "_pulse/api/arc/test/category/item?server-name={serverName}&service-name={serviceName}&test-category-id={testId}",
+      "needs": "categoryCreated",
+      "statusCodeExpected": 200,
+      "usedBy": "$unitTesting.getCategory"
+   },
+   {
+      "group": "Test Hub (writes)",
+      "name": "Delete the test category",
+      "writes": true,
+      "method": "DELETE",
+      "url": "_pulse/api/arc/test/category/delete?server-name={serverName}&service-name={serviceName}",
+      "body": {
+         "id": "{testId}",
+         "label": "{testName}-{testId}"
+      },
+      "needs": "categoryCreated",
+      "statusCodeExpected": 204,
+      "usedBy": "$unitTesting.deleteCategory"
+   },
+   {
+      "group": "Test Hub update (writes)",
+      "name": "Create a second test category",
+      "writes": true,
+      "method": "POST",
+      "url": "_pulse/api/arc/test/category/create?server-name={serverName}&service-name={serviceName}",
+      "body": {
+         "id": "{testId2}",
+         "label": "{testName}-{testId2}",
+         "color": ""
+      },
+      "statusCodeExpected": 204,
+      "sets": "category2Created",
+      "usedBy": "$unitTesting.saveCategory (new). Known issue in Pulse 8.0.1: after the update below, Pulse indexes the category twice and can no longer read or delete it, so this category is left behind."
+   },
+   {
+      "group": "Test Hub update (writes)",
+      "name": "Rename the second test category",
+      "writes": true,
+      "method": "PUT",
+      "url": "_pulse/api/arc/test/category/update?server-name={serverName}&service-name={serviceName}",
+      "body": {
+         "id": "{testId2}",
+         "label": "{testName}-{testId2} (updated)",
+         "color": ""
+      },
+      "needs": "category2Created",
+      "delayBefore": 2000,
+      "statusCodeExpected": 204,
+      "usedBy": "$unitTesting.saveCategory (overwrite)"
+   },
+   {
+      "group": "Test Hub update (writes)",
+      "name": "Delete the renamed test category",
+      "writes": true,
+      "method": "DELETE",
+      "url": "_pulse/api/arc/test/category/delete?server-name={serverName}&service-name={serviceName}",
+      "body": {
+         "id": "{testId2}",
+         "label": "{testName}-{testId2} (updated)"
+      },
+      "needs": "category2Created",
+      "delayBefore": 2000,
+      "statusCodeExpected": 204,
+      "usedBy": "$unitTesting.deleteCategory after an update"
+   }
+]
