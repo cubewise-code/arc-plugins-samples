@@ -3,10 +3,11 @@ This plugin runs the Pulse API calls that Arc makes, and the Pulse data calls th
 
 1. Sign in to Pulse in Arc. If you are not signed in, the page shows a **Sign in to Pulse** link that opens Arc's Pulse sign-in (and reconnects Pulse first if it was disconnected in Arc).
 2. Open **Tools > Pulse API Sanity Check** under the instance.
-3. Select the requests to run and click **Run**. They run one after the other.
+3. Choose the **Pulse environment** and **Service** to check. The page starts on the ones Arc matches to the instance; any environment Pulse knows can be chosen (Workspace environments are marked), and **This instance** goes back. The sample process, chore, cube and TM1 user always come from the instance, so in another environment the requests that use them may find nothing.
+4. Select the requests to run and click **Run**. They run one after the other.
    - **Search all columns** shows only the rows that contain every word you type: the area, request, method, URL, expected status, result, message, or where Arc uses the call (for example `test hub`, `/api/arc/test/` or `getLockStatus`).
    - The status buttons (passed, warning, failed, skipped) filter the rows the same way, and the select-all checkbox acts on the rows shown.
-4. Click a finished row to see the URL that was called, the body that was sent and Pulse's answer.
+5. Click a finished row to see the URL that was called, the body that was sent and Pulse's answer.
 
 ## What it needs
 - `pulseurl` set in Arc's `settings.yml`, and `pulseenvironment` (and `pulseinstance` if the names differ) set for the instance, so Arc can match it to a Pulse server and service. Without them, the requests that need the server or service name are skipped and the page says why.
@@ -21,15 +22,17 @@ The **Pulse data** groups read what Pulse has collected, mostly stored in its Op
 
 | Group | Calls |
 |---|---|
-| storage | `api/system/status` (OpenSearch health, each index with its document count, the H2 database), `api/system/state`, `api/system/logs/application` |
-| monitoring | `api/performance/server`, `api/performance/instance`, `api/state/nearest`, `api/session/runtime`, `api/session/waittime`, `api/cancel/requests`, `api/disconnect/requests`, `api/service/requests` |
-| history | `api/cubestats/{server}/{service}/{cube}`, `api/rulestats/{server}/{service}/{cube}`, `api/processhistory`, `api/processhistorygantt`, `api/raw`, `api/source/level`, `api/instance` |
+| storage | `api/system/status` (OpenSearch health, each index with its document count, the H2 database), `api/system/state`, `api/system/logs/application`, `api/system/logs/monitor`, `api/system/mcp` (MCP endpoint and tools) |
+| monitoring | `api/performance/server`, `api/performance/instance`, `api/state/nearest`, `api/session/runtime`, `api/session/waittime`, `api/cancel/requests`, `api/disconnect/requests`, `api/service/requests`, `api/system/instance` (instance monitoring settings) |
+| history | `api/cubestats/{server}/{service}/{cube}`, `api/rulestats/{server}/{service}/{cube}`, `api/processhistory`, `api/processhistorygantt`, `api/raw`, `api/source/level`, `api/instance`, `api/changes/history` (paged change history), `api/repository` (every file in the source repository) |
 | usage | `api/sessions`, `api/system/sessions`, `api/system/session/user`, `api/user`, `api/websheets`, `api/workbooks`, `api/canvaslogs` (and their `/open` variants) |
-| alerts | `api/system/alert/list-simple`, `api/pulse/alert`, `api/systemsummaryreport/` |
+| alerts | `api/system/alert/list-simple`, `api/system/alert/list`, `api/system/alert/type/list`, `api/pulse/alert`, `api/systemsummaryreport/` |
+| Workspace | `api/workspace/version`, `api/workspace/book/list`, `api/workspace/book/detail?id=` (Workspace environments only; added in Pulse 8.0.20261120) |
 
 Notes:
 - `api/system/status` returns OpenSearch details only to a signed-in user; `api/system/status/check`, which Arc uses, returns them empty.
 - `cubestats` and `rulestats` need the Pulse server in the path (`/api/cubestats/CWVV/tm1srv01/Employee`). Pulse's own JavaScript client documents them as `/{service}/{cube}`, which answers "An invalid path was used".
+- The **Workspace** requests run only when the chosen environment is a Workspace environment in Pulse; otherwise they are skipped. On any other environment Pulse answers "... is not a Workspace environment". The book detail uses the first book the list returns.
 - `api/system/sessions` reads every session in the date range and can take a few seconds.
 - There is no call that passes a query through to OpenSearch, and OpenSearch itself cannot be queried from outside Pulse: it listens on HTTPS and asks for a client certificate.
 
@@ -37,7 +40,8 @@ Values in braces are filled in before a request runs, URL-encoded in the URL:
 
 | Placeholder | Value |
 |---|---|
-| `{serverName}`, `{serviceName}` | The instance's Pulse server and service, as Arc finds them |
+| `{serverName}`, `{serviceName}` | The Pulse environment and service chosen on the page (by default the instance's, as Arc finds them) |
+| `{workspaceBookId}` | The first book `api/workspace/book/list` returns |
 | `{process}`, `{chore}`, `{ruleCube}` | The instance's first process, chore and cube (a cube with rules when there is one) |
 | `{tm1User}`, `{pulseUser}` | The TM1 user and the Pulse user |
 | `{today}`, `{monthAgo}` | Today, and 30 days ago (`YYYY-MM-DD`) |
@@ -53,6 +57,7 @@ Each entry in `requests.json` can use:
 - `headers`: extra request headers.
 - `capture`: `{ "key": "path" }` keeps a value from the answer (a lodash path such as `commits[0].id`) for later requests. Give a list of paths when the answer's shape differs between Pulse versions; the first one with a value is used.
 - `delayBefore`: milliseconds to wait before the request, to give Pulse time to index what the previous request created.
+- `requires`: `"workspace"` runs the request only when the chosen environment is a Workspace environment; it is skipped otherwise.
 - `sets` / `needs`: a request with `needs` runs only if the request with the same `sets` value succeeded.
 - `writes: true`: not selected by default, and asks you to confirm before it runs.
 - `usedBy`: where Arc (or, for the Pulse data groups, Pulse) uses the call, shown as a tooltip and in the details.
@@ -66,6 +71,8 @@ The read requests change nothing. The write requests, which are not selected by 
 - **Test Hub update**, a separate group: create a second category, rename it and delete it.
 
 If a step that removes a test object fails, the page tells you what to remove by hand.
+
+**Known Pulse change (8.0.20261120):** `api/processhistory` without `start` and `end` now answers HTTP 200 with `{"Failed": true, "Message": "Unable to load process history"}`. Arc's `$pulse.getHistoryStats` sends no dates, so the **Process history statistics** request fails on this Pulse; the same call with a date range (**Process and chore history by day**) works.
 
 **Known Pulse issue (8.0.1):** renaming a test category (`PUT .../category/update`, which is what Arc's Test Centre sends) leaves the category in Pulse's index twice. After that Pulse cannot read or delete it (`Cursor returned more than one result` in `pulse.log`), so the **Test Hub update** group leaves a category called `zzArcPulseSanityCheck-<id> (updated)` behind on an affected Pulse. Waiting between the requests does not help. Select that group only when you want to check this.
 

@@ -253,6 +253,22 @@
       "usedBy": "Pulse Administration > Logs (MCP get_log_lines)"
    },
    {
+      "group": "Pulse data: storage",
+      "name": "Pulse Monitor log (latest lines)",
+      "method": "GET",
+      "url": "_pulse/api/system/logs/monitor",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Administration > Logs, Monitor service"
+   },
+   {
+      "group": "Pulse data: storage",
+      "name": "MCP endpoint and tools",
+      "method": "GET",
+      "url": "_pulse/api/system/mcp",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Administration > MCP (endpoint, tool categories, isAdmin)"
+   },
+   {
       "group": "Pulse data: monitoring",
       "name": "Server performance (last 30 days)",
       "method": "GET",
@@ -317,6 +333,14 @@
       "usedBy": "Pulse Monitoring (MCP list_service_requests)"
    },
    {
+      "group": "Pulse data: monitoring",
+      "name": "Instance monitoring settings",
+      "method": "GET",
+      "url": "_pulse/api/system/instance?servername={serverName}",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Settings > Instances (user and wait limits, V12, cloud)"
+   },
+   {
       "group": "Pulse data: history",
       "name": "Cube statistics history",
       "method": "GET",
@@ -371,6 +395,22 @@
       "url": "_pulse/api/instance?servername={serverName}&service={serviceName}",
       "statusCodeExpected": 200,
       "usedBy": "Pulse documentation (MCP get_instance_objects)"
+   },
+   {
+      "group": "Pulse data: history",
+      "name": "Change history, paged (last 30 days)",
+      "method": "GET",
+      "url": "_pulse/api/changes/history?servername={serverName}&service={serviceName}&start={monthAgo}&end={today}",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse change history ({count, pages, commits})"
+   },
+   {
+      "group": "Pulse data: history",
+      "name": "Source repository files",
+      "method": "GET",
+      "url": "_pulse/api/repository?servername={serverName}&service={serviceName}",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse source repository: every file with its path, size, type and latest commit"
    },
    {
       "group": "Pulse data: usage",
@@ -475,6 +515,52 @@
       "url": "_pulse/api/systemsummaryreport/?serviceName={serviceName}&servername={serverName}",
       "statusCodeExpected": 200,
       "usedBy": "Pulse Reports > System summary (MCP get_system_summary_report)"
+   },
+   {
+      "group": "Pulse data: alerts",
+      "name": "Alerts, alert types and email groups",
+      "method": "GET",
+      "url": "_pulse/api/system/alert/list?servername={serverName}",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Settings > Alerts (full list: alerts, alertTypes, emailGroups)"
+   },
+   {
+      "group": "Pulse data: alerts",
+      "name": "Alert type definitions",
+      "method": "GET",
+      "url": "_pulse/api/system/alert/type/list?servername={serverName}",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Settings > Alerts, alert types"
+   },
+   {
+      "group": "Pulse data: Workspace",
+      "name": "Workspace version",
+      "method": "GET",
+      "url": "_pulse/api/workspace/version?servername={serverName}",
+      "requires": "workspace",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Workspace books (Workspace environments only)"
+   },
+   {
+      "group": "Pulse data: Workspace",
+      "name": "Workspace books",
+      "method": "GET",
+      "url": "_pulse/api/workspace/book/list?servername={serverName}",
+      "requires": "workspace",
+      "statusCodeExpected": 200,
+      "capture": {
+         "workspaceBookId": "books[0].assetId"
+      },
+      "usedBy": "Pulse Workspace books: each book with its folder, owner, TM1 objects and documentation status"
+   },
+   {
+      "group": "Pulse data: Workspace",
+      "name": "One Workspace book (the first listed)",
+      "method": "GET",
+      "url": "_pulse/api/workspace/book/detail?servername={serverName}&id={workspaceBookId}",
+      "requires": "workspace",
+      "statusCodeExpected": 200,
+      "usedBy": "Pulse Workspace book page: metadata, description, objects and sheets"
    },
    {
       "group": "Object locking (writes)",
