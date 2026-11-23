@@ -1,6 +1,6 @@
 arc.run(['$rootScope', function ($rootScope) {
 
-   $rootScope.plugin("arcSanityCheck", "TM1 REST API Sanity Check (Sample)", "page", {
+   $rootScope.plugin("arcSanityCheck", "TM1 REST API Sanity Check", "page", {
       menu: "tools",
       icon: "fa-check-circle",
       description: "Runs a set of TM1 REST API requests against the instance and checks each one returns the expected status",

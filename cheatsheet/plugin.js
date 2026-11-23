@@ -1,6 +1,6 @@
 arc.run(['$rootScope', function ($rootScope) {
 
-   $rootScope.plugin("arcCheatSheet", "Cheatsheet (Sample)", "page", {
+   $rootScope.plugin("arcCheatSheet", "Cheatsheet", "page", {
       menu: "tools",
       icon: "fa-archive",
       description: "This plugin gathers everything you should now about how to build plugins",

@@ -26,9 +26,31 @@
          <a href="" class="alert-link ml-1" ng-click="signInToPulse()">{{ 'PULSESANITYSIGNIN' | translate }}</a>
       </div>
 
+      <div class="d-flex flex-wrap align-items-center mb-2 target">
+         <label class="mb-1 mr-2 small text-muted" for="pulseSanityEnv">Pulse environment</label>
+         <select id="pulseSanityEnv" class="form-control form-control-sm mr-3 mb-1" style="width: auto; min-width: 160px;"
+                 ng-model="selection.server" ng-change="targetChanged(true)" ng-disabled="page.running || !envs.length"
+                 ng-options="env.name as (env.name + (env.workspace ? ' (Workspace)' : '') + (env.name === instanceTarget.server ? ' - this instance' : '')) for env in envs">
+            <option value="">-</option>
+         </select>
+         <label class="mb-1 mr-2 small text-muted" for="pulseSanityService">Service</label>
+         <select id="pulseSanityService" class="form-control form-control-sm mr-3 mb-1" style="width: auto; min-width: 140px;"
+                 ng-model="selection.service" ng-change="targetChanged(false)" ng-disabled="page.running || !servicesOf(selection.server).length"
+                 ng-options="svc as svc for svc in servicesOf(selection.server)">
+            <option value="">-</option>
+         </select>
+         <button type="button" class="btn btn-sm btn-secondary mb-1 mr-2" ng-if="instanceTarget.server && !isInstanceTarget()" ng-click="useInstanceTarget()" ng-disabled="page.running"
+                 title="Go back to the Pulse environment and service Arc matches to {{instance}}">
+            <i class="fa fa-fw fa-undo"></i> This instance
+         </button>
+      </div>
+      <div ng-if="selection.server && !isInstanceTarget()" class="alert alert-info py-2 small">
+         <i class="fa fa-fw fa-info-circle"></i>
+         Requests run against <strong>{{selection.server}} / {{selection.service || '-'}}</strong>, not the environment Arc matches to {{instance}}.
+         The sample process, chore, cube and TM1 user still come from {{instance}}, so the requests that use them may find nothing in this environment.
+      </div>
+
       <div class="context small text-muted mb-2">
-         <span>Pulse server: <code>{{ctx.serverName || '-'}}</code></span>
-         <span>Service: <code>{{ctx.serviceName || '-'}}</code></span>
          <span>Pulse user: <code>{{ctx.pulseUser || '-'}}</code></span>
          <span ng-if="ctx.pulseVersion">Pulse version: <code>{{ctx.pulseVersion}}</code></span>
          <span>Process: <code>{{ctx.process || '-'}}</code></span>

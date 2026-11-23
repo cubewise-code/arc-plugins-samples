@@ -1,12 +1,12 @@
 arc.run(["$rootScope", function ($rootScope) {
 
-   $rootScope.plugin("arcPulseSanityCheck", "Pulse API Sanity Check (Sample)", "page", {
+   $rootScope.plugin("arcPulseSanityCheck", "Pulse API Sanity Check", "page", {
       menu: "tools",
       icon: "fa-heartbeat",
       description: "Runs the Pulse API calls Arc makes, and the Pulse data APIs (monitoring, history, usage, alerts), through Arc's /_pulse proxy for this instance and checks each one returns the expected status",
       author: "Cubewise",
       url: "https://github.com/cubewise-code/arc-plugins-samples/tree/master/pulse-api-sanity-check",
-      version: "1.4.2"
+      version: "1.5.0"
    });
 
 }]);
@@ -63,15 +63,23 @@ arc.directive("arcPulseSanityCheck", function () {
 
             // Why a placeholder can have no value, shown on the skipped request
             var MISSING_HINTS = {
-               serverName: "This instance is not linked to a Pulse environment (pulseenvironment in Arc's settings.yml).",
-               serviceName: "This instance is not linked to a Pulse environment (pulseenvironment in Arc's settings.yml).",
+               serverName: "No Pulse environment is chosen: choose one above, or link this instance to one (pulseenvironment in Arc's settings.yml).",
+               serviceName: "No Pulse service is chosen: choose one above, or link this instance to one (pulseenvironment in Arc's settings.yml).",
                process: "No process was found on the instance.",
                chore: "No chore was found on the instance.",
                ruleCube: "No cube was found on the instance.",
                tm1User: "The TM1 user could not be read.",
                commitId: "Pulse has no change for this instance in the last 30 days, so there is no change to read.",
                commitPath: "Pulse has no change for this instance in the last 30 days, so there is no change to read.",
-               commitAuthor: "Pulse has no change for this instance in the last 30 days, so there is no author to search for."
+               commitAuthor: "Pulse has no change for this instance in the last 30 days, so there is no author to search for.",
+               workspaceBookId: "Pulse lists no Workspace book for this environment, or the book list request was not run."
+            };
+
+            // Why a request with `requires` is skipped
+            var REQUIRES_HINTS = {
+               workspace: function (ctx) {
+                  return "Not run: " + (ctx.serverName || "this environment") + " is not a Workspace environment in Pulse. Choose a Workspace environment above.";
+               }
             };
 
             $scope.page = {
@@ -85,6 +93,13 @@ arc.directive("arcPulseSanityCheck", function () {
             };
             $scope.requests = [];
             $scope.ctx = {};
+            // Pulse environments (servers) and their services, from api/setting
+            $scope.envs = [];
+            // The environment and service the requests run against. Starts on the one Arc matches to
+            // this instance; kept across a reload while it still exists in Pulse.
+            $scope.selection = { server: null, service: null };
+            // The environment and service Arc matches to this instance
+            $scope.instanceTarget = { server: null, service: null };
             $scope.counts = { success: 0, warning: 0, failed: 0, skipped: 0, done: 0, total: 0 };
             $scope.methodBadge = {
                GET: "badge-success",
@@ -173,13 +188,15 @@ arc.directive("arcPulseSanityCheck", function () {
                var ctx = $scope.ctx;
                var notControl = "$filter=indexof(Name,'}') eq -1";
 
+               $scope.instanceTarget = { server: null, service: null };
                var pulseService = $pulse.serviceFromInstance($scope.instance).then(function (service) {
-                  ctx.serverName = service.serverName;
-                  ctx.serviceName = service.serviceName;
+                  $scope.instanceTarget = { server: service.serverName, service: service.serviceName };
                }, function (error) {
                   $scope.page.contextError = (error && error.message) || String(error);
                   _logger.warn("Instance not matched to a Pulse service", error);
                });
+
+               var environments = loadEnvironments();
 
                var processes = tm1Get("/Processes?$select=Name&" + notControl + "&$top=1").then(function (r) {
                   if (r.status === 200 && r.data.value.length) {
@@ -207,7 +224,99 @@ arc.directive("arcPulseSanityCheck", function () {
                   if (r.status === 200 && r.data) { ctx.tm1User = r.data.Name; }
                });
 
-               return $q.all([pulseService, processes, chores, cubes, user]);
+               return $q.all([pulseService, environments, processes, chores, cubes, user]).then(function () {
+                  chooseDefaultTarget();
+               });
+            };
+
+            // --- Environments: which Pulse server and service the requests run against
+
+            var NO_PROMPT = { "x-login-no-prompt": true, "x-non-interactive": true };
+
+            // Pulse's environments and their services. Signed out, Pulse answers 401 and the list stays
+            // empty: the requests then run against the environment Arc matches to this instance.
+            var loadEnvironments = function () {
+               return $http.get("_pulse/api/setting/?include-connection-url=true", { headers: NO_PROMPT }).then(function (r) {
+                  var list = _.isArray(r.data) ? r.data : [];
+                  $scope.envs = _.sortBy(_.compact(_.map(list, function (s) {
+                     var name = s.ServerName || s.serverName;
+                     if (!name || s.Deleted === true) { return null; }
+                     return {
+                        name: name,
+                        services: _.sortBy(_.uniq(s.ServicesAsList || s.servicesAsList || [])),
+                        workspace: s.Workspace === true || s.workspace === true
+                     };
+                  })), function (e) { return e.name.toLowerCase(); });
+               }, function (r) {
+                  $scope.envs = [];
+                  _logger.info("Pulse environments could not be listed (HTTP " + (r && r.status) + ")");
+               });
+            };
+
+            var findEnv = function (name) { return _.find($scope.envs, { name: name }); };
+
+            // Keep the environment chosen before a reload while Pulse still has it, otherwise use this instance's
+            var chooseDefaultTarget = function () {
+               var sel = $scope.selection;
+               var env = sel.server && findEnv(sel.server);
+               var keep = env && _.includes(env.services, sel.service);
+               if (!keep) {
+                  sel.server = $scope.instanceTarget.server;
+                  sel.service = $scope.instanceTarget.service;
+                  // The instance's environment is not in the list (Pulse signed out): add it so the selector still shows it
+                  if (sel.server && !findEnv(sel.server)) {
+                     $scope.envs.unshift({ name: sel.server, services: _.compact([sel.service]), workspace: false });
+                  }
+               }
+               applyTarget();
+            };
+
+            // Values captured from Pulse answers belong to one environment and service
+            var capturedKeys = function () {
+               return _.uniq(_.flatMap($scope.requests, function (item) { return _.keys(item.capture || {}); }));
+            };
+
+            var applyTarget = function () {
+               var sel = $scope.selection;
+               var env = findEnv(sel.server);
+               $scope.ctx.serverName = sel.server || null;
+               $scope.ctx.serviceName = sel.service || null;
+               $scope.ctx.workspace = !!(env && env.workspace);
+            };
+
+            $scope.servicesOf = function (serverName) {
+               var env = findEnv(serverName);
+               return env ? env.services : [];
+            };
+
+            $scope.isWorkspace = function (serverName) {
+               var env = findEnv(serverName);
+               return !!(env && env.workspace);
+            };
+
+            $scope.isInstanceTarget = function () {
+               return $scope.selection.server === $scope.instanceTarget.server &&
+                  $scope.selection.service === $scope.instanceTarget.service;
+            };
+
+            $scope.targetChanged = function (changedServer) {
+               var sel = $scope.selection;
+               if (changedServer) {
+                  var services = $scope.servicesOf(sel.server);
+                  if (!_.includes(services, sel.service)) {
+                     // Same service as this instance when the environment has it, otherwise its first service
+                     sel.service = _.includes(services, $scope.instanceTarget.service) ? $scope.instanceTarget.service : (services[0] || null);
+                  }
+               }
+               _.each(capturedKeys(), function (key) { delete $scope.ctx[key]; });
+               applyTarget();
+               $scope.reset();
+            };
+
+            $scope.useInstanceTarget = function () {
+               $scope.selection.server = $scope.instanceTarget.server;
+               $scope.selection.service = $scope.instanceTarget.service;
+               $scope.targetChanged(false);
             };
 
             // --- Requests file -----------------------------------------------------
@@ -275,6 +384,12 @@ arc.directive("arcPulseSanityCheck", function () {
 
                if (item.needs && !$scope.ctx[item.needs]) {
                   finish(item, "skipped", "Not run: the step that creates its test object did not succeed.");
+                  return $q.when();
+               }
+
+               var unmet = _.find(_.castArray(item.requires || []), function (need) { return !$scope.ctx[need]; });
+               if (unmet) {
+                  finish(item, "skipped", REQUIRES_HINTS[unmet] ? REQUIRES_HINTS[unmet]($scope.ctx) : "Not run: needs " + unmet + ".");
                   return $q.when();
                }
 
@@ -405,7 +520,7 @@ arc.directive("arcPulseSanityCheck", function () {
                var warnUpdate = _.some(writes, { group: "Test Hub update (writes)" }) ?
                   " Pulse 8.0.1 cannot delete a test category after it was renamed, so 'Test Hub update' may leave a category called '" + TEST_NAME + "-<id> (updated)' behind." : "";
                $dialogs.confirm("The selected write requests (" + groups + ") create test objects called '" + TEST_NAME +
-                  "...' in Pulse for " + $scope.instance + " (an object lock, Test Hub categories), read them and remove them again." +
+                  "...' in Pulse for " + ($scope.ctx.serverName || "-") + " / " + ($scope.ctx.serviceName || "-") + " (an object lock, Test Hub categories), read them and remove them again." +
                   " No TM1 object is changed." + warnUpdate + " Run them?", runAll);
             };
 
